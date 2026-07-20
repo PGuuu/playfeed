@@ -46,11 +46,16 @@
   .meta .tip { font-size: 12px; opacity: 0.6; margin-top: 6px; }
 
   .overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 14px; background: rgba(8,8,12,0.55);
-    backdrop-filter: blur(3px); text-align: center; padding: 24px; }
+    align-items: center; justify-content: center; gap: 14px; background: rgba(8,8,12,0.32);
+    text-align: center; padding: 24px; }
   .overlay.hidden { display: none; }
-  .overlay h2 { font-size: 26px; font-weight: 700; }
-  .overlay p { font-size: 15px; opacity: 0.85; line-height: 1.6; }
+  .overlay h2 { font-size: 26px; font-weight: 700; text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8); }
+  .overlay p { font-size: 15px; opacity: 0.95; line-height: 1.6; text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.8); }
+  .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+    display: flex; align-items: center; gap: 6px; }
+  .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
+    animation: pvblink 1.2s ease-in-out infinite; }
+  @keyframes pvblink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
   .overlay .go { margin-top: 6px; border: none; cursor: pointer; background: #fff; color: #111;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
@@ -444,6 +449,7 @@ const posts = [];
         <div class="tip">${g.tip}</div>
       </div>
       <div class="overlay">
+        <div class="pv-tag">遊戲實況預覽</div>
         <h2>${g.title.split('：')[0]}</h2>
         <p>${g.tip}</p>
         <button class="go">開始</button>
@@ -461,6 +467,54 @@ const posts = [];
   const likeBtn = post.querySelector('.like');
   const state = { game: null, running: false };
 
+  /* 實況預覽（attract mode）：滑到這格時，遊戲自己在標題後面隨機試玩 */
+  const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
+  const pvEnv = {
+    W, H, ctx, beep: () => {}, setScore: () => {},
+    over() {
+      if (!pv.on) return;
+      clearTimeout(pv.restartT);
+      pv.restartT = setTimeout(() => { if (pv.on && !state.running) pv.game.start(); }, 900);
+    }
+  };
+  function startPreview() {
+    if (pv.on || state.running) return;
+    pv.on = true;
+    if (!pv.game) pv.game = g.create(pvEnv);
+    pv.game.start();
+    schedulePvInput();
+  }
+  function stopPreview() {
+    pv.on = false;
+    clearTimeout(pv.timer); clearTimeout(pv.restartT); clearInterval(pv.swipeIv);
+    if (pv.game) pv.game.stop();
+  }
+  function schedulePvInput() {
+    pv.timer = setTimeout(() => {
+      if (!pv.on) return;
+      pvDemoInput();
+      schedulePvInput();
+    }, 350 + Math.random() * 550);
+  }
+  function pvDemoInput() {
+    const x = W * (0.15 + Math.random() * 0.7), y = H * (0.25 + Math.random() * 0.55);
+    pv.game.input('down', x, y);
+    if (Math.random() < 0.45) {
+      /* 偶爾來一段滑動，讓切西瓜、削皮這類遊戲也看得出玩法 */
+      let step = 0;
+      const dx = (Math.random() - 0.5) * 180, dy = 60 + Math.random() * 220;
+      clearInterval(pv.swipeIv);
+      pv.swipeIv = setInterval(() => {
+        if (!pv.on) return clearInterval(pv.swipeIv);
+        step++;
+        pv.game.input('move', x + dx * step / 6, y + dy * step / 6);
+        if (step >= 6) { clearInterval(pv.swipeIv); pv.game.input('up', x + dx, y + dy); }
+      }, 30);
+    } else {
+      setTimeout(() => { if (pv.on) pv.game.input('up', x, y); }, 90);
+    }
+  }
+
   const env = {
     W, H, ctx, beep,
     setScore(n) { scEl.textContent = n; },
@@ -477,11 +531,13 @@ const posts = [];
         <button class="go">再玩一次</button>`;
       overlay.classList.remove('hidden');
       overlay.querySelector('.go').addEventListener('click', begin);
+      startPreview();   /* 結算畫面後面繼續跑實況 */
     }
   };
 
   function begin(e) {
     if (e) e.stopPropagation();
+    stopPreview();
     ensureAudio();
     if (!state.game) state.game = g.create(env);
     scEl.textContent = '0';
@@ -527,11 +583,15 @@ const posts = [];
 
   posts.push({
     el: post, g, state, refreshLike, refreshSave,
+    activate() {
+      if (!state.running) startPreview();
+    },
     deactivate() {
+      stopPreview();
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<h2>${g.title.split('：')[0]}</h2><p>${g.tip}</p><button class="go">開始</button>`;
+      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${g.title.split('：')[0]}</h2><p>${g.tip}</p><button class="go">開始</button>`;
       overlay.querySelector('.go').addEventListener('click', begin);
     }
   });
@@ -540,7 +600,9 @@ const posts = [];
 const io = new IntersectionObserver(entries => {
   for (const en of entries) {
     const p = posts.find(p => p.el === en.target);
-    if (p && (!en.isIntersecting || en.intersectionRatio < 0.5)) p.deactivate();
+    if (!p) continue;
+    if (en.isIntersecting && en.intersectionRatio >= 0.5) p.activate();
+    else p.deactivate();
   }
 }, { threshold: [0, 0.5, 1] });
 posts.forEach(p => io.observe(p.el));
