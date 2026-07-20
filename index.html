@@ -14,7 +14,8 @@
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
     display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .stage { position: relative; width: 100%; height: 100%; max-width: 560px; }
-  canvas.game { width: 100%; height: 100%; display: block; touch-action: none; }
+  /* pan-y：上下滑永遠交給 feed 捲動（就算遊戲中也能滑到上/下一款），遊戲只吃點按與水平動作 */
+  canvas.game { width: 100%; height: 100%; display: block; touch-action: pan-y; }
 
   .hud { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 120px;
     display: flex; align-items: center; gap: 10px; pointer-events: none; }
@@ -500,9 +501,9 @@ const posts = [];
     const x = W * (0.15 + Math.random() * 0.7), y = H * (0.25 + Math.random() * 0.55);
     pv.game.input('down', x, y);
     if (Math.random() < 0.45) {
-      /* 偶爾來一段滑動，讓切西瓜、削皮這類遊戲也看得出玩法 */
+      /* 偶爾來一段「水平」滑動（上下滑保留給 feed，遊戲互動不用垂直手勢） */
       let step = 0;
-      const dx = (Math.random() - 0.5) * 180, dy = 60 + Math.random() * 220;
+      const dx = (Math.random() < 0.5 ? -1 : 1) * (80 + Math.random() * 160), dy = (Math.random() - 0.5) * 50;
       clearInterval(pv.swipeIv);
       pv.swipeIv = setInterval(() => {
         if (!pv.on) return clearInterval(pv.swipeIv);
@@ -561,6 +562,11 @@ const posts = [];
     if (e.buttons || e.pointerType === 'touch') { const [x, y] = toLogical(e); state.game.input('move', x, y); }
   });
   canvas.addEventListener('pointerup', e => {
+    if (!state.running || !state.game) return;
+    const [x, y] = toLogical(e); state.game.input('up', x, y);
+  });
+  /* 使用者開始上下滑（瀏覽器接手捲動）時，跟遊戲說手指已放開 */
+  canvas.addEventListener('pointercancel', e => {
     if (!state.running || !state.game) return;
     const [x, y] = toLogical(e); state.game.input('up', x, y);
   });
