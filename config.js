@@ -1,0 +1,9 @@
+/* PlayFeed 後台設定
+   還沒設定時網站照樣能玩（體驗模式），按讚、留言、儲存不會被記錄。
+   照「開始指南.md」開好 Supabase 和 Phuze 之後，把下面三個值換成你自己的：
+*/
+window.PLAYFEED_CONFIG = {
+  SUPABASE_URL: "",           // 例如 "https://abcdefgh.supabase.co"
+  SUPABASE_ANON_KEY: "",      // Supabase 後台 Settings → API 裡那串很長的 anon public key
+  PHUZE_PUBLISHABLE_KEY: ""   // Phuze 註冊後拿到的 pk_live_ 開頭的 key（會員登入用）
+};

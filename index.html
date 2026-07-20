@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PlayFeed — 滑一下，玩一個</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #0b0b10; color: #f2f2f5; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none; }
+
+  #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
+  #feed::-webkit-scrollbar { display: none; }
+
+  .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .stage { position: relative; width: 100%; height: 100%; max-width: 560px; }
+  canvas.game { width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 120px;
+    display: flex; align-items: center; gap: 10px; pointer-events: none; }
+  .chip { background: rgba(0,0,0,0.45); backdrop-filter: blur(6px); border-radius: 999px;
+    padding: 6px 14px; font-size: 14px; font-weight: 500; }
+  .score-chip b { font-size: 18px; font-weight: 600; margin-left: 4px; }
+
+  #authChip { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 40;
+    border: none; cursor: pointer; color: #fff; font-family: inherit;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
+  #authChip.on { background: #4b46b8; }
+
+  .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
+    gap: 20px; align-items: center; z-index: 5; }
+  .rail button { background: none; border: none; color: #fff; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
+  .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+    font-size: 21px; transition: transform 0.12s; }
+  .rail button:active .ic { transform: scale(0.85); }
+  .rail button.liked .ic { background: #e0355f; }
+  .rail button.saved .ic { background: #d9a13b; }
+
+  .meta { position: absolute; left: 16px; right: 76px; bottom: max(24px, env(safe-area-inset-bottom));
+    z-index: 5; pointer-events: none; }
+  .meta .author { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .meta .title { font-size: 14px; opacity: 0.9; }
+  .meta .tip { font-size: 12px; opacity: 0.6; margin-top: 6px; }
+
+  .overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; background: rgba(8,8,12,0.55);
+    backdrop-filter: blur(3px); text-align: center; padding: 24px; }
+  .overlay.hidden { display: none; }
+  .overlay h2 { font-size: 26px; font-weight: 700; }
+  .overlay p { font-size: 15px; opacity: 0.85; line-height: 1.6; }
+  .overlay .go { margin-top: 6px; border: none; cursor: pointer; background: #fff; color: #111;
+    font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
+  .overlay .final { font-size: 44px; font-weight: 700; }
+  .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
+
+  .swipe-hint { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+    font-size: 13px; opacity: 0.55; z-index: 4; pointer-events: none; animation: bob 1.6s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translate(-50%,0);} 50% { transform: translate(-50%,-8px);} }
+
+  .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.92); color: #111; font-size: 14px; font-weight: 500;
+    padding: 10px 20px; border-radius: 999px; z-index: 90; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s; max-width: 86vw; text-align: center; }
+  .toast.show { opacity: 1; }
+
+  /* 留言面板 */
+  #sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: #16161d; border-radius: 18px 18px 0 0; max-height: 68dvh;
+    display: flex; flex-direction: column; transform: translateY(105%); transition: transform 0.25s; }
+  #sheet.open { transform: translateY(0); }
+  #sheet .head { display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #sheet .head b { font-size: 15px; }
+  #sheet .head button { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
+  #cmtList { overflow-y: auto; padding: 8px 18px; flex: 1; min-height: 120px; }
+  .cmt { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .cmt .who { font-size: 12px; color: #9a9ab0; margin-bottom: 3px; }
+  .cmt .body { font-size: 14px; line-height: 1.5; }
+  #cmtForm { display: flex; gap: 8px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
+  #cmtInput { flex: 1; background: #23232d; border: none; border-radius: 999px; color: #fff;
+    font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
+  #cmtSend { border: none; background: #4b46b8; color: #fff; font-family: inherit;
+    font-weight: 600; font-size: 14px; border-radius: 999px; padding: 0 20px; cursor: pointer; }
+
+  /* 登入視窗（Phuze magic link） */
+  #login { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; padding: 24px; }
+  #login.open { display: flex; }
+  #login .box { background: #1a1a22; border-radius: 18px; padding: 26px 22px; width: 100%;
+    max-width: 340px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+  #login h3 { font-size: 19px; }
+  #login p { font-size: 13px; color: #a5a5ba; line-height: 1.6; }
+  #phuze-widget { min-height: 52px; text-align: left; }
+  #login .ghost { background: none; border: none; color: #8f8fa5; font-size: 13px;
+    font-family: inherit; cursor: pointer; padding: 6px; }
+  .backdrop { position: fixed; inset: 0; z-index: 55; display: none; }
+  .backdrop.open { display: block; }
+
+  /* 個人頁面 */
+  #profile { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: #16161d; border-radius: 18px 18px 0 0; max-height: 78dvh;
+    display: flex; flex-direction: column; transform: translateY(105%); transition: transform 0.25s; }
+  #profile.open { transform: translateY(0); }
+  #profile .head { display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #profile .head b { font-size: 15px; }
+  #profile .head button { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
+  #profile .who { display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px 0; font-size: 13px; color: #a5a5ba; }
+  #profile .who button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
+    font-family: inherit; font-size: 12px; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  #profileBody { overflow-y: auto; padding: 4px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .psec { font-size: 13px; color: #9a9ab0; margin: 14px 0 8px; }
+  .pitem { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px;
+    background: rgba(255,255,255,0.05); margin-bottom: 8px; cursor: pointer; }
+  .pitem .dot { width: 34px; height: 34px; border-radius: 10px; flex: none; }
+  .pitem .t { font-size: 14px; font-weight: 500; }
+  .pitem .a { font-size: 12px; color: #9a9ab0; margin-top: 2px; }
+  .pempty { font-size: 13px; color: #77778c; padding: 4px 2px 8px; }
+</style>
+</head>
+<body>
+
+<button id="authChip">登入</button>
+<div id="feed"></div>
+<div class="toast" id="toast"></div>
+
+<div class="backdrop" id="backdrop"></div>
+<div id="sheet">
+  <div class="head"><b id="sheetTitle">留言</b><button id="sheetClose">&#10005;</button></div>
+  <div id="cmtList"></div>
+  <div id="cmtForm">
+    <input id="cmtInput" maxlength="300" placeholder="留下你的 feedback…">
+    <button id="cmtSend">送出</button>
+  </div>
+</div>
+
+<div id="profile">
+  <div class="head"><b>我的頁面</b><button id="profileClose">&#10005;</button></div>
+  <div class="who"><span id="profileWho"></span><button id="logoutBtn">登出</button></div>
+  <div id="profileBody">
+    <div class="psec">&#128278; 收藏的遊戲</div>
+    <div id="savedList"></div>
+    <div class="psec">&#9829; 按過讚的</div>
+    <div id="likedList"></div>
+  </div>
+</div>
+
+<div id="login">
+  <div class="box">
+    <h3>登入 PlayFeed</h3>
+    <p>輸入 Email，點信裡的連結就完成登入。<br>登入後就能按讚、留言、把遊戲收進「我的頁面」。</p>
+    <div id="phuze-widget"></div>
+    <button class="ghost" id="skipLogin">先不用，我玩玩就好</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://phuze.edato.me/phuze.js"></script>
+
+<script>
+/* ---------- 全域：畫布尺寸與音效（遊戲包會用到） ---------- */
+const W = 400, H = 700;
+let AC = null;
+function ensureAudio() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+}
+function beep(f1, f2, dur, vol, type) {
+  if (!AC) return;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(f1, AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), AC.currentTime + dur);
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  o.connect(g); g.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime + dur);
+}
+</script>
+
+<!-- 遊戲包：新增一批遊戲就在下面加一行 -->
+<script src="games/pack1.js"></script>
+<script src="games/pack2.js"></script>
+<script src="games/pack3.js"></script>
+
+<script>
+/* ---------- 後台連線（沒設定 config.js 也能跑，會進入體驗模式） ---------- */
+const cfg = window.PLAYFEED_CONFIG || {};
+const online = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
+const db = online ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+const phuzeOn = !!(cfg.PHUZE_PUBLISHABLE_KEY && window.Phuze);
+let user = null;
+let pendingAction = null;   // 被登入擋下的動作，登入成功後自動補做
+const likeState = {};   // game_id -> { count, mine }
+const saveState = {};   // game_id -> mine
+const bests = {};
+
+const authChip = document.getElementById('authChip');
+function displayName(u) {
+  const e = (u && u.email) || '';
+  return e ? e.split('@')[0].slice(0, 12) : '玩家';
+}
+function setUser(u) {
+  user = u;
+  authChip.textContent = u ? displayName(u) : '登入';
+  authChip.classList.toggle('on', !!u);
+}
+
+/* ---------- 登入（Phuze magic link） ---------- */
+const loginBox = document.getElementById('login');
+function openLogin() { loginBox.classList.add('open'); }
+function closeLogin() { loginBox.classList.remove('open'); }
+document.getElementById('skipLogin').addEventListener('click', () => { pendingAction = null; closeLogin(); });
+authChip.addEventListener('click', () => {
+  if (user) return openProfile();
+  if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
+  openLogin();
+});
+if (phuzeOn) {
+  Phuze.init({
+    publishableKey: cfg.PHUZE_PUBLISHABLE_KEY,
+    locale: 'zh-TW',
+    text: {
+      button: '寄登入連結給我', buttonLoading: '寄送中…', buttonSignOut: '登出',
+      placeholder: 'name@example.com',
+      sentTitle: '去收信！', sentSubtitle: '點信裡的連結，這個畫面會自動完成登入。'
+    },
+    theme: { accentColor: '#4b46b8', accentHoverColor: '#5a54d6', accentTextColor: '#ffffff',
+             borderRadius: '12px', borderColor: '#33334a' }
+  });
+  Phuze.mount('#phuze-widget');
+  Phuze.onSessionChange(session => {
+    const wasIn = !!user;
+    setUser(session ? { id: session.uid, email: session.email || '' } : null);
+    loadLikes(); loadSaves();
+    if (session && !wasIn) {
+      if (loginBox.classList.contains('open')) { closeLogin(); toast('登入成功！'); }
+      if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
+    }
+    if (!session) pendingAction = null;
+  });
+}
+function requireLogin(action) {
+  if (!online || !phuzeOn) { toast('體驗模式：尚未連接後台，互動先不會被儲存'); return false; }
+  if (!user) { pendingAction = action || null; openLogin(); return false; }
+  return true;
+}
+
+/* ---------- 個人頁面 ---------- */
+const profileBox = document.getElementById('profile');
+function openProfile() {
+  renderProfile();
+  profileBox.classList.add('open');
+  document.getElementById('backdrop').classList.add('open');
+}
+function closeProfile() {
+  profileBox.classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+}
+document.getElementById('profileClose').addEventListener('click', closeProfile);
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  closeProfile();
+  if (phuzeOn) await Phuze.logout();
+  toast('已登出');
+});
+function renderProfile() {
+  document.getElementById('profileWho').textContent =
+    user ? displayName(user) + (user.email ? '（' + user.email + '）' : '') : '';
+  fillGameList('savedList', (window.GAMES || []).filter(g => saveState[g.id]),
+    '還沒有收藏。看到喜歡的遊戲，按右邊的 🔖 存起來。');
+  fillGameList('likedList', (window.GAMES || []).filter(g => likeState[g.id] && likeState[g.id].mine),
+    '還沒按過讚。');
+}
+function fillGameList(elId, games, emptyMsg) {
+  const el = document.getElementById(elId);
+  if (!games.length) { el.innerHTML = '<div class="pempty">' + emptyMsg + '</div>'; return; }
+  el.innerHTML = '';
+  for (const g of games) {
+    const item = document.createElement('div');
+    item.className = 'pitem';
+    item.innerHTML = '<span class="dot" style="background:' + g.bg + '"></span>' +
+      '<span><div class="t">' + g.title + '</div><div class="a">' + g.author + '</div></span>';
+    item.addEventListener('click', () => {
+      closeProfile();
+      const p = posts.find(p => p.g.id === g.id);
+      if (p) p.el.scrollIntoView({ behavior: 'smooth' });
+    });
+    el.appendChild(item);
+  }
+}
+
+/* ---------- 按讚 ---------- */
+async function loadLikes() {
+  if (!online) return;
+  const { data, error } = await db.from('likes').select('game_id,user_id');
+  if (error || !data) return;
+  for (const g of window.GAMES) likeState[g.id] = { count: 0, mine: false };
+  for (const row of data) {
+    if (!likeState[row.game_id]) likeState[row.game_id] = { count: 0, mine: false };
+    likeState[row.game_id].count++;
+    if (user && row.user_id === user.id) likeState[row.game_id].mine = true;
+  }
+  for (const p of posts) p.refreshLike();
+}
+function refreshPost(gameId) {
+  const p = posts.find(p => p.g.id === gameId);
+  if (p) { p.refreshLike(); p.refreshSave(); }
+}
+async function toggleLike(gameId) {
+  if (!requireLogin(() => toggleLike(gameId))) return;
+  const st = likeState[gameId] || (likeState[gameId] = { count: 0, mine: false });
+  if (st.mine) {
+    st.mine = false; st.count--;
+    refreshPost(gameId);
+    await db.from('likes').delete().eq('game_id', gameId).eq('user_id', user.id);
+  } else {
+    st.mine = true; st.count++;
+    refreshPost(gameId);
+    await db.from('likes').insert({ game_id: gameId, user_id: user.id });
+  }
+}
+
+/* ---------- 儲存（收藏到我的頁面） ---------- */
+async function loadSaves() {
+  for (const g of (window.GAMES || [])) saveState[g.id] = false;
+  if (online && user) {
+    const { data } = await db.from('saves').select('game_id').eq('user_id', user.id);
+    if (data) for (const row of data) saveState[row.game_id] = true;
+  }
+  for (const p of posts) p.refreshSave();
+}
+async function toggleSave(gameId) {
+  if (!requireLogin(() => toggleSave(gameId))) return;
+  const on = !saveState[gameId];
+  saveState[gameId] = on;
+  refreshPost(gameId);
+  if (on) {
+    toast('已收藏到我的頁面 🔖');
+    await db.from('saves').insert({ game_id: gameId, user_id: user.id });
+  } else {
+    await db.from('saves').delete().eq('game_id', gameId).eq('user_id', user.id);
+  }
+}
+
+/* ---------- 留言 ---------- */
+const sheet = document.getElementById('sheet');
+const backdrop = document.getElementById('backdrop');
+const cmtList = document.getElementById('cmtList');
+let sheetGame = null;
+function closeSheet() { sheet.classList.remove('open'); backdrop.classList.remove('open'); }
+document.getElementById('sheetClose').addEventListener('click', closeSheet);
+backdrop.addEventListener('click', () => { closeSheet(); closeProfile(); });
+async function openComments(g) {
+  sheetGame = g;
+  document.getElementById('sheetTitle').textContent = g.title.split('：')[0] + ' 的留言';
+  cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">載入中…</div></div>';
+  sheet.classList.add('open'); backdrop.classList.add('open');
+  if (!online) {
+    cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">尚未連接後台，設定 config.js 之後留言就會是真的。</div></div>';
+    return;
+  }
+  const { data, error } = await db.from('comments')
+    .select('name,body,created_at').eq('game_id', g.id)
+    .order('created_at', { ascending: false }).limit(50);
+  if (error) { cmtList.innerHTML = '<div class="cmt"><div class="body">載入失敗，稍後再試</div></div>'; return; }
+  renderComments(data);
+}
+function renderComments(rows) {
+  if (!rows.length) {
+    cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">還沒有留言，搶頭香吧。</div></div>';
+    return;
+  }
+  cmtList.innerHTML = rows.map(r => {
+    const d = new Date(r.created_at);
+    const when = (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+      String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="cmt"><div class="who">${esc(r.name)} · ${when}</div><div class="body">${esc(r.body)}</div></div>`;
+  }).join('');
+}
+async function sendComment() {
+  const input = document.getElementById('cmtInput');
+  const body = input.value.trim();
+  if (!body || !sheetGame) return;
+  if (!requireLogin(sendComment)) return;
+  const { error } = await db.from('comments').insert({
+    game_id: sheetGame.id, user_id: user.id, name: displayName(user), body
+  });
+  if (error) return toast('送出失敗：' + error.message);
+  input.value = '';
+  openComments(sheetGame);
+}
+document.getElementById('cmtSend').addEventListener('click', sendComment);
+
+/* ---------- 分享 ---------- */
+async function shareGame(g) {
+  const url = location.origin + location.pathname + '#' + g.id;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'PlayFeed', text: '來挑戰「' + g.title + '」！', url }); } catch (e) {}
+  } else {
+    try { await navigator.clipboard.writeText(url); toast('連結已複製，貼給朋友挑戰吧'); }
+    catch (e) { toast(url); }
+  }
+}
+
+/* ---------- 分數上傳 ---------- */
+async function submitScore(gameId, score) {
+  if (!online || !user || !score) return;
+  await db.from('scores').upsert(
+    { game_id: gameId, user_id: user.id, score },
+    { onConflict: 'game_id,user_id' }
+  );
+}
+
+/* ---------- Feed 引擎 ---------- */
+const feed = document.getElementById('feed');
+const posts = [];
+
+(window.GAMES || []).forEach((g, idx) => {
+  const post = document.createElement('section');
+  post.className = 'post';
+  post.style.background = g.bg;
+  post.innerHTML = `
+    <div class="stage">
+      <canvas class="game" width="${W}" height="${H}"></canvas>
+      <div class="hud">
+        <span class="chip score-chip">分數<b class="sc">0</b></span>
+        <span class="chip best-chip" style="display:none">最佳 <span class="bs">0</span></span>
+      </div>
+      <div class="rail">
+        <button class="like"><span class="ic">&#9829;</span><span class="lc">0</span></button>
+        <button class="cmt"><span class="ic">&#128172;</span><span>留言</span></button>
+        <button class="sv"><span class="ic">&#128278;</span><span>儲存</span></button>
+        <button class="shr"><span class="ic">&#10148;</span><span>分享</span></button>
+      </div>
+      <div class="meta">
+        <div class="author">${g.author}</div>
+        <div class="title">${g.title}</div>
+        <div class="tip">${g.tip}</div>
+      </div>
+      <div class="overlay">
+        <h2>${g.title.split('：')[0]}</h2>
+        <p>${g.tip}</p>
+        <button class="go">開始</button>
+      </div>
+      ${idx === 0 ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
+    </div>`;
+  feed.appendChild(post);
+
+  const canvas = post.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = post.querySelector('.overlay');
+  const scEl = post.querySelector('.sc');
+  const bestChip = post.querySelector('.best-chip');
+  const bsEl = post.querySelector('.bs');
+  const likeBtn = post.querySelector('.like');
+  const state = { game: null, running: false };
+
+  const env = {
+    W, H, ctx, beep,
+    setScore(n) { scEl.textContent = n; },
+    over(score) {
+      state.running = false;
+      const prev = bests[g.id] || 0;
+      const isBest = score > prev;
+      if (isBest) { bests[g.id] = score; submitScore(g.id, score); }
+      bestChip.style.display = ''; bsEl.textContent = bests[g.id] || 0;
+      overlay.innerHTML = `
+        <div class="final">${score}</div>
+        ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
+        <p>再挑戰一次，或往上滑玩下一款</p>
+        <button class="go">再玩一次</button>`;
+      overlay.classList.remove('hidden');
+      overlay.querySelector('.go').addEventListener('click', begin);
+    }
+  };
+
+  function begin(e) {
+    if (e) e.stopPropagation();
+    ensureAudio();
+    if (!state.game) state.game = g.create(env);
+    scEl.textContent = '0';
+    overlay.classList.add('hidden');
+    state.running = true;
+    state.game.start();
+  }
+  post.querySelector('.go').addEventListener('click', begin);
+
+  function toLogical(e) {
+    const r = canvas.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
+  }
+  canvas.addEventListener('pointerdown', e => {
+    if (!state.running || !state.game) return;
+    canvas.setPointerCapture(e.pointerId);
+    const [x, y] = toLogical(e); state.game.input('down', x, y);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!state.running || !state.game) return;
+    if (e.buttons || e.pointerType === 'touch') { const [x, y] = toLogical(e); state.game.input('move', x, y); }
+  });
+  canvas.addEventListener('pointerup', e => {
+    if (!state.running || !state.game) return;
+    const [x, y] = toLogical(e); state.game.input('up', x, y);
+  });
+
+  const saveBtn = post.querySelector('.sv');
+  likeBtn.addEventListener('click', () => toggleLike(g.id));
+  saveBtn.addEventListener('click', () => toggleSave(g.id));
+  post.querySelector('.cmt').addEventListener('click', () => openComments(g));
+  post.querySelector('.shr').addEventListener('click', () => shareGame(g));
+
+  function refreshLike() {
+    const st = likeState[g.id];
+    if (!st) return;
+    likeBtn.classList.toggle('liked', st.mine);
+    likeBtn.querySelector('.lc').textContent = st.count;
+  }
+  function refreshSave() {
+    saveBtn.classList.toggle('saved', !!saveState[g.id]);
+  }
+
+  posts.push({
+    el: post, g, state, refreshLike, refreshSave,
+    deactivate() {
+      if (state.game && state.running) { state.game.stop(); state.running = false; }
+      if (!overlay.classList.contains('hidden')) return;
+      overlay.classList.remove('hidden');
+      overlay.innerHTML = `<h2>${g.title.split('：')[0]}</h2><p>${g.tip}</p><button class="go">開始</button>`;
+      overlay.querySelector('.go').addEventListener('click', begin);
+    }
+  });
+});
+
+const io = new IntersectionObserver(entries => {
+  for (const en of entries) {
+    const p = posts.find(p => p.el === en.target);
+    if (p && (!en.isIntersecting || en.intersectionRatio < 0.5)) p.deactivate();
+  }
+}, { threshold: [0, 0.5, 1] });
+posts.forEach(p => io.observe(p.el));
+
+/* 分享連結直達指定遊戲 */
+if (location.hash) {
+  const target = posts.find(p => p.g.id === location.hash.slice(1));
+  if (target) setTimeout(() => target.el.scrollIntoView(), 60);
+}
+
+/* 桌機鍵盤 */
+document.addEventListener('keydown', e => {
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  const p = posts.find(p => {
+    const r = p.el.getBoundingClientRect();
+    return r.top > -window.innerHeight/2 && r.top < window.innerHeight/2;
+  });
+  if (!p || !p.state.running || !p.state.game) return;
+  if (e.key === 'ArrowLeft') { p.state.game.input('down', W*0.25, H/2); e.preventDefault(); }
+  if (e.key === 'ArrowRight') { p.state.game.input('down', W*0.75, H/2); e.preventDefault(); }
+  if (e.key === ' ' || e.key === 'ArrowUp') { p.state.game.input('down', W/2, H/2); e.preventDefault(); }
+});
+
+/* Toast */
+let toastT = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+loadLikes();
+loadSaves();
+</script>
+</body>
+</html>
