@@ -164,27 +164,37 @@
   .backdrop { position: fixed; inset: 0; z-index: 55; display: none; }
   .backdrop.open { display: block; }
 
-  /* 個人頁面 */
-  #profile { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-    background: #16161d; border-radius: 18px 18px 0 0; max-height: 78dvh;
-    display: flex; flex-direction: column; transform: translateY(105%); transition: transform 0.25s; }
+  /* 個人頁（IG 風格全螢幕 + 分頁 + 縮圖網格 + 底部導覽） */
+  #profile { position: fixed; inset: 0; z-index: 65; background: #0b0b10;
+    display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #profile.open { transform: translateY(0); }
-  #profile .head { display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  #profile .head b { font-size: 15px; }
-  #profile .head button { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
-  #profile .who { display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 18px 0; font-size: 13px; color: #a5a5ba; }
-  #profile .who button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
-    font-family: inherit; font-size: 12px; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
-  #profileBody { overflow-y: auto; padding: 4px 18px calc(18px + env(safe-area-inset-bottom)); }
-  .psec { font-size: 13px; color: #9a9ab0; margin: 14px 0 8px; }
-  .pitem { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px;
-    background: rgba(255,255,255,0.05); margin-bottom: 8px; cursor: pointer; }
-  .pitem .dot { width: 34px; height: 34px; border-radius: 10px; flex: none; }
-  .pitem .t { font-size: 14px; font-weight: 500; }
-  .pitem .a { font-size: 12px; color: #9a9ab0; margin-top: 2px; }
-  .pempty { font-size: 13px; color: #77778c; padding: 4px 2px 8px; }
+  .phead { display: flex; align-items: center; justify-content: space-between;
+    padding: max(14px, env(safe-area-inset-top)) 18px 12px; }
+  .phead b { font-size: 17px; font-weight: 700; }
+  .phead button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
+    font-family: inherit; font-size: 12px; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .ptabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .ptabs button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
+    font-size: 13px; font-weight: 600; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
+  .ptabs button.active { color: #fff; border-bottom-color: #fff; }
+  #pgrid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 3px; padding: 3px; align-content: start; }
+  #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
+    font-size: 13px; padding: 48px 24px; line-height: 1.8; }
+  .gcell { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; }
+  .gcell .hero { font-size: 46px; line-height: 1; }
+  .gcell .hero img { width: 60%; height: 60%; object-fit: contain; }
+  .gcell .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.75), transparent);
+    font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gcell .badge { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700;
+    background: rgba(106,90,208,0.9); color: #fff; padding: 2px 7px; border-radius: 999px; }
+  .pnav { display: flex; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: env(safe-area-inset-bottom); }
+  .pnav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
+    font-size: 11px; cursor: pointer; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .pnav button .ni { font-size: 21px; line-height: 1; }
+  .pnav button.active { color: #fff; }
 </style>
 </head>
 <body>
@@ -204,15 +214,16 @@
 </div>
 
 <div id="profile">
-  <div class="head"><b>我的頁面</b><button id="profileClose">&#10005;</button></div>
-  <div class="who"><span id="profileWho"></span><button id="logoutBtn">登出</button></div>
-  <div id="profileBody">
-    <div class="psec">&#127912; 我做的改造</div>
-    <div id="myRemixList"></div>
-    <div class="psec">&#128278; 收藏的遊戲</div>
-    <div id="savedList"></div>
-    <div class="psec">&#9829; 按過讚的</div>
-    <div id="likedList"></div>
+  <div class="phead"><b id="profileWho">個人頁</b><button id="logoutBtn">登出</button></div>
+  <div class="ptabs">
+    <button class="active" data-tab="mine">🎨 我做的</button>
+    <button data-tab="saved">🔖 儲存</button>
+    <button data-tab="liked">♥ 愛心</button>
+  </div>
+  <div id="pgrid"></div>
+  <div class="pnav">
+    <button id="navHome"><span class="ni">🏠</span>首頁</button>
+    <button id="navMe" class="active"><span class="ni">👤</span>我的</button>
   </div>
 </div>
 
@@ -332,48 +343,59 @@ function requireLogin(action) {
   return true;
 }
 
-/* ---------- 個人頁面 ---------- */
+/* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格 + 底部導覽） ---------- */
 const profileBox = document.getElementById('profile');
+let profileTab = 'mine';
 function openProfile() {
-  renderProfile();
+  document.getElementById('profileWho').textContent = user ? displayName(user) : '個人頁';
+  renderProfileGrid(profileTab);
   profileBox.classList.add('open');
-  document.getElementById('backdrop').classList.add('open');
 }
-function closeProfile() {
-  profileBox.classList.remove('open');
-  document.getElementById('backdrop').classList.remove('open');
-}
-document.getElementById('profileClose').addEventListener('click', closeProfile);
+function closeProfile() { profileBox.classList.remove('open'); }
+document.querySelectorAll('.ptabs button').forEach(b => b.addEventListener('click', () => {
+  profileTab = b.dataset.tab;
+  document.querySelectorAll('.ptabs button').forEach(x => x.classList.toggle('active', x === b));
+  renderProfileGrid(profileTab);
+}));
+document.getElementById('navHome').addEventListener('click', closeProfile);
+document.getElementById('navMe').addEventListener('click', () => { document.getElementById('pgrid').scrollTop = 0; });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   closeProfile();
   if (phuzeOn) await Phuze.logout();
   toast('已登出');
 });
-function renderProfile() {
-  document.getElementById('profileWho').textContent =
-    user ? displayName(user) + (user.email ? '（' + user.email + '）' : '') : '';
-  fillGameList('myRemixList', posts.filter(p => p.entry.remixMeta && user && p.entry.remixMeta.user_id === user.id).map(p => p.entry),
-    '還沒做過改造。在遊戲上按右邊的 🎨 改造，上傳圖片就能做出你自己的版本。');
-  fillGameList('savedList', posts.filter(p => saveState[p.id]).map(p => p.entry),
-    '還沒有收藏。看到喜歡的遊戲，按右邊的 🔖 存起來。');
-  fillGameList('likedList', posts.filter(p => likeState[p.id] && likeState[p.id].mine).map(p => p.entry),
-    '還沒按過讚。');
+function profileData(tab) {
+  if (tab === 'mine') return posts.filter(p => p.entry.remixMeta && user && p.entry.remixMeta.user_id === user.id);
+  if (tab === 'saved') return posts.filter(p => saveState[p.id]);
+  return posts.filter(p => likeState[p.id] && likeState[p.id].mine);
 }
-function fillGameList(elId, games, emptyMsg) {
-  const el = document.getElementById(elId);
-  if (!games.length) { el.innerHTML = '<div class="pempty">' + emptyMsg + '</div>'; return; }
-  el.innerHTML = '';
-  for (const g of games) {
-    const item = document.createElement('div');
-    item.className = 'pitem';
-    item.innerHTML = '<span class="dot" style="background:' + g.bg + '"></span>' +
-      '<span><div class="t">' + g.title + '</div><div class="a">' + g.author + '</div></span>';
-    item.addEventListener('click', () => {
+function renderProfileGrid(tab) {
+  const grid = document.getElementById('pgrid');
+  const items = profileData(tab);
+  grid.innerHTML = '';
+  if (!items.length) {
+    const msg = { mine: '還沒做過改造。<br>在遊戲上按 🎨 改造、上傳圖片，就能做出你的版本。',
+      saved: '還沒有收藏。<br>看到喜歡的遊戲按 🔖 存起來。', liked: '還沒按過愛心 ♥' }[tab];
+    grid.innerHTML = '<div class="gempty">' + msg + '</div>';
+    return;
+  }
+  for (const p of items) {
+    const e = p.entry;
+    const cell = document.createElement('div');
+    cell.className = 'gcell';
+    cell.style.background = e.bg;
+    const firstSprite = e.spriteData && Object.values(e.spriteData)[0];
+    const hero = firstSprite ? '<img src="' + firstSprite + '">'
+      : (e.remixSlots && e.remixSlots[0] ? e.remixSlots[0].default : '🎮');
+    cell.innerHTML = '<span class="hero">' + hero + '</span>' +
+      (p.remixOf ? '<span class="badge">改造</span>' : '') +
+      '<span class="cap">' + e.title.split('：')[0] + '</span>';
+    cell.addEventListener('click', () => {
       closeProfile();
-      const p = posts.find(p => p.id === g.id);
-      if (p) p.el.scrollIntoView({ behavior: 'smooth' });
+      const t = posts.find(x => x.id === p.id);
+      if (t) setTimeout(() => t.el.scrollIntoView(), 60);
     });
-    el.appendChild(item);
+    grid.appendChild(cell);
   }
 }
 
@@ -870,8 +892,12 @@ function makePost(entry, opts) {
         gest.swiped = true;
         if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
         const myIdx = posts.findIndex(pp => pp.el === post);   /* 即時算位置，插入 remix 後仍正確 */
-        const target = posts[myIdx + (dy < 0 ? 1 : -1)];       /* 往上滑=下一款 */
-        if (target) target.el.scrollIntoView({ behavior: 'smooth' });
+        let ni = myIdx + (dy < 0 ? 1 : -1);                    /* 往上滑=下一款 */
+        let wrap = false;
+        if (ni >= posts.length) { ni = 0; wrap = true; }        /* 最後一款再往上滑 → 回到第一款 */
+        else if (ni < 0) { ni = posts.length - 1; wrap = true; } /* 第一款往下滑 → 到最後一款 */
+        const target = posts[ni];
+        if (target) target.el.scrollIntoView({ behavior: wrap ? 'auto' : 'smooth' });
         return;
       }
     }
@@ -974,11 +1000,20 @@ async function loadRemixGames() {
   loadLikes(); loadSaves();
 }
 
-/* 分享連結直達指定遊戲 */
-if (location.hash) {
-  const target = posts.find(p => p.id === location.hash.slice(1));
-  if (target) setTimeout(() => target.el.scrollIntoView(), 60);
+/* 分享連結直達指定遊戲（含 remix：remix 是非同步載入，找不到就重試等它進來） */
+function goToHash(retries) {
+  if (!location.hash) return;
+  const id = decodeURIComponent(location.hash.slice(1));
+  const target = posts.find(p => p.id === id);
+  if (target) {
+    const jump = () => target.el.scrollIntoView();
+    jump(); requestAnimationFrame(jump); setTimeout(jump, 250);   /* 打敗版面尚未穩定造成的回到頂端 */
+  } else if (retries > 0) {
+    setTimeout(() => goToHash(retries - 1), 200);
+  }
 }
+goToHash(20);
+window.addEventListener('hashchange', () => goToHash(20));
 
 /* 桌機鍵盤 */
 document.addEventListener('keydown', e => {
