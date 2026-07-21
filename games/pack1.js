@@ -450,15 +450,39 @@ window.GAMES = (window.GAMES || []).concat([
 
 /* 8. 快刀切水果：滑動切，炸彈別切 */
 {
-  id: 'slice', title: '快刀切水果：手滑注意', author: '@夜市快刀手', tip: '手指滑過水果就能切，切到炸彈直接結束', bg: '#20242e',
+  id: 'slice', title: '快刀切水果：橫斬一刀流', author: '@夜市快刀手', tip: '點一下＝朝那個高度橫斬一刀，一刀多切有加分，炸彈的高度千萬別斬', bg: '#20242e',
   create(env) {
     const { ctx, setScore, over } = env;
     const colors = ['#e24b4a','#ef9f27','#97c459','#d4537e','#f0c33c'];
-    let fruits, trail, score, lives, frames, spawnT, raf, alive;
-    function reset() { fruits = []; trail = []; score = 0; lives = 3; frames = 0; spawnT = 40; alive = true; }
+    const BAND = 30;   /* 斬擊上下判定範圍 */
+    let fruits, slashes, pieces, pops, score, lives, frames, spawnT, cd, raf, alive;
+    function reset() { fruits = []; slashes = []; pieces = []; pops = []; score = 0; lives = 3; frames = 0; spawnT = 40; cd = 0; alive = true; }
     function end() { alive = false; cancelAnimationFrame(raf); beep(200, 40, 0.4, 0.25, 'sawtooth'); over(score); }
+    function slash(y) {
+      cd = 9;
+      slashes.push({ y, t: 12 });
+      let hitBomb = false, n = 0;
+      for (const f of fruits) {
+        if (f.dead || Math.abs(f.y - y) > BAND) continue;
+        if (f.bomb) { hitBomb = true; continue; }
+        f.dead = true; n++;
+        pieces.push({ x: f.x, y: f.y, vx: -2.5 - Math.random()*2, vy: -2 + Math.random()*2, c: f.c, r: f.r, a: 1, up: true });
+        pieces.push({ x: f.x, y: f.y, vx: 2.5 + Math.random()*2, vy: -2 + Math.random()*2, c: f.c, r: f.r, a: 1, up: false });
+      }
+      if (hitBomb) { end(); return; }
+      if (n > 0) {
+        const gain = n * 10 + (n - 1) * 15;
+        score += gain; setScore(score);
+        pops.push({ y: Math.max(60, y - 24), t: 46, txt: n > 1 ? n + ' 連切！+' + gain : '+' + gain });
+        beep(600 + n * 120, 1400, 0.09, 0.13);
+        if (n > 1) beep(900, 1600, 0.12, 0.1);
+      } else {
+        beep(500, 300, 0.05, 0.05);   /* 揮空 */
+      }
+    }
     function loop() {
       frames++;
+      if (cd > 0) cd--;
       if (--spawnT <= 0) {
         const n = 1 + (Math.random() < 0.4 ? 1 : 0) + (Math.random() < 0.15 ? 1 : 0);
         for (let i = 0; i < n; i++) fruits.push({
@@ -480,8 +504,12 @@ window.GAMES = (window.GAMES || []).concat([
         }
       }
       fruits = fruits.filter(f => !f.dead);
-      for (const p of trail) p.a -= 0.07;
-      trail = trail.filter(p => p.a > 0);
+      for (const p of pieces) { p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.a -= 0.025; }
+      pieces = pieces.filter(p => p.a > 0 && p.y < H + 60);
+      for (const s of slashes) s.t--;
+      slashes = slashes.filter(s => s.t > 0);
+      for (const p of pops) { p.t--; p.y -= 0.6; }
+      pops = pops.filter(p => p.t > 0);
       /* draw */
       ctx.fillStyle = '#20242e'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = 'rgba(255,255,255,0.05)';
@@ -498,14 +526,32 @@ window.GAMES = (window.GAMES || []).concat([
           ctx.beginPath(); ctx.arc(f.x - 8, f.y - 8, 8, 0, 7); ctx.fill();
         }
       }
-      if (trail.length > 1) {
-        ctx.lineCap = 'round';
-        for (let i = 1; i < trail.length; i++) {
-          ctx.strokeStyle = `rgba(255,255,255,${trail[i].a})`;
-          ctx.lineWidth = 6 * trail[i].a + 1;
-          ctx.beginPath(); ctx.moveTo(trail[i-1].x, trail[i-1].y);
-          ctx.lineTo(trail[i].x, trail[i].y); ctx.stroke();
-        }
+      /* 切開的水果碎塊（上下兩半飛開） */
+      for (const p of pieces) {
+        ctx.globalAlpha = Math.max(0, p.a);
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, p.up ? Math.PI : 0, p.up ? 0 : Math.PI);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      /* 橫斬刀光 */
+      ctx.lineCap = 'round';
+      for (const s of slashes) {
+        const a = s.t / 12;
+        ctx.strokeStyle = `rgba(255,255,255,${0.25 * a})`;
+        ctx.lineWidth = 14 * a + 2;
+        ctx.beginPath(); ctx.moveTo(8, s.y); ctx.lineTo(W - 8, s.y); ctx.stroke();
+        ctx.strokeStyle = `rgba(255,255,255,${0.95 * a})`;
+        ctx.lineWidth = 3 * a + 1;
+        ctx.beginPath(); ctx.moveTo(8, s.y); ctx.lineTo(W - 8, s.y); ctx.stroke();
+      }
+      /* 得分浮字 */
+      for (const p of pops) {
+        ctx.globalAlpha = Math.min(1, p.t / 20);
+        ctx.fillStyle = '#f0c33c'; ctx.font = '800 24px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText(p.txt, W / 2, p.y);
+        ctx.globalAlpha = 1;
       }
       for (let i = 0; i < 3; i++) {
         ctx.fillStyle = i < lives ? '#e0355f' : 'rgba(255,255,255,0.2)';
@@ -513,27 +559,13 @@ window.GAMES = (window.GAMES || []).concat([
       }
       if (alive) raf = requestAnimationFrame(loop);
     }
-    function cut(x, y) {
-      for (const f of fruits) {
-        if (f.dead) continue;
-        if ((x-f.x)*(x-f.x) + (y-f.y)*(y-f.y) < (f.r+10)*(f.r+10)) {
-          if (f.bomb) { end(); return; }
-          f.dead = true; score += 10; setScore(score);
-          beep(600 + Math.random()*400, 1300, 0.08, 0.13);
-        }
-      }
-    }
     return {
       start() { reset(); raf = requestAnimationFrame(loop); },
       stop() { alive = false; cancelAnimationFrame(raf); },
+      /* 純點按：點哪個高度就朝那個高度橫斬（上下滑動保留給 feed 捲動） */
       input(t, x, y) {
         if (!alive) return;
-        if (t === 'down' || t === 'move') {
-          trail.push({ x, y, a: 1 });
-          if (trail.length > 24) trail.shift();
-          cut(x, y);
-        }
-        if (t === 'up') trail = [];
+        if (t === 'down' && cd <= 0) slash(y);
       }
     };
   }
