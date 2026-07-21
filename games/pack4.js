@@ -5,9 +5,24 @@ window.GAMES = (window.GAMES || []).concat([
 
 {
   id: 'crossy-chicken', title: '小雞過馬路：能過幾條是幾條', author: '@馬路安全宣導大使', tip: '點中間往前跳、點左右兩側橫移，發呆太久會被老鷹抓走', bg: '#7ec850',
+  remixSlots: [
+    { key: 'player', label: '主角小雞', hint: '你的角色，在最下面跳', default: '🐔' },
+    { key: 'car',    label: '車子',     hint: '路上會撞死你的車',     default: '🚗' },
+    { key: 'tree',   label: '樹',       hint: '草地上的障礙物',       default: '🌳' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const W = env.W, H = env.H;
+    /* 可換圖元素：有上傳圖片就畫圖，否則畫預設 emoji */
+    function spr(key, emoji, cx, cy, size, flip) {
+      const im = env.getSprite && env.getSprite(key);
+      ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
+      if (im) {
+        const s = Math.min(size / im.width, size / im.height), w = im.width * s, hh = im.height * s;
+        ctx.drawImage(im, -w/2, -hh/2, w, hh);
+      } else { ctx.font = size + 'px serif'; ctx.fillText(emoji, 0, 0); }
+      ctx.restore();
+    }
     const T = 58, NC = 6, CW = W / NC, BASE = H - 190;
     const CAR_EMOJI = ['🚗','🚙','🚕','🚌','🛻'];
     let rows, pr, prF, px, hop, maxR, cam, alive, raf, idleT, eagle, deadT, deadGlyph, frames, land, splash;
@@ -157,11 +172,10 @@ window.GAMES = (window.GAMES || []).concat([
           /* 立體感：上緣提亮、下緣壓暗 */
           ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fillRect(0, y - T/2, W, 3);
           ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(0, y + T/2 - 4, W, 4);
-          ctx.font = '40px serif';
           for (const c of row.trees) {
             ctx.fillStyle = 'rgba(0,0,0,0.12)';
             ctx.beginPath(); ctx.ellipse((c + 0.5) * CW, y + 16, 17, 6, 0, 0, 6.283); ctx.fill();
-            ctx.fillText('🌳', (c + 0.5) * CW, y - 6);
+            spr('tree', '🌳', (c + 0.5) * CW, y - 6, 40);
           }
         } else if (row.type === 'road') {
           ctx.fillStyle = '#5a5a62'; ctx.fillRect(0, y - T/2, W, T);
@@ -169,16 +183,12 @@ window.GAMES = (window.GAMES || []).concat([
           ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.setLineDash([16, 16]);
           ctx.beginPath(); ctx.moveTo(0, y + T/2); ctx.lineTo(W, y + T/2); ctx.stroke();
           ctx.setLineDash([]);
-          ctx.font = '42px serif';
-          ctx.save();
           for (const cx of row.cars) {
             /* 車底陰影 */
             ctx.fillStyle = 'rgba(0,0,0,0.16)';
             ctx.beginPath(); ctx.ellipse(cx, y + 14, 24, 6, 0, 0, 6.283); ctx.fill();
-            if (row.dir < 0) { ctx.translate(cx, y); ctx.scale(-1, 1); ctx.fillText(row.glyph, 0, 0); ctx.setTransform(1,0,0,1,0,0); }
-            else ctx.fillText(row.glyph, cx, y);
+            spr('car', row.glyph, cx, y, 42, row.dir < 0);
           }
-          ctx.restore();
         } else {
           ctx.fillStyle = '#4f8fd0'; ctx.fillRect(0, y - T/2, W, T);
           ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.fillRect(0, y - T/2, W, 3);
@@ -212,8 +222,14 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.save();
       ctx.translate(px, py - 8 + arc);
       ctx.scale(1 + land * 0.22, 1 - land * 0.22);
-      ctx.font = '44px serif';
-      ctx.fillText(alive ? '🐔' : deadGlyph, 0, 0);
+      const pim = alive && env.getSprite && env.getSprite('player');
+      if (pim) {
+        const s = Math.min(44 / pim.width, 44 / pim.height), w = pim.width * s, hh = pim.height * s;
+        ctx.drawImage(pim, -w/2, -hh/2, w, hh);
+      } else {
+        ctx.font = '44px serif';
+        ctx.fillText(alive ? '🐔' : deadGlyph, 0, 0);
+      }
       ctx.restore();
       /* 老鷹 */
       if (eagle) {
