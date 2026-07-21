@@ -6,9 +6,10 @@ window.GAMES = (window.GAMES || []).concat([
 {
   id: 'crossy-chicken', title: '小雞過馬路：能過幾條是幾條', author: '@馬路安全宣導大使', tip: '點中間往前跳、點左右兩側橫移，發呆太久會被老鷹抓走', bg: '#7ec850',
   remixSlots: [
-    { key: 'player', label: '主角小雞', hint: '你的角色，在最下面跳', default: '🐔' },
-    { key: 'car',    label: '車子',     hint: '路上會撞死你的車',     default: '🚗' },
-    { key: 'tree',   label: '樹',       hint: '草地上的障礙物',       default: '🌳' }
+    { key: 'player', label: '主角小雞', hint: '你的角色，在最下面跳', default: '🐔', shape: 'free' },
+    { key: 'car',    label: '車子',     hint: '路上會撞死你的車',     default: '🚗', shape: 'wide' },
+    { key: 'tree',   label: '樹',       hint: '草地上的障礙物',       default: '🌳', shape: 'free' },
+    { key: 'eagle',  label: '老鷹',     hint: '發呆太久會俯衝抓你',   default: '🦅', shape: 'free' }
   ],
   create(env) {
     const { ctx, setScore, over } = env;
@@ -235,7 +236,7 @@ window.GAMES = (window.GAMES || []).concat([
       if (eagle) {
         ctx.fillStyle = 'rgba(0,0,0,0.14)';
         ctx.beginPath(); ctx.ellipse(px, py + 14, 20, 6, 0, 0, 6.283); ctx.fill();
-        ctx.font = '58px serif'; ctx.fillText('🦅', px, eagle.y);
+        spr('eagle', '🦅', px, eagle.y, 60);
       }
       /* 發呆警告 */
       if (alive && idleT > 280 && !eagle && Math.floor(frames / 14) % 2 === 0) {

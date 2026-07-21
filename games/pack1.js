@@ -7,7 +7,10 @@ window.GAMES = (window.GAMES || []).concat([
 /* 1. 毛怪過馬路：左右閃避 + 貼身加分 */
 {
   id: 'dodge', title: '毛怪過馬路：離車越近分越高', author: '@playfeed 官方', tip: '點左右半邊移動，貼著車走有加分', bg: '#8a8a8a',
-  remixSlots: [{ key: 'player', label: '毛怪', hint: '你操控的角色', default: '👾' }],
+  remixSlots: [
+    { key: 'player', label: '毛怪（主角）', hint: '你操控的角色', default: '👾', shape: 'free' },
+    { key: 'car', label: '車子', hint: '要閃避的車', default: '🚗', shape: 'wide' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -52,10 +55,12 @@ window.GAMES = (window.GAMES || []).concat([
       for (let i = 0; i < 7; i++) ctx.fillRect(i*60+10, H-96, 42, 16);
       for (const c of cars) {
         const x = lx(c.lane) - LW*0.31;
-        ctx.fillStyle = c.c;
-        ctx.beginPath(); ctx.roundRect(x, c.y, LW*0.62, 100, 12); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.beginPath(); ctx.roundRect(x+9, c.y+12, LW*0.62-18, 22, 6); ctx.fill();
+        if (!sprite('car', lx(c.lane), c.y + 50, 108)) {
+          ctx.fillStyle = c.c;
+          ctx.beginPath(); ctx.roundRect(x, c.y, LW*0.62, 100, 12); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.beginPath(); ctx.roundRect(x+9, c.y+12, LW*0.62-18, 22, 6); ctx.fill();
+        }
       }
       const jit = danger > 0.6 ? (Math.random()-0.5) * danger * 5 : 0, X = px + jit;
       if (!sprite('player', X, PY, 74)) {
@@ -84,7 +89,10 @@ window.GAMES = (window.GAMES || []).concat([
 /* 2. 珍珠快接：拖曳杯子接珍珠，別接到炸彈 */
 {
   id: 'boba', title: '珍珠快接：手搖店打工日常', author: '@奶茶研究所', tip: '左右拖曳杯子，接珍珠、閃炸彈', bg: '#f3e2c8',
-  remixSlots: [{ key: 'pearl', label: '珍珠', hint: '要接住的東西', default: '⚫' }],
+  remixSlots: [
+    { key: 'pearl', label: '珍珠', hint: '要接住的東西', default: '⚫', shape: 'circle' },
+    { key: 'bomb', label: '炸彈', hint: '要閃開的危險物', default: '💣', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -115,9 +123,11 @@ window.GAMES = (window.GAMES || []).concat([
       for (let i = 0; i < 5; i++) ctx.fillRect(0, i*160+30, W, 14);
       for (const it of items) {
         if (it.bomb) {
-          ctx.fillStyle = '#33313b'; ctx.beginPath(); ctx.arc(it.x, it.y, 16, 0, 7); ctx.fill();
-          ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.moveTo(it.x+8, it.y-12); ctx.lineTo(it.x+16, it.y-22); ctx.stroke();
+          if (!sprite('bomb', it.x, it.y, 42)) {
+            ctx.fillStyle = '#33313b'; ctx.beginPath(); ctx.arc(it.x, it.y, 16, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(it.x+8, it.y-12); ctx.lineTo(it.x+16, it.y-22); ctx.stroke();
+          }
         } else if (!sprite('pearl', it.x, it.y, 30)) {
           ctx.fillStyle = '#3a2417'; ctx.beginPath(); ctx.arc(it.x, it.y, 13, 0, 7); ctx.fill();
           ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(it.x-4, it.y-4, 4, 0, 7); ctx.fill();
@@ -204,7 +214,7 @@ window.GAMES = (window.GAMES || []).concat([
 /* 4. 泡泡上升：點擊上浮，穿過縫隙 */
 {
   id: 'bubble', title: '泡泡上升：辦公室逃脫', author: '@社畜救援隊', tip: '點一下浮一下，穿過縫隙別破掉', bg: '#12333f',
-  remixSlots: [{ key: 'bubble', label: '泡泡', hint: '你控制的主角', default: '🫧' }],
+  remixSlots: [{ key: 'bubble', label: '泡泡（主角）', hint: '你控制的主角', default: '🫧', shape: 'circle' }],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -327,7 +337,10 @@ window.GAMES = (window.GAMES || []).concat([
 /* 6. 打地鼠：點地鼠別點炸彈 */
 {
   id: 'mole', title: '打地鼠：下班壓力釋放', author: '@打卡下班委員會', tip: '點地鼠加分、炸彈別碰，讓地鼠跑掉會扣命', bg: '#3f6b3a',
-  remixSlots: [{ key: 'mole', label: '地鼠', hint: '要打的目標', default: '🐹' }],
+  remixSlots: [
+    { key: 'mole', label: '地鼠', hint: '要打的目標', default: '🐹', shape: 'circle' },
+    { key: 'bomb', label: '炸彈', hint: '千萬別打的東西', default: '💣', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -367,10 +380,12 @@ window.GAMES = (window.GAMES || []).concat([
       for (const m of moles) {
         const x = cols[m.cell%3], y = rows[(m.cell/3)|0] - m.pop * 26 + 10;
         if (m.bomb) {
-          ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill();
-          ctx.strokeStyle = '#e24b4a'; ctx.lineWidth = 5;
-          ctx.beginPath(); ctx.moveTo(x-11, y-11); ctx.lineTo(x+11, y+11);
-          ctx.moveTo(x+11, y-11); ctx.lineTo(x-11, y+11); ctx.stroke();
+          if (!sprite('bomb', x, y, 62)) {
+            ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#e24b4a'; ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.moveTo(x-11, y-11); ctx.lineTo(x+11, y+11);
+            ctx.moveTo(x+11, y-11); ctx.lineTo(x-11, y+11); ctx.stroke();
+          }
         } else if (!sprite('mole', x, y, 64)) {
           ctx.fillStyle = '#7a5230'; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill();
           ctx.fillStyle = '#a8794f'; ctx.beginPath(); ctx.arc(x, y+9, 17, 0, 7); ctx.fill();
@@ -407,7 +422,7 @@ window.GAMES = (window.GAMES || []).concat([
 /* 7. 一二三木頭人：按住前進，紅燈別動 */
 {
   id: 'redlight', title: '一二三木頭人：膽量測試', author: '@操場守門員', tip: '按住前進、放開停下，紅燈還在動就出局', bg: '#c9b98f',
-  remixSlots: [{ key: 'player', label: '玩家', hint: '偷偷前進的角色', default: '🏃' }],
+  remixSlots: [{ key: 'player', label: '玩家（主角）', hint: '偷偷前進的角色', default: '🏃', shape: 'free' }],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -467,7 +482,10 @@ window.GAMES = (window.GAMES || []).concat([
 /* 8. 快刀切水果：滑動切，炸彈別切 */
 {
   id: 'slice', title: '快刀切水果：橫斬一刀流', author: '@夜市快刀手', tip: '點一下＝朝那個高度橫斬一刀，一刀多切有加分，炸彈的高度千萬別斬', bg: '#20242e',
-  remixSlots: [{ key: 'fruit', label: '水果', hint: '要切的目標', default: '🍉' }],
+  remixSlots: [
+    { key: 'fruit', label: '水果', hint: '要切的目標', default: '🍉', shape: 'circle' },
+    { key: 'bomb', label: '炸彈', hint: '別切到的東西', default: '💣', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -534,10 +552,12 @@ window.GAMES = (window.GAMES || []).concat([
       for (let i = 0; i < 20; i++) ctx.fillRect((i*83)%W, (i*149)%H, 2, 2);
       for (const f of fruits) {
         if (f.bomb) {
-          ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
-          ctx.strokeStyle = '#e24b4a'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.moveTo(f.x + 12, f.y - 18); ctx.lineTo(f.x + 22, f.y - 32); ctx.stroke();
-          ctx.fillStyle = '#f0c33c'; ctx.beginPath(); ctx.arc(f.x + 24, f.y - 34, 4, 0, 7); ctx.fill();
+          if (!sprite('bomb', f.x, f.y, f.r * 2 + 12)) {
+            ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#e24b4a'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(f.x + 12, f.y - 18); ctx.lineTo(f.x + 22, f.y - 32); ctx.stroke();
+            ctx.fillStyle = '#f0c33c'; ctx.beginPath(); ctx.arc(f.x + 24, f.y - 34, 4, 0, 7); ctx.fill();
+          }
         } else if (!sprite('fruit', f.x, f.y, f.r * 2 + 10)) {
           ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
           ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -643,7 +663,10 @@ window.GAMES = (window.GAMES || []).concat([
 /* 10. 跳跳羊：點擊跳過柵欄 */
 {
   id: 'sheep', title: '跳跳羊：翻過柵欄回家', author: '@牧場物語同好會', tip: '點一下起跳，柵欄會越來越快', bg: '#87b5d6',
-  remixSlots: [{ key: 'sheep', label: '跳跳羊', hint: '你控制的角色', default: '🐑' }],
+  remixSlots: [
+    { key: 'sheep', label: '跳跳羊（主角）', hint: '你控制的角色', default: '🐑', shape: 'free' },
+    { key: 'fence', label: '柵欄', hint: '要跳過的障礙', default: '🚧', shape: 'tall' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
@@ -679,12 +702,14 @@ window.GAMES = (window.GAMES || []).concat([
       }
       ctx.fillStyle = '#6ca24f'; ctx.fillRect(0, GY + 26, W, H - GY);
       ctx.fillStyle = '#578540'; ctx.fillRect(0, GY + 26, W, 8);
-      ctx.fillStyle = '#8a5a2b';
       for (const f of fences) {
-        ctx.fillRect(f.x - 14, GY + 28 - f.h, 8, f.h);
-        ctx.fillRect(f.x + 6, GY + 28 - f.h, 8, f.h);
-        ctx.fillRect(f.x - 20, GY + 34 - f.h, 40, 7);
-        ctx.fillRect(f.x - 20, GY + 30 - f.h/2, 40, 7);
+        if (!sprite('fence', f.x, GY + 28 - f.h / 2, Math.max(48, f.h + 10))) {
+          ctx.fillStyle = '#8a5a2b';
+          ctx.fillRect(f.x - 14, GY + 28 - f.h, 8, f.h);
+          ctx.fillRect(f.x + 6, GY + 28 - f.h, 8, f.h);
+          ctx.fillRect(f.x - 20, GY + 34 - f.h, 40, 7);
+          ctx.fillRect(f.x - 20, GY + 30 - f.h/2, 40, 7);
+        }
       }
       const hop = y < GY ? -4 : 0;
       if (!sprite('sheep', SX, y - 6 + hop, 72)) {

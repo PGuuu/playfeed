@@ -6,10 +6,14 @@ window.GAMES = (window.GAMES || []).concat([
 
 {
   id: 'potato-peel', title: '削馬鈴薯：限時削皮大賽', author: '@廚房修行中', tip: '刀子左右來回移動，抓準時機點一下削掉整條皮，30 秒能削幾顆？', bg: '#f0e3cf',
-  remixSlots: [{ key: 'potato', label: '馬鈴薯', hint: '要削皮的東西（削掉後露出裡面）', default: '🥔' }],
+  remixSlots: [
+    { key: 'potato', label: '馬鈴薯', hint: '要削皮的東西（削掉後露出裡面）', default: '🥔', shape: 'circle' },
+    { key: 'knife', label: '刀子', hint: '左右巡邏、點按下削的刀', default: '🔪', shape: 'tall' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
     const getSprite = env.getSprite || (() => null);
+    const sprite = env.sprite || (() => false);
     const CX = 200, CY = 330, KY = 148, BASE_TIME = 30 * 60;   /* 30 秒（畫格） */
     let strips, nStrips, rx, ry, score, timeLeft, potatoes, raf, alive, banner, speckles, knife, peels, shake;
 
@@ -163,16 +167,18 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.setLineDash([6, 7]);
       ctx.beginPath(); ctx.moveTo(kx, ky + 46); ctx.lineTo(kx, botY(kx) || CY + ry); ctx.stroke();
       ctx.setLineDash([]);
-      /* 刀刃（朝下） */
-      ctx.fillStyle = '#cfd6dc';
-      ctx.beginPath();
-      ctx.moveTo(kx - 11, ky - 12); ctx.lineTo(kx + 11, ky - 12);
-      ctx.lineTo(kx + 7, ky + 34); ctx.lineTo(kx, ky + 46); ctx.lineTo(kx - 7, ky + 34);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1.5; ctx.stroke();
-      /* 刀柄 */
-      ctx.fillStyle = '#7a5230';
-      ctx.beginPath(); ctx.roundRect(kx - 8, ky - 46, 16, 38, 7); ctx.fill();
+      if (!sprite('knife', kx, ky, 96)) {
+        /* 刀刃（朝下） */
+        ctx.fillStyle = '#cfd6dc';
+        ctx.beginPath();
+        ctx.moveTo(kx - 11, ky - 12); ctx.lineTo(kx + 11, ky - 12);
+        ctx.lineTo(kx + 7, ky + 34); ctx.lineTo(kx, ky + 46); ctx.lineTo(kx - 7, ky + 34);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1.5; ctx.stroke();
+        /* 刀柄 */
+        ctx.fillStyle = '#7a5230';
+        ctx.beginPath(); ctx.roundRect(kx - 8, ky - 46, 16, 38, 7); ctx.fill();
+      }
       ctx.restore();
       /* 提示 */
       ctx.fillStyle = 'rgba(107,84,51,0.65)'; ctx.font = '500 14px system-ui';

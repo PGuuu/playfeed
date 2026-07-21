@@ -138,6 +138,17 @@
   #remixSave { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-weight: 600;
     font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
   #remixSave:disabled { opacity: 0.6; cursor: default; }
+  /* 這個遊戲已有的改造版（橫向捲動的縮圖） */
+  #remixVersions { display: flex; gap: 8px; overflow-x: auto; padding: 10px 18px 2px; scrollbar-width: none; }
+  #remixVersions::-webkit-scrollbar { display: none; }
+  #remixVersions:empty { display: none; }
+  .verchip { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; width: 62px; }
+  .verchip .sw { width: 54px; height: 54px; border-radius: 12px; flex: none; }
+  .verchip .nm { font-size: 11px; color: #bcbcd0; max-width: 62px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+  .verchip.cur .sw { outline: 2px solid #6a5ad0; outline-offset: 1px; }
+  .vhead { font-size: 12px; color: #9a9ab0; padding: 12px 18px 0; }
 
   /* 登入視窗（Phuze magic link） */
   #login { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6);
@@ -196,6 +207,8 @@
   <div class="head"><b>我的頁面</b><button id="profileClose">&#10005;</button></div>
   <div class="who"><span id="profileWho"></span><button id="logoutBtn">登出</button></div>
   <div id="profileBody">
+    <div class="psec">&#127912; 我做的改造</div>
+    <div id="myRemixList"></div>
     <div class="psec">&#128278; 收藏的遊戲</div>
     <div id="savedList"></div>
     <div class="psec">&#9829; 按過讚的</div>
@@ -205,7 +218,8 @@
 
 <div id="remixSheet">
   <div class="head"><b id="remixTitle">改造這個遊戲</b><button id="remixClose">&#10005;</button></div>
-  <div class="note">上傳圖片替換遊戲元素（建議 PNG 透明背景），改好會即時顯示在上面的畫面。<br>儲存後就變成大家都能玩的新遊戲（需要登入）。</div>
+  <div id="remixVersions"></div>
+  <div class="note">上傳圖片替換遊戲元素（建議 PNG 透明背景）。圖會置中縮放對齊虛線輪廓，<br>改好會即時顯示在上面的畫面。儲存後變成大家都能玩的新遊戲（需登入）。</div>
   <div id="remixSlots"></div>
   <div id="remixFoot">
     <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
@@ -338,6 +352,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 function renderProfile() {
   document.getElementById('profileWho').textContent =
     user ? displayName(user) + (user.email ? '（' + user.email + '）' : '') : '';
+  fillGameList('myRemixList', posts.filter(p => p.entry.remixMeta && user && p.entry.remixMeta.user_id === user.id).map(p => p.entry),
+    '還沒做過改造。在遊戲上按右邊的 🎨 改造，上傳圖片就能做出你自己的版本。');
   fillGameList('savedList', posts.filter(p => saveState[p.id]).map(p => p.entry),
     '還沒有收藏。看到喜歡的遊戲，按右邊的 🔖 存起來。');
   fillGameList('likedList', posts.filter(p => likeState[p.id] && likeState[p.id].mine).map(p => p.entry),
@@ -490,17 +506,24 @@ function buildShareCard(snapURL, title, score, cb) {
   img.onload = () => {
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const cx = c.getContext('2d');
-    cx.drawImage(img, 0, 0, W, H);
-    const grd = cx.createLinearGradient(0, H - 240, 0, H);
-    grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.85)');
-    cx.fillStyle = grd; cx.fillRect(0, H - 240, W, 240);
+    cx.drawImage(img, 0, 0, W, H);           /* 精華截圖：結算那一刻的畫面 */
+    /* 頂部徽章 */
+    const tg = cx.createLinearGradient(0, 0, 0, 120);
+    tg.addColorStop(0, 'rgba(0,0,0,0.55)'); tg.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = tg; cx.fillRect(0, 0, W, 120);
+    cx.textAlign = 'left'; cx.fillStyle = '#fff'; cx.font = '800 20px system-ui';
+    cx.fillText('🎮 PlayFeed', 20, 42);
+    /* 底部：遊戲名 + 大分數 */
+    const grd = cx.createLinearGradient(0, H - 260, 0, H);
+    grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.88)');
+    cx.fillStyle = grd; cx.fillRect(0, H - 260, W, 260);
     cx.textAlign = 'center';
-    cx.fillStyle = '#fff'; cx.font = '800 30px system-ui';
-    cx.fillText(title.split('：')[0], W / 2, H - 92);
-    cx.font = '800 48px system-ui';
-    cx.fillText(score + ' 分', W / 2, H - 44);
-    cx.fillStyle = 'rgba(255,255,255,0.72)'; cx.font = '600 14px system-ui';
-    cx.fillText('PlayFeed · playfeed-gilt.vercel.app', W / 2, H - 16);
+    cx.fillStyle = 'rgba(255,255,255,0.9)'; cx.font = '700 26px system-ui';
+    cx.fillText(title.split('：')[0], W / 2, H - 108);
+    cx.fillStyle = '#ffd75e'; cx.font = '900 60px system-ui';
+    cx.fillText(score + '', W / 2, H - 50);
+    cx.fillStyle = 'rgba(255,255,255,0.85)'; cx.font = '600 15px system-ui';
+    cx.fillText('分 · 換你來破紀錄', W / 2, H - 24);
     cb(c.toDataURL('image/png'));
   };
   img.onerror = () => cb(null);
@@ -509,17 +532,22 @@ function buildShareCard(snapURL, title, score, cb) {
 async function shareScoreCard(cardURL, g, score) {
   const url = location.origin + location.pathname + '#' + g.id;
   const text = '我在 PlayFeed 玩《' + g.title.split('：')[0] + '》拿了 ' + score + ' 分！來挑戰 👉';
+  let file = null;
   try {
     const blob = await (await fetch(cardURL)).blob();
-    const file = new File([blob], 'playfeed-score.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text, url }); return;
-    }
-    if (navigator.share) { await navigator.share({ text, url }); return; }
-    const a = document.createElement('a'); a.href = cardURL; a.download = 'playfeed-score.png'; a.click();
-    try { await navigator.clipboard.writeText(url); toast('成績圖已下載，連結也複製好了'); }
-    catch (e) { toast('成績圖已下載'); }
-  } catch (e) { /* 使用者取消分享 */ }
+    file = new File([blob], 'playfeed-score.png', { type: 'image/png' });
+  } catch (e) {}
+  /* 1. 首選：原生分享「帶精華圖」 */
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], text, url }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  /* 2. 不支援帶圖分享：下載精華圖（確保圖一定到手）+ 複製文字連結 */
+  const a = document.createElement('a'); a.href = cardURL; a.download = 'playfeed-score.png'; a.click();
+  let copied = false;
+  try { await navigator.clipboard.writeText(text + ' ' + url); copied = true; } catch (e) {}
+  if (navigator.share) { try { await navigator.share({ text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  toast(copied ? '精華圖已下載，文字連結也複製好了' : '精華圖已下載');
 }
 
 /* ---------- Remix：上傳圖片替換元素 → 發佈成新遊戲（存後端 remixes 表） ---------- */
@@ -562,6 +590,7 @@ function openRemix(entry) {
   activeRemix = { entry, draft };
   document.getElementById('remixTitle').textContent = '改造《' + entry.title.split('：')[0] + '》';
   document.getElementById('remixName').value = '';
+  renderRemixVersions();
   renderRemixSlots();
   remixSheet.classList.add('open'); backdrop.classList.add('open');
   const p = posts.find(p => p.id === entry.id);   /* 讓上面的畫面在跑，才看得到即時預覽 */
@@ -569,6 +598,49 @@ function openRemix(entry) {
 }
 function closeRemix() { remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null; }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
+/* 這個遊戲已有的改造版：可直接跳過去玩 */
+function renderRemixVersions() {
+  const host = document.getElementById('remixVersions');
+  const baseId = activeRemix.entry.base.id;
+  const related = posts.filter(p => p.id === baseId || p.remixOf === baseId);
+  if (related.length <= 1) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div class="vhead" style="padding-left:0">這個遊戲的版本（' + related.length + '）：點縮圖直接玩</div>';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;';
+  for (const p of related) {
+    const chip = document.createElement('div');
+    chip.className = 'verchip' + (p.id === activeRemix.entry.id ? ' cur' : '');
+    const nm = p.remixOf ? p.entry.title : '原版';
+    chip.innerHTML = '<span class="sw" style="background:' + p.entry.bg + '"></span><span class="nm">' + nm + '</span>';
+    chip.addEventListener('click', () => { closeRemix(); setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60); });
+    row.appendChild(chip);
+  }
+  host.appendChild(row);
+}
+/* 槽位預覽：畫出元素的輪廓＋你上傳的圖，讓你知道圖會怎麼縮放對齊 */
+function drawSlotPreview(cvs, slot, cur) {
+  const S = 58, pad = 7, ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, S, S);
+  const shape = slot.shape || 'free';
+  let bw = S - 2 * pad, bh = S - 2 * pad;
+  if (shape === 'wide') bh = 32;
+  else if (shape === 'tall') bw = 34;
+  const bx = (S - bw) / 2, by = (S - bh) / 2;
+  const im = cur && cur.img;
+  if (im && im.complete && im.naturalWidth) {
+    const sc = Math.min(bw / im.width, bh / im.height), w = im.width * sc, h = im.height * sc;
+    ctx.drawImage(im, (S - w) / 2, (S - h) / 2, w, h);
+  } else {
+    ctx.globalAlpha = 0.5; ctx.font = Math.min(bw, bh) * 0.78 + 'px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(slot.default, S / 2, S / 2 + 2); ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  if (shape === 'circle') ctx.arc(S / 2, S / 2, Math.min(bw, bh) / 2, 0, 6.283);
+  else ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.stroke(); ctx.setLineDash([]);
+}
 function renderRemixSlots() {
   const host = document.getElementById('remixSlots');
   host.innerHTML = '';
@@ -577,10 +649,11 @@ function renderRemixSlots() {
     const row = document.createElement('div');
     row.className = 'slot';
     row.innerHTML =
-      '<div class="preview">' + (cur ? '<img src="' + cur.dataURL + '">' : slot.default) + '</div>' +
+      '<canvas class="preview" width="58" height="58"></canvas>' +
       '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
       '<div class="acts"><button class="up">' + (cur ? '換一張' : '上傳圖片') + '</button>' +
       '<button class="rst"' + (cur ? '' : ' disabled') + '>還原</button></div>';
+    drawSlotPreview(row.querySelector('canvas'), slot, cur);
     row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
     row.querySelector('.rst').addEventListener('click', () => { delete activeRemix.draft[slot.key]; renderRemixSlots(); });
     host.appendChild(row);
@@ -870,7 +943,7 @@ function toRemixEntry(r) {
   return { id: 'remix:' + r.id, base, title: r.name,
            author: '@' + (r.author || '玩家') + '·改造', tip: base.tip, bg: base.bg,
            remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
-           spriteData: r.sprites || {}, remixOf: r.base_id };
+           spriteData: r.sprites || {}, remixOf: r.base_id, remixMeta: r };
 }
 function addPost(po, index) {
   if (index == null || index >= posts.length) { feed.appendChild(po.el); posts.push(po); }
