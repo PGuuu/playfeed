@@ -6,6 +6,7 @@ drop table if exists public.likes cascade;
 drop table if exists public.comments cascade;
 drop table if exists public.scores cascade;
 drop table if exists public.saves cascade;
+drop table if exists public.remixes cascade;
 
 -- user_id 是 Phuze 發的會員編號（一串文字），不是 Supabase 自己的帳號系統
 create table public.likes (
@@ -42,10 +43,22 @@ create table public.saves (
   unique (game_id, user_id)
 );
 
+-- Remix：玩家改造後發佈的新遊戲版本（sprites 是 {槽位: 圖片dataURL}）
+create table public.remixes (
+  id uuid primary key default gen_random_uuid(),
+  base_id text not null,
+  user_id text not null,
+  name text not null,
+  author text not null default '玩家',
+  sprites jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+
 alter table public.likes enable row level security;
 alter table public.comments enable row level security;
 alter table public.scores enable row level security;
 alter table public.saves enable row level security;
+alter table public.remixes enable row level security;
 
 -- 因為登入是 Phuze 管的，Supabase 這邊驗不了身分，
 -- 所以政策先全開（適合小型社群實驗；要更嚴格的防偽造再跟 Claude 說，
@@ -64,3 +77,7 @@ create policy "update scores" on public.scores for update using (true) with chec
 create policy "read saves" on public.saves for select using (true);
 create policy "write saves" on public.saves for insert with check (true);
 create policy "remove saves" on public.saves for delete using (true);
+
+create policy "read remixes" on public.remixes for select using (true);
+create policy "write remixes" on public.remixes for insert with check (true);
+create policy "remove remixes" on public.remixes for delete using (true);

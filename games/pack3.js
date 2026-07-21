@@ -6,8 +6,10 @@ window.GAMES = (window.GAMES || []).concat([
 
 {
   id: 'potato-peel', title: '削馬鈴薯：限時削皮大賽', author: '@廚房修行中', tip: '刀子左右來回移動，抓準時機點一下削掉整條皮，30 秒能削幾顆？', bg: '#f0e3cf',
+  remixSlots: [{ key: 'potato', label: '馬鈴薯', hint: '要削皮的東西（削掉後露出裡面）', default: '🥔' }],
   create(env) {
     const { ctx, setScore, over } = env;
+    const getSprite = env.getSprite || (() => null);
     const CX = 200, CY = 330, KY = 148, BASE_TIME = 30 * 60;   /* 30 秒（畫格） */
     let strips, nStrips, rx, ry, score, timeLeft, potatoes, raf, alive, banner, speckles, knife, peels, shake;
 
@@ -124,13 +126,18 @@ window.GAMES = (window.GAMES || []).concat([
         ctx.beginPath(); ctx.roundRect(-p.w / 2, -5, p.w, 10, 5); ctx.fill();
         ctx.restore();
       }
-      /* 馬鈴薯：生皮 */
+      /* 馬鈴薯：生皮（可換圖，削掉後露出裡面的果肉） */
       ctx.save();
       potatoPath(); ctx.clip();
-      ctx.fillStyle = '#b98d4f';
-      ctx.fillRect(CX - rx, CY - ry, rx * 2, ry * 2);
-      ctx.fillStyle = 'rgba(90,60,25,0.25)';
-      for (const s of speckles) { ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, 6.283); ctx.fill(); }
+      const skin = getSprite('potato');
+      if (skin) {
+        ctx.drawImage(skin, CX - rx, CY - ry, rx * 2, ry * 2);
+      } else {
+        ctx.fillStyle = '#b98d4f';
+        ctx.fillRect(CX - rx, CY - ry, rx * 2, ry * 2);
+        ctx.fillStyle = 'rgba(90,60,25,0.25)';
+        for (const s of speckles) { ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, 6.283); ctx.fill(); }
+      }
       /* 已削的部分 */
       for (const st of strips) {
         ctx.fillStyle = '#ecd9a4';

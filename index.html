@@ -131,6 +131,13 @@
   .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
     cursor: pointer; }
   .slot .rst[disabled] { opacity: 0.35; cursor: default; }
+  #remixFoot { display: flex; gap: 8px; padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255,255,255,0.08); }
+  #remixName { flex: 1; min-width: 0; background: #23232d; border: none; border-radius: 999px; color: #fff;
+    font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
+  #remixSave { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-weight: 600;
+    font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
+  #remixSave:disabled { opacity: 0.6; cursor: default; }
 
   /* 登入視窗（Phuze magic link） */
   #login { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6);
@@ -198,8 +205,12 @@
 
 <div id="remixSheet">
   <div class="head"><b id="remixTitle">改造這個遊戲</b><button id="remixClose">&#10005;</button></div>
-  <div class="note">上傳你自己的圖片替換遊戲元素（建議 PNG 透明背景）。<br>改好會即時顯示在上面的畫面，目前只存在這台裝置。</div>
+  <div class="note">上傳圖片替換遊戲元素（建議 PNG 透明背景），改好會即時顯示在上面的畫面。<br>儲存後就變成大家都能玩的新遊戲（需要登入）。</div>
   <div id="remixSlots"></div>
+  <div id="remixFoot">
+    <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
+    <button id="remixSave">儲存成新遊戲</button>
+  </div>
   <input type="file" id="remixFile" accept="image/*" style="display:none">
 </div>
 
@@ -327,9 +338,9 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 function renderProfile() {
   document.getElementById('profileWho').textContent =
     user ? displayName(user) + (user.email ? '（' + user.email + '）' : '') : '';
-  fillGameList('savedList', (window.GAMES || []).filter(g => saveState[g.id]),
+  fillGameList('savedList', posts.filter(p => saveState[p.id]).map(p => p.entry),
     '還沒有收藏。看到喜歡的遊戲，按右邊的 🔖 存起來。');
-  fillGameList('likedList', (window.GAMES || []).filter(g => likeState[g.id] && likeState[g.id].mine),
+  fillGameList('likedList', posts.filter(p => likeState[p.id] && likeState[p.id].mine).map(p => p.entry),
     '還沒按過讚。');
 }
 function fillGameList(elId, games, emptyMsg) {
@@ -343,7 +354,7 @@ function fillGameList(elId, games, emptyMsg) {
       '<span><div class="t">' + g.title + '</div><div class="a">' + g.author + '</div></span>';
     item.addEventListener('click', () => {
       closeProfile();
-      const p = posts.find(p => p.g.id === g.id);
+      const p = posts.find(p => p.id === g.id);
       if (p) p.el.scrollIntoView({ behavior: 'smooth' });
     });
     el.appendChild(item);
@@ -355,7 +366,7 @@ async function loadLikes() {
   if (!online) return;
   const { data, error } = await db.from('likes').select('game_id,user_id');
   if (error || !data) return;
-  for (const g of window.GAMES) likeState[g.id] = { count: 0, mine: false };
+  for (const p of posts) likeState[p.id] = { count: 0, mine: false };
   for (const row of data) {
     if (!likeState[row.game_id]) likeState[row.game_id] = { count: 0, mine: false };
     likeState[row.game_id].count++;
@@ -364,7 +375,7 @@ async function loadLikes() {
   for (const p of posts) p.refreshLike();
 }
 function refreshPost(gameId) {
-  const p = posts.find(p => p.g.id === gameId);
+  const p = posts.find(p => p.id === gameId);
   if (p) { p.refreshLike(); p.refreshSave(); }
 }
 async function toggleLike(gameId) {
@@ -383,7 +394,7 @@ async function toggleLike(gameId) {
 
 /* ---------- 儲存（收藏到我的頁面） ---------- */
 async function loadSaves() {
-  for (const g of (window.GAMES || [])) saveState[g.id] = false;
+  for (const p of posts) saveState[p.id] = false;
   if (online && user) {
     const { data } = await db.from('saves').select('game_id').eq('user_id', user.id);
     if (data) for (const row of data) saveState[row.game_id] = true;
@@ -511,40 +522,17 @@ async function shareScoreCard(cardURL, g, score) {
   } catch (e) { /* 使用者取消分享 */ }
 }
 
-/* ---------- Remix：上傳圖片替換遊戲元素（本機儲存 + 即時預覽） ---------- */
-const REMIX_KEY = 'playfeed_remix_v1';
-const remixStore = {};   // gameId -> { slotKey: { dataURL, img } }
-function loadRemix() {
-  let raw = {};
-  try { raw = JSON.parse(localStorage.getItem(REMIX_KEY) || '{}'); } catch (e) {}
-  for (const gid in raw) {
-    remixStore[gid] = {};
-    for (const k in raw[gid]) {
-      const img = new Image(); img.src = raw[gid][k];
-      remixStore[gid][k] = { dataURL: raw[gid][k], img };
-    }
-  }
-}
-function saveRemix() {
-  const out = {};
-  for (const gid in remixStore) {
-    out[gid] = {};
-    for (const k in remixStore[gid]) out[gid][k] = remixStore[gid][k].dataURL;
-  }
-  try { localStorage.setItem(REMIX_KEY, JSON.stringify(out)); }
-  catch (e) { toast('圖片太多存不下，先還原一些再試'); }
-}
-function getSpriteFor(gameId, key) {
-  const s = remixStore[gameId] && remixStore[gameId][key];
-  return (s && s.img && s.img.complete && s.img.naturalWidth) ? s.img : null;
-}
+/* ---------- Remix：上傳圖片替換元素 → 發佈成新遊戲（存後端 remixes 表） ---------- */
+function imgFrom(dataURL) { const im = new Image(); im.src = dataURL; return im; }
+function spritesFromData(data) { const out = {}; for (const k in (data || {})) out[k] = imgFrom(data[k]); return out; }
+function spriteReady(im) { return (im && im.complete && im.naturalWidth) ? im : null; }
 function processUpload(file, cb) {
   if (!file || !file.type.startsWith('image/')) { toast('請上傳圖片檔（建議 PNG 透明背景）'); return; }
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
     img.onload = () => {
-      const max = 256, sc = Math.min(1, max / Math.max(img.width, img.height));
+      const max = 240, sc = Math.min(1, max / Math.max(img.width, img.height));
       const w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -557,58 +545,91 @@ function processUpload(file, cb) {
 }
 const remixSheet = document.getElementById('remixSheet');
 const remixFile = document.getElementById('remixFile');
-let remixGame = null, remixSlotKey = null;
-function openRemix(g) {
-  if (!g.remixSlots) return;
-  remixGame = g;
-  document.getElementById('remixTitle').textContent = '改造《' + g.title.split('：')[0] + '》';
+let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} } }
+let remixSlotKey = null;
+/* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
+function draftSpriteFor(entryId, key) {
+  if (activeRemix && activeRemix.entry.id === entryId) {
+    const d = activeRemix.draft[key];
+    if (d) return spriteReady(d.img);
+  }
+  return null;
+}
+function openRemix(entry) {
+  if (!entry.remixSlots) return;
+  const draft = {};
+  for (const k in (entry.spriteData || {})) draft[k] = { dataURL: entry.spriteData[k], img: imgFrom(entry.spriteData[k]) };
+  activeRemix = { entry, draft };
+  document.getElementById('remixTitle').textContent = '改造《' + entry.title.split('：')[0] + '》';
+  document.getElementById('remixName').value = '';
   renderRemixSlots();
   remixSheet.classList.add('open'); backdrop.classList.add('open');
-  const p = posts.find(p => p.g.id === g.id);   /* 確保上面的畫面在跑，才看得到即時預覽 */
+  const p = posts.find(p => p.id === entry.id);   /* 讓上面的畫面在跑，才看得到即時預覽 */
   if (p) p.activate();
 }
-function closeRemix() { remixSheet.classList.remove('open'); backdrop.classList.remove('open'); }
+function closeRemix() { remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null; }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
 function renderRemixSlots() {
   const host = document.getElementById('remixSlots');
   host.innerHTML = '';
-  for (const slot of remixGame.remixSlots) {
-    const custom = remixStore[remixGame.id] && remixStore[remixGame.id][slot.key];
+  for (const slot of activeRemix.entry.remixSlots) {
+    const cur = activeRemix.draft[slot.key];
     const row = document.createElement('div');
     row.className = 'slot';
     row.innerHTML =
-      '<div class="preview">' + (custom ? '<img src="' + custom.dataURL + '">' : slot.default) + '</div>' +
+      '<div class="preview">' + (cur ? '<img src="' + cur.dataURL + '">' : slot.default) + '</div>' +
       '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
-      '<div class="acts"><button class="up">上傳圖片</button>' +
-      '<button class="rst"' + (custom ? '' : ' disabled') + '>還原</button></div>';
+      '<div class="acts"><button class="up">' + (cur ? '換一張' : '上傳圖片') + '</button>' +
+      '<button class="rst"' + (cur ? '' : ' disabled') + '>還原</button></div>';
     row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
-    row.querySelector('.rst').addEventListener('click', () => {
-      if (remixStore[remixGame.id]) { delete remixStore[remixGame.id][slot.key]; saveRemix(); renderRemixSlots(); }
-    });
+    row.querySelector('.rst').addEventListener('click', () => { delete activeRemix.draft[slot.key]; renderRemixSlots(); });
     host.appendChild(row);
   }
 }
 remixFile.addEventListener('change', () => {
   const file = remixFile.files && remixFile.files[0];
-  if (!file || !remixGame || !remixSlotKey) return;
+  if (!file || !activeRemix || !remixSlotKey) return;
   processUpload(file, dataURL => {
-    const img = new Image(); img.src = dataURL;
-    (remixStore[remixGame.id] = remixStore[remixGame.id] || {})[remixSlotKey] = { dataURL, img };
-    saveRemix();
-    img.onload = renderRemixSlots;
-    renderRemixSlots();   /* 即時更新縮圖；上面的遊戲畫面下一幀就會換成新圖 */
+    const d = { dataURL, img: imgFrom(dataURL) };
+    d.img.onload = renderRemixSlots;
+    activeRemix.draft[remixSlotKey] = d;
+    renderRemixSlots();   /* 即時更新縮圖；上面的遊戲畫面下一幀就換成新圖 */
     toast('換好了！看上面的畫面 👆');
   });
 });
+async function saveRemixAsGame() {
+  if (!activeRemix) return;
+  const keys = Object.keys(activeRemix.draft);
+  if (!keys.length) { toast('先換上至少一張圖再儲存'); return; }
+  if (!requireLogin(saveRemixAsGame)) return;   /* 未登入 → 跳登入，登入後自動續存 */
+  const base = activeRemix.entry.base;
+  const name = (document.getElementById('remixName').value.trim() || (base.title.split('：')[0] + ' Remix')).slice(0, 40);
+  const sprites = {};
+  for (const k of keys) sprites[k] = activeRemix.draft[k].dataURL;
+  const btn = document.getElementById('remixSave');
+  btn.disabled = true; btn.textContent = '發佈中…';
+  const { data, error } = await db.from('remixes')
+    .insert({ base_id: base.id, user_id: user.id, name, author: displayName(user), sprites })
+    .select().single();
+  btn.disabled = false; btn.textContent = '儲存成新遊戲';
+  if (error) { toast('發佈失敗：' + error.message); return; }
+  closeRemix();
+  const po = insertRemixPost(data);
+  toast('已發佈！這就是你的新遊戲 🎉');
+  if (po) setTimeout(() => po.el.scrollIntoView({ behavior: 'smooth' }), 60);
+}
+document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
 
 /* ---------- Feed 引擎 ---------- */
 const feed = document.getElementById('feed');
 const posts = [];
 
-(window.GAMES || []).forEach((g, idx) => {
+/* 一個 entry = 基本遊戲 或 已發佈的 remix。都用 entry.base.create() 跑，靠 getSprite 換皮。 */
+function makePost(entry, opts) {
+  opts = opts || {};
   const post = document.createElement('section');
   post.className = 'post';
-  post.style.background = g.bg;
+  post.style.background = entry.bg;
   post.innerHTML = `
     <div class="stage">
       <canvas class="game" width="${W}" height="${H}"></canvas>
@@ -620,23 +641,22 @@ const posts = [];
         <button class="like"><span class="ic">&#9829;</span><span class="lc">0</span></button>
         <button class="cmt"><span class="ic">&#128172;</span><span>留言</span></button>
         <button class="sv"><span class="ic">&#128278;</span><span>儲存</span></button>
-        ${g.remixSlots ? '<button class="rmx"><span class="ic">&#127912;</span><span>改造</span></button>' : ''}
+        ${entry.remixSlots ? '<button class="rmx"><span class="ic">&#127912;</span><span>改造</span></button>' : ''}
         <button class="shr"><span class="ic">&#10148;</span><span>分享</span></button>
       </div>
       <div class="meta">
-        <div class="author">${g.author}</div>
-        <div class="title">${g.title}</div>
-        <div class="tip">${g.tip}</div>
+        <div class="author">${entry.author}</div>
+        <div class="title">${entry.title}</div>
+        <div class="tip">${entry.tip}</div>
       </div>
       <div class="overlay">
         <div class="pv-tag">遊戲實況預覽</div>
-        <h2>${g.title.split('：')[0]}</h2>
-        <p>${g.tip}</p>
+        <h2>${entry.title.split('：')[0]}</h2>
+        <p>${entry.tip}</p>
         <button class="go">開始</button>
       </div>
-      ${idx === 0 ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
+      ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
     </div>`;
-  feed.appendChild(post);
 
   const canvas = post.querySelector('canvas');
   const ctx = canvas.getContext('2d');
@@ -647,12 +667,23 @@ const posts = [];
   const bsEl = post.querySelector('.bs');
   const likeBtn = post.querySelector('.like');
   const state = { game: null, running: false };
+  const gid = entry.id;
+  /* 換皮：正在改造這個 post 時優先用草稿，其次用這個 entry 自己的圖（remix 才有） */
+  const getSprite = key => draftSpriteFor(gid, key) || spriteReady(entry.sprites[key]);
+  /* 便利函式：有換圖就置中等比畫出並回傳 true，沒有就回傳 false（讓遊戲畫預設外觀） */
+  const drawSprite = (key, cx, cy, size, flip) => {
+    const im = getSprite(key);
+    if (!im) return false;
+    const s = Math.min(size / im.width, size / im.height), w = im.width * s, h = im.height * s;
+    ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore();
+    return true;
+  };
 
   /* 實況預覽（attract mode）：滑到這格時，遊戲自己在標題後面隨機試玩 */
   const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
   const pvEnv = {
-    W, H, ctx, beep: () => {}, setScore: () => {},
-    getSprite: key => getSpriteFor(g.id, key),
+    W, H, ctx, beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
       if (!pv.on) return;
       clearTimeout(pv.restartT);
@@ -662,7 +693,7 @@ const posts = [];
   function startPreview() {
     if (pv.on || state.running) return;
     pv.on = true;
-    if (!pv.game) pv.game = g.create(pvEnv);
+    if (!pv.game) pv.game = entry.base.create(pvEnv);
     pv.game.start();
     schedulePvInput();
   }
@@ -698,17 +729,16 @@ const posts = [];
   }
 
   const env = {
-    W, H, ctx, beep,
-    getSprite: key => getSpriteFor(g.id, key),
+    W, H, ctx, beep, getSprite, sprite: drawSprite,
     setScore(n) { scEl.textContent = n; },
     over(score) {
       state.running = false;
       stage.classList.remove('playing');
       const snap = canvas.toDataURL('image/png');   /* 先抓結算畫面，等下實況會蓋掉 */
-      const prev = bests[g.id] || 0;
+      const prev = bests[gid] || 0;
       const isBest = score > prev;
-      if (isBest) { bests[g.id] = score; submitScore(g.id, score); }
-      bestChip.style.display = ''; bsEl.textContent = bests[g.id] || 0;
+      if (isBest) { bests[gid] = score; submitScore(gid, score); }
+      bestChip.style.display = ''; bsEl.textContent = bests[gid] || 0;
       overlay.innerHTML = `
         <div class="final">${score}</div>
         ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
@@ -720,9 +750,9 @@ const posts = [];
       overlay.classList.remove('hidden');
       overlay.querySelector('.go').addEventListener('click', begin);
       let cardURL = null;
-      buildShareCard(snap, g.title, score, u => cardURL = u);
+      buildShareCard(snap, entry.title, score, u => cardURL = u);
       overlay.querySelector('.share-score').addEventListener('click', () => {
-        if (cardURL) shareScoreCard(cardURL, g, score);
+        if (cardURL) shareScoreCard(cardURL, entry, score);
         else toast('成績圖產生中，再按一次');
       });
       startPreview();   /* 結算畫面後面繼續跑實況 */
@@ -733,7 +763,7 @@ const posts = [];
     if (e) e.stopPropagation();
     stopPreview();
     ensureAudio();
-    if (!state.game) state.game = g.create(env);
+    if (!state.game) state.game = entry.base.create(env);
     scEl.textContent = '0';
     overlay.classList.add('hidden');
     stage.classList.add('playing');
@@ -766,7 +796,8 @@ const posts = [];
       } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gest.swiped = true;
         if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
-        const target = posts[idx + (dy < 0 ? 1 : -1)];   /* 往上滑=下一款 */
+        const myIdx = posts.findIndex(pp => pp.el === post);   /* 即時算位置，插入 remix 後仍正確 */
+        const target = posts[myIdx + (dy < 0 ? 1 : -1)];       /* 往上滑=下一款 */
         if (target) target.el.scrollIntoView({ behavior: 'smooth' });
         return;
       }
@@ -784,25 +815,25 @@ const posts = [];
   canvas.addEventListener('pointercancel', endGesture);
 
   const saveBtn = post.querySelector('.sv');
-  likeBtn.addEventListener('click', () => toggleLike(g.id));
-  saveBtn.addEventListener('click', () => toggleSave(g.id));
-  post.querySelector('.cmt').addEventListener('click', () => openComments(g));
-  post.querySelector('.shr').addEventListener('click', () => shareGame(g));
+  likeBtn.addEventListener('click', () => toggleLike(gid));
+  saveBtn.addEventListener('click', () => toggleSave(gid));
+  post.querySelector('.cmt').addEventListener('click', () => openComments(entry));
+  post.querySelector('.shr').addEventListener('click', () => shareGame(entry));
   const rmxBtn = post.querySelector('.rmx');
-  if (rmxBtn) rmxBtn.addEventListener('click', () => openRemix(g));
+  if (rmxBtn) rmxBtn.addEventListener('click', () => openRemix(entry));
 
   function refreshLike() {
-    const st = likeState[g.id];
+    const st = likeState[gid];
     if (!st) return;
     likeBtn.classList.toggle('liked', st.mine);
     likeBtn.querySelector('.lc').textContent = st.count;
   }
   function refreshSave() {
-    saveBtn.classList.toggle('saved', !!saveState[g.id]);
+    saveBtn.classList.toggle('saved', !!saveState[gid]);
   }
 
-  posts.push({
-    el: post, g, state, refreshLike, refreshSave,
+  return {
+    el: post, id: gid, entry, base: entry.base, remixOf: entry.remixOf, state, refreshLike, refreshSave,
     activate() {
       if (!state.running) startPreview();
     },
@@ -812,25 +843,67 @@ const posts = [];
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${g.title.split('：')[0]}</h2><p>${g.tip}</p><button class="go">開始</button>`;
+      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p><button class="go">開始</button>`;
       overlay.querySelector('.go').addEventListener('click', begin);
     }
-  });
-});
+  };
+}
 
-const io = new IntersectionObserver(entries => {
-  for (const en of entries) {
+/* IntersectionObserver：滑到哪格就啟動哪格的實況預覽 */
+const io = new IntersectionObserver(ents => {
+  for (const en of ents) {
     const p = posts.find(p => p.el === en.target);
     if (!p) continue;
     if (en.isIntersecting && en.intersectionRatio >= 0.5) p.activate();
     else p.deactivate();
   }
 }, { threshold: [0, 0.5, 1] });
-posts.forEach(p => io.observe(p.el));
+
+/* entry 建構 */
+function toBaseEntry(g) {
+  return { id: g.id, base: g, title: g.title, author: g.author, tip: g.tip, bg: g.bg,
+           remixSlots: g.remixSlots, sprites: {}, spriteData: {} };
+}
+function toRemixEntry(r) {
+  const base = (window.GAMES || []).find(g => g.id === r.base_id);
+  if (!base) return null;
+  return { id: 'remix:' + r.id, base, title: r.name,
+           author: '@' + (r.author || '玩家') + '·改造', tip: base.tip, bg: base.bg,
+           remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
+           spriteData: r.sprites || {}, remixOf: r.base_id };
+}
+function addPost(po, index) {
+  if (index == null || index >= posts.length) { feed.appendChild(po.el); posts.push(po); }
+  else { feed.insertBefore(po.el, posts[index].el); posts.splice(index, 0, po); }
+  io.observe(po.el);
+}
+function insertRemixPost(r) {
+  const entry = toRemixEntry(r);
+  if (!entry) return null;
+  const po = makePost(entry);
+  let at = posts.findIndex(p => p.id === r.base_id);
+  if (at < 0) { addPost(po); return po; }
+  at++;
+  while (posts[at] && posts[at].remixOf === r.base_id) at++;   /* 插在同款 remix 群的最後 */
+  addPost(po, at);
+  return po;
+}
+
+/* 先建基本遊戲（立即顯示，不等網路） */
+(window.GAMES || []).forEach((g, i) => addPost(makePost(toBaseEntry(g), { first: i === 0 })));
+
+/* 再載入已發佈的 remix，插到各自母遊戲後面 */
+async function loadRemixGames() {
+  if (!online) return;
+  const { data, error } = await db.from('remixes').select('*').order('created_at', { ascending: true });
+  if (error || !data) return;
+  for (const r of data) insertRemixPost(r);
+  loadLikes(); loadSaves();
+}
 
 /* 分享連結直達指定遊戲 */
 if (location.hash) {
-  const target = posts.find(p => p.g.id === location.hash.slice(1));
+  const target = posts.find(p => p.id === location.hash.slice(1));
   if (target) setTimeout(() => target.el.scrollIntoView(), 60);
 }
 
@@ -856,9 +929,9 @@ function toast(msg) {
   toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-loadRemix();
 loadLikes();
 loadSaves();
+loadRemixGames();
 </script>
 </body>
 </html>
