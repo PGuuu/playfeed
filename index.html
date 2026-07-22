@@ -71,6 +71,13 @@
   .overlay .share-score { border: none; cursor: pointer; background: rgba(255,255,255,0.18);
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
+  .overlay .camplay { border: none; cursor: pointer; background: #6a5ad0;
+    color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
+  /* 遊玩中視訊指示器 */
+  #camChip { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    z-index: 45; display: none; border: none; cursor: pointer; color: #fff; font-family: inherit;
+    background: #e0355f; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
+  #camChip.show { display: block; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
 
@@ -141,6 +148,9 @@
   #remixSave { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-weight: 600;
     font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
   #remixSave:disabled { opacity: 0.6; cursor: default; }
+  #remixTry { display: block; width: calc(100% - 36px); margin: 8px 18px 0; border: 1px solid rgba(224,53,95,0.6);
+    background: rgba(224,53,95,0.14); color: #ff9ab4; font-family: inherit; font-size: 13px; font-weight: 600;
+    border-radius: 999px; padding: 10px; cursor: pointer; }
   /* 這個遊戲已有的改造版（橫向捲動的縮圖） */
   #remixVersions { display: flex; gap: 8px; overflow-x: auto; padding: 10px 18px 2px; scrollbar-width: none; }
   #remixVersions::-webkit-scrollbar { display: none; }
@@ -203,6 +213,7 @@
 <body>
 
 <button id="authChip">登入</button>
+<button id="camChip">📷 視訊中 · 點此關閉</button>
 <div id="feed"></div>
 <div class="toast" id="toast"></div>
 
@@ -235,6 +246,7 @@
   <div id="remixVersions"></div>
   <div class="note">上傳圖片替換遊戲元素（支援透明圖檔），或用 📷 視訊讓你的臉當角色。圖會置中縮放<br>對齊虛線輪廓，即時顯示在上面的畫面。儲存後變成大家都能玩的新遊戲（需登入）。</div>
   <div id="remixSlots"></div>
+  <button id="remixTry">▶ 用視訊直接玩（免儲存，適合直播即時效果）</button>
   <div id="remixFoot">
     <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
     <button id="remixSave">儲存成新遊戲</button>
@@ -607,8 +619,9 @@ const remixSheet = document.getElementById('remixSheet');
 const remixFile = document.getElementById('remixFile');
 let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} | {live:true} } }
 let remixSlotKey = null;
-/* 視訊當角色：一個共用的攝影機畫面，可同時餵給多個 slot 即時繪製 */
+/* 視訊當角色：一個共用的攝影機畫面，改造預覽與「視訊玩」遊玩中都即時繪製 */
 let remixCamVideo = null, remixCamStream = null;
+let liveCam = { postId: null, keys: [] };   // 遊玩中把哪個 post 的哪些元素換成即時視訊
 async function startCam() {
   if (remixCamStream) return true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這個瀏覽器不支援視訊'); return false; }
@@ -621,11 +634,27 @@ async function startCam() {
   await remixCamVideo.play().catch(() => {});
   return true;
 }
-function stopCam() {
+function killCam() {
   if (remixCamStream) { remixCamStream.getTracks().forEach(t => t.stop()); remixCamStream = null; }
   remixCamVideo = null;
-  /* 清掉所有 live 草稿 */
+}
+function updateCamChip() { document.getElementById('camChip').classList.toggle('show', !!liveCam.postId); }
+function stopLiveCam() { liveCam = { postId: null, keys: [] }; killCam(); updateCamChip(); }
+/* 關改造面板：清掉 live 草稿；若不是正在「視訊玩」才真的關相機 */
+function stopCam() {
   if (activeRemix) for (const k in activeRemix.draft) if (activeRemix.draft[k].live) delete activeRemix.draft[k];
+  if (!liveCam.postId) killCam();
+}
+document.getElementById('camChip').addEventListener('click', stopLiveCam);
+/* 用改造面板裡已指定的視訊元素，直接開始「視訊玩」（不用儲存，適合直播即時效果） */
+function playRemixLive() {
+  if (!activeRemix) return;
+  const liveKeys = Object.keys(activeRemix.draft).filter(k => activeRemix.draft[k].live);
+  if (!liveKeys.length) { toast('先對某個元素按 📷 視訊，再用視訊試玩'); return; }
+  const entryId = activeRemix.entry.id;
+  remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null;   /* 保留相機 */
+  const p = posts.find(pp => pp.id === entryId);
+  if (p) p.startLive(liveKeys);
 }
 /* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
 function draftSpriteFor(entryId, key) {
@@ -788,6 +817,7 @@ async function saveRemixAsGame() {
   if (po) setTimeout(() => po.el.scrollIntoView({ behavior: 'smooth' }), 60);
 }
 document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
+document.getElementById('remixTry').addEventListener('click', playRemixLive);
 
 /* ---------- Feed 引擎 ---------- */
 const feed = document.getElementById('feed');
@@ -822,7 +852,10 @@ function makePost(entry, opts) {
         <div class="pv-tag">遊戲實況預覽</div>
         <h2>${entry.title.split('：')[0]}</h2>
         <p>${entry.tip}</p>
-        <button class="go">開始</button>
+        <div class="ov-btns">
+          <button class="go">開始</button>
+          ${entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : ''}
+        </div>
       </div>
       ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
     </div>`;
@@ -837,8 +870,13 @@ function makePost(entry, opts) {
   const likeBtn = post.querySelector('.like');
   const state = { game: null, running: false };
   const gid = entry.id;
-  /* 換皮：正在改造這個 post 時優先用草稿，其次用這個 entry 自己的圖（remix 才有） */
-  const getSprite = key => draftSpriteFor(gid, key) || spriteReady(entry.sprites[key]);
+  /* 換皮優先序：遊玩中的即時視訊 → 改造草稿 → 這個 entry 自己的圖（remix 才有） */
+  const getSprite = key => {
+    if (liveCam.postId === gid && liveCam.keys.indexOf(key) >= 0) {
+      const v = spriteReady(remixCamVideo); if (v) return v;
+    }
+    return draftSpriteFor(gid, key) || spriteReady(entry.sprites[key]);
+  };
   /* 便利函式：有換圖就置中等比畫出並回傳 true，沒有就回傳 false（讓遊戲畫預設外觀） */
   const drawSprite = (key, cx, cy, size, flip) => {
     const im = getSprite(key);
@@ -915,10 +953,11 @@ function makePost(entry, opts) {
         <p>再挑戰一次，或往上滑玩下一款</p>
         <div class="ov-btns">
           <button class="go">再玩一次</button>
+          ${entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : ''}
           <button class="share-score">分享成績</button>
         </div>`;
       overlay.classList.remove('hidden');
-      overlay.querySelector('.go').addEventListener('click', begin);
+      wireStart(overlay);
       let cardURL = null;
       buildShareCard(snap, entry.title, score, u => cardURL = u);
       overlay.querySelector('.share-score').addEventListener('click', () => {
@@ -929,8 +968,7 @@ function makePost(entry, opts) {
     }
   };
 
-  function begin(e) {
-    if (e) e.stopPropagation();
+  function begin() {
     stopPreview();
     ensureAudio();
     if (!state.game) state.game = entry.base.create(env);
@@ -940,7 +978,23 @@ function makePost(entry, opts) {
     state.running = true;
     state.game.start();
   }
-  post.querySelector('.go').addEventListener('click', begin);
+  async function startWithCam() {
+    ensureAudio();
+    if (await startCam()) {
+      const s = entry.remixSlots.find(s => (s.shape || 'free') === 'free') || entry.remixSlots[0];
+      liveCam = { postId: gid, keys: [s.key] };   /* 把主角換成即時視訊 */
+      updateCamChip();
+      begin();
+    }
+  }
+  /* 開始鈕：普通「開始」＋（可換圖的遊戲才有的）「📷 視訊玩」 */
+  function wireStart(root) {
+    const go = root.querySelector('.go');
+    if (go) go.addEventListener('click', e => { e.stopPropagation(); if (liveCam.postId === gid) stopLiveCam(); begin(); });
+    const cp = root.querySelector('.camplay');
+    if (cp) cp.addEventListener('click', e => { e.stopPropagation(); startWithCam(); });
+  }
+  wireStart(overlay);
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
@@ -1014,12 +1068,16 @@ function makePost(entry, opts) {
     deactivate() {
       stopPreview();
       stage.classList.remove('playing');
+      if (liveCam.postId === gid) stopLiveCam();   /* 滑走就關相機 */
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p><button class="go">開始</button>`;
-      overlay.querySelector('.go').addEventListener('click', begin);
-    }
+      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
+        `<div class="ov-btns"><button class="go">開始</button>` +
+        (entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : '') + `</div>`;
+      wireStart(overlay);
+    },
+    startLive(keys) { ensureAudio(); liveCam = { postId: gid, keys }; updateCamChip(); begin(); }
   };
 }
 
