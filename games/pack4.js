@@ -19,7 +19,8 @@ window.GAMES = (window.GAMES || []).concat([
       const im = env.getSprite && env.getSprite(key);
       ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
       if (im) {
-        const s = Math.min(size / im.width, size / im.height), w = im.width * s, hh = im.height * s;
+        const iw = im.videoWidth || im.naturalWidth || im.width, ih = im.videoHeight || im.naturalHeight || im.height;
+        const s = Math.min(size / iw, size / ih), w = iw * s, hh = ih * s;
         ctx.drawImage(im, -w/2, -hh/2, w, hh);
       } else { ctx.font = size + 'px serif'; ctx.fillText(emoji, 0, 0); }
       ctx.restore();
@@ -225,7 +226,8 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.scale(1 + land * 0.22, 1 - land * 0.22);
       const pim = alive && env.getSprite && env.getSprite('player');
       if (pim) {
-        const s = Math.min(44 / pim.width, 44 / pim.height), w = pim.width * s, hh = pim.height * s;
+        const iw = pim.videoWidth || pim.naturalWidth || pim.width, ih = pim.videoHeight || pim.naturalHeight || pim.height;
+        const s = Math.min(44 / iw, 44 / ih), w = iw * s, hh = ih * s;
         ctx.drawImage(pim, -w/2, -hh/2, w, hh);
       } else {
         ctx.font = '44px serif';

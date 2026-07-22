@@ -128,6 +128,9 @@
   .slot .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
   .slot .up { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-size: 13px;
     font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
+  .slot .cam { border: 1px solid rgba(255,255,255,0.22); background: none; color: #cfcfe0;
+    font-family: inherit; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 12px;
+    cursor: pointer; white-space: nowrap; }
   .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
     cursor: pointer; }
   .slot .rst[disabled] { opacity: 0.35; cursor: default; }
@@ -230,7 +233,7 @@
 <div id="remixSheet">
   <div class="head"><b id="remixTitle">改造這個遊戲</b><button id="remixClose">&#10005;</button></div>
   <div id="remixVersions"></div>
-  <div class="note">上傳圖片替換遊戲元素（建議 PNG 透明背景）。圖會置中縮放對齊虛線輪廓，<br>改好會即時顯示在上面的畫面。儲存後變成大家都能玩的新遊戲（需登入）。</div>
+  <div class="note">上傳圖片替換遊戲元素（支援透明圖檔），或用 📷 視訊讓你的臉當角色。圖會置中縮放<br>對齊虛線輪廓，即時顯示在上面的畫面。儲存後變成大家都能玩的新遊戲（需登入）。</div>
   <div id="remixSlots"></div>
   <div id="remixFoot">
     <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
@@ -575,9 +578,16 @@ async function shareScoreCard(cardURL, g, score) {
 /* ---------- Remix：上傳圖片替換元素 → 發佈成新遊戲（存後端 remixes 表） ---------- */
 function imgFrom(dataURL) { const im = new Image(); im.src = dataURL; return im; }
 function spritesFromData(data) { const out = {}; for (const k in (data || {})) out[k] = imgFrom(data[k]); return out; }
-function spriteReady(im) { return (im && im.complete && im.naturalWidth) ? im : null; }
+function isVideo(im) { return im && im.videoWidth !== undefined; }
+function mediaW(im) { return isVideo(im) ? im.videoWidth : (im.naturalWidth || im.width); }
+function mediaH(im) { return isVideo(im) ? im.videoHeight : (im.naturalHeight || im.height); }
+function spriteReady(im) {
+  if (!im) return null;
+  if (isVideo(im)) return (im.readyState >= 2 && im.videoWidth) ? im : null;   /* 視訊：有畫面才用 */
+  return (im.complete && im.naturalWidth) ? im : null;
+}
 function processUpload(file, cb) {
-  if (!file || !file.type.startsWith('image/')) { toast('請上傳圖片檔（建議 PNG 透明背景）'); return; }
+  if (!file || !file.type.startsWith('image/')) { toast('請上傳圖片檔（支援透明圖檔）'); return; }
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
@@ -595,13 +605,33 @@ function processUpload(file, cb) {
 }
 const remixSheet = document.getElementById('remixSheet');
 const remixFile = document.getElementById('remixFile');
-let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} } }
+let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} | {live:true} } }
 let remixSlotKey = null;
+/* 視訊當角色：一個共用的攝影機畫面，可同時餵給多個 slot 即時繪製 */
+let remixCamVideo = null, remixCamStream = null;
+async function startCam() {
+  if (remixCamStream) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這個瀏覽器不支援視訊'); return false; }
+  try {
+    remixCamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+  } catch (e) { toast('沒拿到相機權限，無法用視訊'); return false; }
+  remixCamVideo = document.createElement('video');
+  remixCamVideo.autoplay = true; remixCamVideo.muted = true; remixCamVideo.playsInline = true;
+  remixCamVideo.srcObject = remixCamStream;
+  await remixCamVideo.play().catch(() => {});
+  return true;
+}
+function stopCam() {
+  if (remixCamStream) { remixCamStream.getTracks().forEach(t => t.stop()); remixCamStream = null; }
+  remixCamVideo = null;
+  /* 清掉所有 live 草稿 */
+  if (activeRemix) for (const k in activeRemix.draft) if (activeRemix.draft[k].live) delete activeRemix.draft[k];
+}
 /* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
 function draftSpriteFor(entryId, key) {
   if (activeRemix && activeRemix.entry.id === entryId) {
     const d = activeRemix.draft[key];
-    if (d) return spriteReady(d.img);
+    if (d) return spriteReady(d.live ? remixCamVideo : d.img);   /* live=用視訊 */
   }
   return null;
 }
@@ -618,7 +648,15 @@ function openRemix(entry) {
   const p = posts.find(p => p.id === entry.id);   /* 讓上面的畫面在跑，才看得到即時預覽 */
   if (p) p.activate();
 }
-function closeRemix() { remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null; }
+function closeRemix() { stopCam(); remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null; }
+function snapshotVideo(video) {
+  const vw = video && video.videoWidth, vh = video && video.videoHeight;
+  if (!vw) return null;
+  const S = 240, side = Math.min(vw, vh), sx = (vw - side) / 2, sy = (vh - side) / 2;
+  const c = document.createElement('canvas'); c.width = S; c.height = S;
+  c.getContext('2d').drawImage(video, sx, sy, side, side, 0, 0, S, S);
+  return c.toDataURL('image/png');
+}
 document.getElementById('remixClose').addEventListener('click', closeRemix);
 /* 這個遊戲已有的改造版：可直接跳過去玩 */
 function renderRemixVersions() {
@@ -648,8 +686,19 @@ function drawSlotPreview(cvs, slot, cur) {
   if (shape === 'wide') bh = 32;
   else if (shape === 'tall') bw = 34;
   const bx = (S - bw) / 2, by = (S - bh) / 2;
+  const shapePath = () => {
+    ctx.beginPath();
+    if (shape === 'circle') ctx.arc(S / 2, S / 2, Math.min(bw, bh) / 2, 0, 6.283);
+    else ctx.roundRect(bx, by, bw, bh, 6);
+  };
+  const live = cur && cur.live && spriteReady(remixCamVideo);
   const im = cur && cur.img;
-  if (im && im.complete && im.naturalWidth) {
+  if (live) {
+    const vw = mediaW(remixCamVideo), vh = mediaH(remixCamVideo);   /* cover-fit 進輪廓 */
+    const sc = Math.max(bw / vw, bh / vh), w = vw * sc, h = vh * sc;
+    ctx.save(); shapePath(); ctx.clip();
+    ctx.drawImage(remixCamVideo, (S - w) / 2, (S - h) / 2, w, h); ctx.restore();
+  } else if (im && im.complete && im.naturalWidth) {
     const sc = Math.min(bw / im.width, bh / im.height), w = im.width * sc, h = im.height * sc;
     ctx.drawImage(im, (S - w) / 2, (S - h) / 2, w, h);
   } else {
@@ -658,25 +707,45 @@ function drawSlotPreview(cvs, slot, cur) {
     ctx.fillText(slot.default, S / 2, S / 2 + 2); ctx.globalAlpha = 1;
   }
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
-  ctx.beginPath();
-  if (shape === 'circle') ctx.arc(S / 2, S / 2, Math.min(bw, bh) / 2, 0, 6.283);
-  else ctx.roundRect(bx, by, bw, bh, 6);
-  ctx.stroke(); ctx.setLineDash([]);
+  shapePath(); ctx.stroke(); ctx.setLineDash([]);
+}
+let remixSlotCanvases = [];
+function remixTick() {
+  if (!remixSheet.classList.contains('open') || !activeRemix) return;
+  let anyLive = false;
+  for (const s of remixSlotCanvases) {
+    const d = activeRemix.draft[s.slot.key];
+    if (d && d.live) { anyLive = true; drawSlotPreview(s.cvs, s.slot, d); }
+  }
+  if (anyLive) requestAnimationFrame(remixTick);
 }
 function renderRemixSlots() {
   const host = document.getElementById('remixSlots');
   host.innerHTML = '';
+  remixSlotCanvases = [];
   for (const slot of activeRemix.entry.remixSlots) {
     const cur = activeRemix.draft[slot.key];
+    const changed = !!cur;
     const row = document.createElement('div');
     row.className = 'slot';
     row.innerHTML =
       '<canvas class="preview" width="58" height="58"></canvas>' +
       '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
-      '<div class="acts"><button class="up">' + (cur ? '換一張' : '上傳圖片') + '</button>' +
-      '<button class="rst"' + (cur ? '' : ' disabled') + '>還原</button></div>';
-    drawSlotPreview(row.querySelector('canvas'), slot, cur);
+      '<div class="acts"><button class="up">' + (cur && cur.img ? '換一張' : '上傳圖片') + '</button>' +
+      '<button class="cam">' + (cur && cur.live ? '關視訊' : '📷 視訊') + '</button>' +
+      '<button class="rst"' + (changed ? '' : ' disabled') + '>還原</button></div>';
+    const cvs = row.querySelector('canvas');
+    drawSlotPreview(cvs, slot, cur);
+    remixSlotCanvases.push({ slot, cvs });
     row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
+    row.querySelector('.cam').addEventListener('click', async () => {
+      if (cur && cur.live) { delete activeRemix.draft[slot.key]; renderRemixSlots(); return; }
+      if (await startCam()) {
+        activeRemix.draft[slot.key] = { live: true };
+        renderRemixSlots(); requestAnimationFrame(remixTick);
+        toast('把臉對準鏡頭！視訊只在你本機，儲存時會拍一張定格');
+      }
+    });
     row.querySelector('.rst').addEventListener('click', () => { delete activeRemix.draft[slot.key]; renderRemixSlots(); });
     host.appendChild(row);
   }
@@ -700,7 +769,12 @@ async function saveRemixAsGame() {
   const base = activeRemix.entry.base;
   const name = (document.getElementById('remixName').value.trim() || (base.title.split('：')[0] + ' Remix')).slice(0, 40);
   const sprites = {};
-  for (const k of keys) sprites[k] = activeRemix.draft[k].dataURL;
+  for (const k of keys) {                       /* live 視訊 → 存檔時拍一張定格 */
+    const d = activeRemix.draft[k];
+    const dataURL = d.live ? snapshotVideo(remixCamVideo) : d.dataURL;
+    if (dataURL) sprites[k] = dataURL;
+  }
+  if (!Object.keys(sprites).length) { toast('沒有可儲存的內容'); return; }
   const btn = document.getElementById('remixSave');
   btn.disabled = true; btn.textContent = '發佈中…';
   const { data, error } = await db.from('remixes')
@@ -769,7 +843,8 @@ function makePost(entry, opts) {
   const drawSprite = (key, cx, cy, size, flip) => {
     const im = getSprite(key);
     if (!im) return false;
-    const s = Math.min(size / im.width, size / im.height), w = im.width * s, h = im.height * s;
+    const iw = mediaW(im), ih = mediaH(im);
+    const s = Math.min(size / iw, size / ih), w = iw * s, h = ih * s;
     ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
     ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore();
     return true;
