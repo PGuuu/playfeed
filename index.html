@@ -48,7 +48,7 @@
   .rail button.saved .ic { background: #d9a13b; }
   .rail button.rmx .ic { background: rgba(120,90,220,0.55); }
 
-  .meta { position: absolute; left: 16px; right: 76px; bottom: max(24px, env(safe-area-inset-bottom));
+  .meta { position: absolute; left: 16px; right: 76px; bottom: calc(60px + env(safe-area-inset-bottom));
     z-index: 5; pointer-events: none; transition: opacity 0.28s; }
   .meta .author { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
   .meta .title { font-size: 14px; opacity: 0.9; }
@@ -75,7 +75,7 @@
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
   /* 遊玩中視訊指示器 */
   #camChip { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-    z-index: 45; display: none; border: none; cursor: pointer; color: #fff; font-family: inherit;
+    z-index: 68; display: none; border: none; cursor: pointer; color: #fff; font-family: inherit;
     background: #e0355f; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
   #camChip.show { display: block; }
   .overlay .final { font-size: 44px; font-weight: 700; }
@@ -203,11 +203,27 @@
     font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gcell .badge { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700;
     background: rgba(106,90,208,0.9); color: #fff; padding: 2px 7px; border-radius: 999px; }
-  .pnav { display: flex; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: env(safe-area-inset-bottom); }
-  .pnav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
+
+  /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
+  #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
+    background: rgba(10,10,14,0.68); backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: env(safe-area-inset-bottom);
+    transition: transform 0.22s, opacity 0.22s; }
+  #mainNav.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
+  #mainNav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
     font-size: 11px; cursor: pointer; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .pnav button .ni { font-size: 21px; line-height: 1; }
-  .pnav button.active { color: #fff; }
+  #mainNav button .ni { font-size: 21px; line-height: 1; }
+  #mainNav button.active { color: #fff; }
+
+  /* 單一遊戲視圖：從個人頁／版本列表／分享連結進來的改造版，不混進首頁 */
+  #remixView { position: fixed; inset: 0; z-index: 67; background: #0b0b10;
+    display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
+  #remixView.open { transform: translateY(0); }
+  #remixViewStage { flex: 1; position: relative; overflow: hidden; }
+  #remixViewBack { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 10;
+    border: none; cursor: pointer; color: #fff; font-family: inherit;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -235,10 +251,16 @@
     <button data-tab="liked">♥ 愛心</button>
   </div>
   <div id="pgrid"></div>
-  <div class="pnav">
-    <button id="navHome"><span class="ni">🏠</span>首頁</button>
-    <button id="navMe" class="active"><span class="ni">👤</span>我的</button>
-  </div>
+</div>
+
+<div id="mainNav">
+  <button id="navHomeMain" class="active"><span class="ni">🏠</span>首頁</button>
+  <button id="navMeMain"><span class="ni">👤</span>我的</button>
+</div>
+
+<div id="remixView">
+  <button id="remixViewBack">&#8249; 返回</button>
+  <div id="remixViewStage"></div>
 </div>
 
 <div id="remixSheet">
@@ -320,8 +342,8 @@ function setUser(u) {
 
 /* ---------- 登入（Phuze magic link） ---------- */
 const loginBox = document.getElementById('login');
-function openLogin() { loginBox.classList.add('open'); }
-function closeLogin() { loginBox.classList.remove('open'); }
+function openLogin() { loginBox.classList.add('open'); setNavVisible(false); }
+function closeLogin() { loginBox.classList.remove('open'); restoreNavVisibility(); }
 document.getElementById('skipLogin').addEventListener('click', () => { pendingAction = null; closeLogin(); });
 authChip.addEventListener('click', () => {
   if (user) return openProfile();
@@ -358,31 +380,53 @@ function requireLogin(action) {
   return true;
 }
 
-/* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格 + 底部導覽） ---------- */
+/* ---------- 底部常駐導覽（IG 風格：首頁 / 我的） ---------- */
+const mainNav = document.getElementById('mainNav');
+function setNavVisible(v) { mainNav.classList.toggle('hide', !v); }
+/* 關掉某個蓋在上面的面板（留言/登入/改造）後，導覽列該不該出現要看底下是首頁還是單一遊戲視圖 */
+function restoreNavVisibility() { setNavVisible(!document.getElementById('remixView').classList.contains('open')); }
+function setMainNavActive(tab) {
+  document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
+  document.getElementById('navMeMain').classList.toggle('active', tab === 'me');
+}
+document.getElementById('navHomeMain').addEventListener('click', () => { closeProfile(); closeStandalone(); });
+document.getElementById('navMeMain').addEventListener('click', () => {
+  if (user) return openProfile();
+  if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
+  pendingAction = () => openProfile();
+  openLogin();
+});
+
+/* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
 const profileBox = document.getElementById('profile');
 let profileTab = 'mine';
 function openProfile() {
+  closeStandalone();
   document.getElementById('profileWho').textContent = user ? displayName(user) : '個人頁';
   renderProfileGrid(profileTab);
   profileBox.classList.add('open');
+  setMainNavActive('me');
 }
-function closeProfile() { profileBox.classList.remove('open'); }
+function closeProfile() { profileBox.classList.remove('open'); setMainNavActive('home'); }
 document.querySelectorAll('.ptabs button').forEach(b => b.addEventListener('click', () => {
   profileTab = b.dataset.tab;
   document.querySelectorAll('.ptabs button').forEach(x => x.classList.toggle('active', x === b));
   renderProfileGrid(profileTab);
 }));
-document.getElementById('navHome').addEventListener('click', closeProfile);
-document.getElementById('navMe').addEventListener('click', () => { document.getElementById('pgrid').scrollTop = 0; });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   closeProfile();
   if (phuzeOn) await Phuze.logout();
   toast('已登出');
 });
 function profileData(tab) {
-  if (tab === 'mine') return posts.filter(p => p.entry.remixMeta && user && p.entry.remixMeta.user_id === user.id);
-  if (tab === 'saved') return posts.filter(p => saveState[p.id]);
-  return posts.filter(p => likeState[p.id] && likeState[p.id].mine);
+  if (tab === 'mine') {
+    if (!user) return [];
+    return remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
+  }
+  const st = tab === 'saved' ? saveState : likeState;
+  return Object.keys(st)
+    .filter(id => tab === 'saved' ? st[id] : (st[id] && st[id].mine))
+    .map(entryFor).filter(Boolean);
 }
 function renderProfileGrid(tab) {
   const grid = document.getElementById('pgrid');
@@ -394,8 +438,7 @@ function renderProfileGrid(tab) {
     grid.innerHTML = '<div class="gempty">' + msg + '</div>';
     return;
   }
-  for (const p of items) {
-    const e = p.entry;
+  for (const e of items) {
     const cell = document.createElement('div');
     cell.className = 'gcell';
     cell.style.background = e.bg;
@@ -403,11 +446,12 @@ function renderProfileGrid(tab) {
     const hero = firstSprite ? '<img src="' + firstSprite + '">'
       : (e.remixSlots && e.remixSlots[0] ? e.remixSlots[0].default : '🎮');
     cell.innerHTML = '<span class="hero">' + hero + '</span>' +
-      (p.remixOf ? '<span class="badge">改造</span>' : '') +
+      (e.remixOf ? '<span class="badge">改造</span>' : '') +
       '<span class="cap">' + e.title.split('：')[0] + '</span>';
     cell.addEventListener('click', () => {
       closeProfile();
-      const t = posts.find(x => x.id === p.id);
+      if (e.remixOf) { openStandalone(e.id); return; }
+      const t = posts.find(x => x.id === e.id);
       if (t) setTimeout(() => t.el.scrollIntoView(), 60);
     });
     grid.appendChild(cell);
@@ -428,7 +472,7 @@ async function loadLikes() {
   for (const p of posts) p.refreshLike();
 }
 function refreshPost(gameId) {
-  const p = posts.find(p => p.id === gameId);
+  const p = posts.find(p => p.id === gameId) || (standalonePost && standalonePost.id === gameId ? standalonePost : null);
   if (p) { p.refreshLike(); p.refreshSave(); }
 }
 async function toggleLike(gameId) {
@@ -472,14 +516,14 @@ const sheet = document.getElementById('sheet');
 const backdrop = document.getElementById('backdrop');
 const cmtList = document.getElementById('cmtList');
 let sheetGame = null;
-function closeSheet() { sheet.classList.remove('open'); backdrop.classList.remove('open'); }
+function closeSheet() { sheet.classList.remove('open'); backdrop.classList.remove('open'); restoreNavVisibility(); }
 document.getElementById('sheetClose').addEventListener('click', closeSheet);
 backdrop.addEventListener('click', () => { closeSheet(); closeProfile(); closeRemix(); });
 async function openComments(g) {
   sheetGame = g;
   document.getElementById('sheetTitle').textContent = g.title.split('：')[0] + ' 的留言';
   cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">載入中…</div></div>';
-  sheet.classList.add('open'); backdrop.classList.add('open');
+  sheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
   if (!online) {
     cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">尚未連接後台，設定 config.js 之後留言就會是真的。</div></div>';
     return;
@@ -590,6 +634,28 @@ async function shareScoreCard(cardURL, g, score) {
 /* ---------- Remix：上傳圖片替換元素 → 發佈成新遊戲（存後端 remixes 表） ---------- */
 function imgFrom(dataURL) { const im = new Image(); im.src = dataURL; return im; }
 function spritesFromData(data) { const out = {}; for (const k in (data || {})) out[k] = imgFrom(data[k]); return out; }
+/* Remix 資料快取：remixRows 是後端原始資料，entry 是要餵給 makePost/UI 的整理過格式。
+   刻意跟「首頁 feed 裡有哪些 post」脫鉤——remix 不會自動混進首頁，只在被明確點開時才建立畫面。 */
+let remixRows = [];
+const remixEntryCache = {};
+function cacheRemixEntry(row) {
+  const id = 'remix:' + row.id;
+  if (!remixEntryCache[id]) {
+    const entry = toRemixEntry(row);
+    if (!entry) return null;
+    remixEntryCache[id] = entry;
+  }
+  return remixEntryCache[id];
+}
+function baseEntryById(id) { const g = (window.GAMES || []).find(g => g.id === id); return g ? toBaseEntry(g) : null; }
+function entryFor(id) {
+  if (id.indexOf('remix:') === 0) {
+    if (remixEntryCache[id]) return remixEntryCache[id];
+    const row = remixRows.find(r => 'remix:' + r.id === id);
+    return row ? cacheRemixEntry(row) : null;
+  }
+  return baseEntryById(id);
+}
 function isVideo(im) { return im && im.videoWidth !== undefined; }
 function mediaW(im) { return isVideo(im) ? im.videoWidth : (im.naturalWidth || im.width); }
 function mediaH(im) { return isVideo(im) ? im.videoHeight : (im.naturalHeight || im.height); }
@@ -653,7 +719,7 @@ function playRemixLive() {
   if (!liveKeys.length) { toast('先對某個元素按 📷 視訊，再用視訊試玩'); return; }
   const entryId = activeRemix.entry.id;
   remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null;   /* 保留相機 */
-  const p = posts.find(pp => pp.id === entryId);
+  const p = posts.find(pp => pp.id === entryId) || (standalonePost && standalonePost.id === entryId ? standalonePost : null);
   if (p) p.startLive(liveKeys);
 }
 /* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
@@ -673,11 +739,15 @@ function openRemix(entry) {
   document.getElementById('remixName').value = '';
   renderRemixVersions();
   renderRemixSlots();
-  remixSheet.classList.add('open'); backdrop.classList.add('open');
-  const p = posts.find(p => p.id === entry.id);   /* 讓上面的畫面在跑，才看得到即時預覽 */
-  if (p) p.activate();
+  remixSheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
+  const p = posts.find(p => p.id === entry.id) || (standalonePost && standalonePost.id === entry.id ? standalonePost : null);
+  if (p) p.activate();   /* 讓上面的畫面在跑，才看得到即時預覽 */
 }
-function closeRemix() { stopCam(); remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null; }
+function closeRemix() {
+  stopCam(); remixSheet.classList.remove('open'); backdrop.classList.remove('open');
+  restoreNavVisibility();
+  activeRemix = null;
+}
 function snapshotVideo(video) {
   const vw = video && video.videoWidth, vh = video && video.videoHeight;
   if (!vw) return null;
@@ -687,21 +757,32 @@ function snapshotVideo(video) {
   return c.toDataURL('image/png');
 }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
-/* 這個遊戲已有的改造版：可直接跳過去玩 */
+/* 這個遊戲已有的改造版：可直接跳過去玩（來源是 remixRows，跟這些版本目前有沒有在畫面上無關） */
 function renderRemixVersions() {
   const host = document.getElementById('remixVersions');
   const baseId = activeRemix.entry.base.id;
-  const related = posts.filter(p => p.id === baseId || p.remixOf === baseId);
-  if (related.length <= 1) { host.innerHTML = ''; return; }
-  host.innerHTML = '<div class="vhead" style="padding-left:0">這個遊戲的版本（' + related.length + '）：點縮圖直接玩</div>';
+  const siblings = remixRows.filter(r => r.base_id === baseId);
+  if (!siblings.length) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div class="vhead" style="padding-left:0">這個遊戲的版本（' + (siblings.length + 1) + '）：點縮圖直接玩</div>';
   const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;';
-  for (const p of related) {
+  row.style.cssText = 'display:flex;gap:8px;overflow-x:auto;';
+  const baseChip = document.createElement('div');
+  baseChip.className = 'verchip' + (activeRemix.entry.id === baseId ? ' cur' : '');
+  baseChip.innerHTML = '<span class="sw" style="background:' + activeRemix.entry.base.bg + '"></span><span class="nm">原版</span>';
+  baseChip.addEventListener('click', () => {
+    closeRemix(); closeStandalone();
+    const p = posts.find(x => x.id === baseId);
+    if (p) setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60);
+  });
+  row.appendChild(baseChip);
+  for (const r of siblings) {
+    const id = 'remix:' + r.id;
+    const entry = cacheRemixEntry(r);
+    if (!entry) continue;
     const chip = document.createElement('div');
-    chip.className = 'verchip' + (p.id === activeRemix.entry.id ? ' cur' : '');
-    const nm = p.remixOf ? p.entry.title : '原版';
-    chip.innerHTML = '<span class="sw" style="background:' + p.entry.bg + '"></span><span class="nm">' + nm + '</span>';
-    chip.addEventListener('click', () => { closeRemix(); setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60); });
+    chip.className = 'verchip' + (activeRemix.entry.id === id ? ' cur' : '');
+    chip.innerHTML = '<span class="sw" style="background:' + entry.bg + '"></span><span class="nm">' + entry.title + '</span>';
+    chip.addEventListener('click', () => { closeRemix(); openStandalone(id); });
     row.appendChild(chip);
   }
   host.appendChild(row);
@@ -811,10 +892,11 @@ async function saveRemixAsGame() {
     .select().single();
   btn.disabled = false; btn.textContent = '儲存成新遊戲';
   if (error) { toast('發佈失敗：' + error.message); return; }
+  remixRows.push(data);
+  const entry = cacheRemixEntry(data);
   closeRemix();
-  const po = insertRemixPost(data);
   toast('已發佈！這就是你的新遊戲 🎉');
-  if (po) setTimeout(() => po.el.scrollIntoView({ behavior: 'smooth' }), 60);
+  if (entry) openStandalone(entry.id);
 }
 document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
 document.getElementById('remixTry').addEventListener('click', playRemixLive);
@@ -1020,7 +1102,8 @@ function makePost(entry, opts) {
       } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gest.swiped = true;
         if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
-        const myIdx = posts.findIndex(pp => pp.el === post);   /* 即時算位置，插入 remix 後仍正確 */
+        if (opts.standalone) { closeStandalone(); return; }   /* 單一遊戲視圖：上下滑＝退出，不接首頁的輪播 */
+        const myIdx = posts.findIndex(pp => pp.el === post);   /* 即時算位置 */
         let ni = myIdx + (dy < 0 ? 1 : -1);                    /* 往上滑=下一款 */
         let wrap = false;
         if (ni >= posts.length) { ni = 0; wrap = true; }        /* 最後一款再往上滑 → 回到第一款 */
@@ -1104,39 +1187,61 @@ function toRemixEntry(r) {
            remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
            spriteData: r.sprites || {}, remixOf: r.base_id, remixMeta: r };
 }
-function addPost(po, index) {
-  if (index == null || index >= posts.length) { feed.appendChild(po.el); posts.push(po); }
-  else { feed.insertBefore(po.el, posts[index].el); posts.splice(index, 0, po); }
-  io.observe(po.el);
-}
-function insertRemixPost(r) {
-  const entry = toRemixEntry(r);
-  if (!entry) return null;
-  const po = makePost(entry);
-  let at = posts.findIndex(p => p.id === r.base_id);
-  if (at < 0) { addPost(po); return po; }
-  at++;
-  while (posts[at] && posts[at].remixOf === r.base_id) at++;   /* 插在同款 remix 群的最後 */
-  addPost(po, at);
-  return po;
-}
+function addPost(po) { feed.appendChild(po.el); posts.push(po); io.observe(po.el); }
 
-/* 先建基本遊戲（立即顯示，不等網路） */
+/* 首頁只放原始遊戲，永遠不會有 remix（立即顯示，不等網路） */
 (window.GAMES || []).forEach((g, i) => addPost(makePost(toBaseEntry(g), { first: i === 0 })));
 
-/* 再載入已發佈的 remix，插到各自母遊戲後面 */
+/* 已發佈的 remix：只快取資料，不放進首頁 feed。要看到某個 remix 一律透過
+   「個人頁的我做的」／「改造面板的版本列表」／分享連結，用 openStandalone() 開單一遊戲視圖。 */
 async function loadRemixGames() {
   if (!online) return;
   const { data, error } = await db.from('remixes').select('*').order('created_at', { ascending: true });
   if (error || !data) return;
-  for (const r of data) insertRemixPost(r);
-  loadLikes(); loadSaves();
+  remixRows = data;
+  for (const r of data) cacheRemixEntry(r);
+  if (profileBox.classList.contains('open')) renderProfileGrid(profileTab);
+  if (activeRemix) renderRemixVersions();
+  goToHash(20);   /* 讓一開始就帶著 remix 分享連結進來的訪客能跳到那個版本 */
 }
 
-/* 分享連結直達指定遊戲（含 remix：remix 是非同步載入，找不到就重試等它進來） */
+/* ---------- 單一遊戲視圖：remix 專用，不佔首頁的位置 ---------- */
+const remixView = document.getElementById('remixView');
+const remixViewStage = document.getElementById('remixViewStage');
+let standalonePost = null;
+function openStandalone(id) {
+  const entry = entryFor(id);
+  if (!entry) { toast('找不到這個遊戲'); return; }
+  closeProfile(); closeRemix(); closeSheet();
+  if (standalonePost) standalonePost.deactivate();
+  remixViewStage.innerHTML = '';
+  standalonePost = makePost(entry, { standalone: true });
+  remixViewStage.appendChild(standalonePost.el);
+  remixView.classList.add('open');
+  setNavVisible(false);
+  standalonePost.refreshLike(); standalonePost.refreshSave();
+  standalonePost.activate();
+}
+function closeStandalone() {
+  if (!remixView.classList.contains('open')) return;
+  if (standalonePost) standalonePost.deactivate();
+  remixView.classList.remove('open');
+  setNavVisible(true);
+  setTimeout(() => { remixViewStage.innerHTML = ''; standalonePost = null; }, 300);
+}
+document.getElementById('remixViewBack').addEventListener('click', closeStandalone);
+
+/* 分享連結直達指定遊戲：base 遊戲在首頁 feed 裡找；remix 用單一遊戲視圖打開
+   （remix 資料是非同步載入，找不到就重試等它進來） */
 function goToHash(retries) {
   if (!location.hash) return;
   const id = decodeURIComponent(location.hash.slice(1));
+  if (id.indexOf('remix:') === 0) {
+    const entry = entryFor(id);
+    if (entry) { openStandalone(id); return; }
+    if (retries > 0) setTimeout(() => goToHash(retries - 1), 200);
+    return;
+  }
   const target = posts.find(p => p.id === id);
   if (target) {
     const jump = () => target.el.scrollIntoView();
