@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PlayFeed — 滑一下，玩一個</title>
+<link rel="stylesheet" href="creator.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
   html, body { height: 100%; background: #0b0b10; color: #f2f2f5; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
@@ -264,6 +265,7 @@
 
 <div id="mainNav">
   <button id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
+  <button id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
   <button id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
 </div>
 
@@ -391,6 +393,7 @@ if (phuzeOn) {
     const wasIn = !!user;
     setUser(session ? { id: session.uid, email: session.email || '' } : null);
     loadLikes(); loadSaves();
+    if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
     if (session && !wasIn) {
       if (loginBox.classList.contains('open')) { closeLogin(); toast('登入成功！'); }
       if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
@@ -411,10 +414,20 @@ function setNavVisible(v) { mainNav.classList.toggle('hide', !v); }
 function restoreNavVisibility() { setNavVisible(!document.getElementById('remixView').classList.contains('open')); }
 function setMainNavActive(tab) {
   document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
+  document.getElementById('navCreateMain').classList.toggle('active', tab === 'create');
   document.getElementById('navMeMain').classList.toggle('active', tab === 'me');
 }
-document.getElementById('navHomeMain').addEventListener('click', () => { closeProfile(); closeStandalone(); });
+document.getElementById('navHomeMain').addEventListener('click', () => {
+  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
+  closeProfile(); closeStandalone();
+});
+document.getElementById('navCreateMain').addEventListener('click', () => {
+  closeProfile(); closeStandalone();
+  if (window.PlayFeedCreator) window.PlayFeedCreator.open();
+  else toast('創作工具載入中，請再按一次');
+});
 document.getElementById('navMeMain').addEventListener('click', () => {
+  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
   if (user) return openProfile();
   if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
   pendingAction = () => openProfile();
@@ -445,7 +458,9 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 function profileData(tab) {
   if (tab === 'mine') {
     if (!user) return [];
-    return remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
+    const remixes = remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
+    const scripts = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
+    return remixes.concat(scripts);
   }
   const st = tab === 'saved' ? saveState : likeState;
   return Object.keys(st)
@@ -457,9 +472,10 @@ function renderProfileGrid(tab) {
   const items = profileData(tab);
   grid.innerHTML = '';
   if (!items.length) {
-    const msg = { mine: '還沒做過改造。<br>在遊戲上按 🎨 改造、上傳圖片，就能做出你的版本。',
-      saved: '還沒有收藏。<br>看到喜歡的遊戲按 🔖 存起來。', liked: '還沒按過愛心 ♥' }[tab];
-    grid.innerHTML = '<div class="gempty">' + msg + '</div>';
+    const msg = { mine: '還沒有發布或改造遊戲。到「創作」貼上 Script，就能發布第一款。',
+      saved: '還沒有收藏。看到喜歡的遊戲按「儲存」。', liked: '還沒按過愛心。' }[tab];
+    const empty = document.createElement('div');
+    empty.className = 'gempty'; empty.textContent = msg; grid.appendChild(empty);
     return;
   }
   for (const e of items) {
@@ -467,13 +483,27 @@ function renderProfileGrid(tab) {
     cell.className = 'gcell';
     cell.style.background = e.bg;
     const firstSprite = e.spriteData && Object.values(e.spriteData)[0];
-    const hero = firstSprite ? '<img src="' + firstSprite + '">'
-      : (e.remixSlots && e.remixSlots[0] ? e.remixSlots[0].default : '🎮');
-    cell.innerHTML = '<span class="hero">' + hero + '</span>' +
-      (e.remixOf ? '<span class="badge">改造</span>' : '') +
-      '<span class="cap">' + e.title.split('：')[0] + '</span>';
+    const hero = document.createElement('span');
+    hero.className = 'hero';
+    if (e.screenshot || firstSprite) {
+      const image = document.createElement('img'); image.src = e.screenshot || firstSprite; hero.appendChild(image);
+    } else {
+      hero.textContent = e.remixSlots && e.remixSlots[0] ? e.remixSlots[0].default : '🎮';
+    }
+    cell.appendChild(hero);
+    if (e.remixOf || e.userScript) {
+      const badge = document.createElement('span'); badge.className = 'badge';
+      badge.textContent = e.userScript ? 'Script' : '改造'; cell.appendChild(badge);
+    }
+    const cap = document.createElement('span'); cap.className = 'cap';
+    cap.textContent = e.title.split('：')[0]; cell.appendChild(cap);
     cell.addEventListener('click', () => {
       closeProfile();
+      if (e.userScript) {
+        const target = document.querySelector('.sandbox-post[data-game-id="' + CSS.escape(e.id) + '"]');
+        if (target) setTimeout(() => target.scrollIntoView(), 60);
+        return;
+      }
       if (e.remixOf) { openStandalone(e.id); return; }
       const t = posts.find(x => x.id === e.id);
       if (t) setTimeout(() => t.el.scrollIntoView(), 60);
@@ -511,6 +541,7 @@ async function toggleLike(gameId) {
     refreshPost(gameId);
     await db.from('likes').insert({ game_id: gameId, user_id: user.id });
   }
+  if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
 }
 
 /* ---------- 儲存（收藏到我的頁面） ---------- */
@@ -533,6 +564,7 @@ async function toggleSave(gameId) {
   } else {
     await db.from('saves').delete().eq('game_id', gameId).eq('user_id', user.id);
   }
+  if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
 }
 
 /* ---------- 留言 ---------- */
@@ -673,6 +705,9 @@ function cacheRemixEntry(row) {
 }
 function baseEntryById(id) { const g = (window.GAMES || []).find(g => g.id === id); return g ? toBaseEntry(g) : null; }
 function entryFor(id) {
+  if (id.indexOf('game:') === 0 && window.PlayFeedCreator) {
+    return window.PlayFeedCreator.entryFor(id);
+  }
   if (id.indexOf('remix:') === 0) {
     if (remixEntryCache[id]) return remixEntryCache[id];
     const row = remixRows.find(r => 'remix:' + r.id === id);
@@ -1302,6 +1337,28 @@ function toast(msg) {
 loadLikes();
 loadSaves();
 loadRemixGames();
+
+/* 投稿工具與沙盒遊戲使用的最小平台介面。 */
+window.PlayFeedHost = {
+  get db() { return db; },
+  get user() { return user; },
+  feed,
+  icons: ICONS,
+  displayName,
+  requireLogin,
+  toast,
+  setNavVisible,
+  setMainNavActive,
+  closeProfile,
+  closeStandalone,
+  refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
+  toggleLike,
+  toggleSave,
+  openComments,
+  shareGame,
+  submitScore
+};
 </script>
+<script type="module" src="creator.js"></script>
 </body>
 </html>

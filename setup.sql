@@ -7,6 +7,8 @@ drop table if exists public.comments cascade;
 drop table if exists public.scores cascade;
 drop table if exists public.saves cascade;
 drop table if exists public.remixes cascade;
+drop table if exists public.user_game_scores cascade;
+drop table if exists public.user_games cascade;
 
 -- user_id 是 Phuze 發的會員編號（一串文字），不是 Supabase 自己的帳號系統
 create table public.likes (
@@ -54,11 +56,48 @@ create table public.remixes (
   created_at timestamptz not null default now()
 );
 
+-- 使用者投稿的完整 Script 與平台擷取 metadata
+create table public.user_games (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  suggested_id text,
+  api_version int not null default 1,
+  game_version text not null default '1.0.0',
+  title text not null check (char_length(title) between 1 and 80),
+  description text not null check (char_length(description) between 1 and 240),
+  tip text not null check (char_length(tip) between 1 and 160),
+  bg text not null default '#18354a',
+  tags jsonb not null default '[]',
+  controls jsonb not null default '[]',
+  duration int not null check (duration between 20 and 60),
+  score jsonb not null default '{}',
+  remix_slots jsonb not null default '[]',
+  script text not null check (char_length(script) between 1 and 150000),
+  screenshot text,
+  author_id text not null,
+  author_name text not null default '玩家',
+  status text not null default 'published' check (status in ('draft', 'published', 'hidden', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 投稿遊戲依「遊戲 ID + 版本 + 玩家」分開保存最佳成績
+create table public.user_game_scores (
+  game_id uuid not null references public.user_games(id) on delete cascade,
+  game_version text not null,
+  user_id text not null,
+  score double precision not null check (score between -1000000000 and 1000000000),
+  updated_at timestamptz not null default now(),
+  primary key (game_id, game_version, user_id)
+);
+
 alter table public.likes enable row level security;
 alter table public.comments enable row level security;
 alter table public.scores enable row level security;
 alter table public.saves enable row level security;
 alter table public.remixes enable row level security;
+alter table public.user_games enable row level security;
+alter table public.user_game_scores enable row level security;
 
 -- 因為登入是 Phuze 管的，Supabase 這邊驗不了身分，
 -- 所以政策先全開（適合小型社群實驗；要更嚴格的防偽造再跟 Claude 說，
@@ -81,3 +120,11 @@ create policy "remove saves" on public.saves for delete using (true);
 create policy "read remixes" on public.remixes for select using (true);
 create policy "write remixes" on public.remixes for insert with check (true);
 create policy "remove remixes" on public.remixes for delete using (true);
+
+create policy "read published user games" on public.user_games for select using (status = 'published');
+create policy "write user games" on public.user_games for insert with check (true);
+create policy "update user games" on public.user_games for update using (true) with check (true);
+
+create policy "read user game scores" on public.user_game_scores for select using (true);
+create policy "write user game scores" on public.user_game_scores for insert with check (true);
+create policy "update user game scores" on public.user_game_scores for update using (true) with check (true);
