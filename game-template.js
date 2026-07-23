@@ -6,11 +6,18 @@
 window.GAMES = (window.GAMES || []).concat([
 
 {
+  apiVersion: 1,
+  gameVersion: '1.0.0',
   id: 'space-dodge',
   title: '太空閃避：撐越久分越高',
+  description: '左右移動太空船閃避愈來愈密集的隕石，存活愈久分數愈高。',
   author: '@範本作者',
   tip: '點左右半邊移動，閃開隕石，活越久分越高',
   bg: '#0b1e33',
+  tags: ['survival', 'timing', 'space'],
+  controls: ['tap', 'horizontal-drag'],
+  duration: 45,
+  score: { label: '存活分數', order: 'higher', decimals: 0 },
   /* 選配：宣告可被玩家換圖的元素 */
   remixSlots: [
     { key: 'player', label: '太空船（主角）', hint: '你操控的角色', default: '🚀', shape: 'free' },
@@ -107,6 +114,7 @@ window.GAMES = (window.GAMES || []).concat([
       /* 只吃點按：點左半邊往左、右半邊往右。沒有任何垂直手勢。 */
       input(t, x) {
         if (!alive) return;
+        if (t === 'cancel') { targetX = px; return; }
         if (t === 'down' || t === 'move') targetX = x < W / 2 ? W * 0.25 : W * 0.75;
       }
     };
