@@ -342,6 +342,7 @@ const online = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
 const db = online ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
 const phuzeOn = !!(cfg.PHUZE_PUBLISHABLE_KEY && window.Phuze);
 let user = null;
+let phuzeToken = '';
 let pendingAction = null;   // 被登入擋下的動作，登入成功後自動補做
 const DISLIKE_PREFIX = '__dislike__:';
 const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
@@ -374,6 +375,35 @@ function setUser(u) {
   authChip.textContent = u ? displayName(u) : '登入';
   authChip.classList.toggle('on', !!u);
 }
+function currentPhuzeToken(session) {
+  return String(
+    session?.token ||
+    session?.sessionToken ||
+    session?.accessToken ||
+    localStorage.getItem('phuze_session') ||
+    ''
+  );
+}
+async function secureWrite(action, payload = {}) {
+  if (!phuzeToken) throw new Error('登入已失效，請重新登入');
+  const response = await fetch('/api/write', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${phuzeToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.ok) {
+    if (response.status === 401) {
+      phuzeToken = '';
+      setUser(null);
+    }
+    throw new Error(result.error || '操作失敗，請稍後再試');
+  }
+  return result;
+}
 
 /* ---------- 登入（Phuze magic link） ---------- */
 const loginBox = document.getElementById('login');
@@ -400,6 +430,7 @@ if (phuzeOn) {
   Phuze.mount('#phuze-widget');
   Phuze.onSessionChange(session => {
     const wasIn = !!user;
+    phuzeToken = session ? currentPhuzeToken(session) : '';
     setUser(session ? { id: session.uid, email: session.email || '' } : null);
     loadLikes(); loadSaves();
     if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
@@ -561,36 +592,39 @@ function refreshPost(gameId) {
 async function toggleReaction(gameId, reaction) {
   if (!requireLogin(() => toggleReaction(gameId, reaction))) return;
   const st = reactionState(gameId);
+  const previous = { ...st };
   const isLike = reaction === 'like';
   const active = isLike ? st.mine : st.disliked;
-  const oldKey = reactionDbKey(gameId, isLike ? 'dislike' : 'like');
-  const newKey = reactionDbKey(gameId, reaction);
-  const writes = [];
+  let nextReaction = null;
 
   if (active) {
     if (isLike) { st.mine = false; st.count = Math.max(0, st.count - 1); }
     else { st.disliked = false; st.dislikeCount = Math.max(0, st.dislikeCount - 1); }
-    writes.push(db.from('likes').delete().eq('game_id', newKey).eq('user_id', user.id));
   } else {
     if (isLike) {
       if (st.disliked) {
         st.disliked = false;
         st.dislikeCount = Math.max(0, st.dislikeCount - 1);
-        writes.push(db.from('likes').delete().eq('game_id', oldKey).eq('user_id', user.id));
       }
       st.mine = true; st.count++;
     } else {
       if (st.mine) {
         st.mine = false;
         st.count = Math.max(0, st.count - 1);
-        writes.push(db.from('likes').delete().eq('game_id', oldKey).eq('user_id', user.id));
       }
       st.disliked = true; st.dislikeCount++;
     }
-    writes.push(db.from('likes').insert({ game_id: newKey, user_id: user.id }));
+    nextReaction = reaction;
   }
   refreshPost(gameId);
-  await Promise.all(writes);
+  try {
+    await secureWrite('reaction', { gameId, reaction: nextReaction });
+  } catch (error) {
+    Object.assign(st, previous);
+    refreshPost(gameId);
+    toast('操作失敗：' + error.message);
+    return;
+  }
   if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
   if (profileBox.classList.contains('open')) renderProfileGrid(profileTab);
 }
@@ -609,11 +643,14 @@ async function toggleSave(gameId) {
   const on = !saveState[gameId];
   saveState[gameId] = on;
   refreshPost(gameId);
-  if (on) {
-    toast('已收藏到我的頁面 🔖');
-    await db.from('saves').insert({ game_id: gameId, user_id: user.id });
-  } else {
-    await db.from('saves').delete().eq('game_id', gameId).eq('user_id', user.id);
+  try {
+    await secureWrite('save', { gameId, active: on });
+    if (on) toast('已收藏到我的頁面 🔖');
+  } catch (error) {
+    saveState[gameId] = !on;
+    refreshPost(gameId);
+    toast('操作失敗：' + error.message);
+    return;
   }
   if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
 }
@@ -659,10 +696,11 @@ async function sendComment() {
   const body = input.value.trim();
   if (!body || !sheetGame) return;
   if (!requireLogin(sendComment)) return;
-  const { error } = await db.from('comments').insert({
-    game_id: sheetGame.id, user_id: user.id, name: displayName(user), body
-  });
-  if (error) return toast('送出失敗：' + error.message);
+  try {
+    await secureWrite('comment', { gameId: sheetGame.id, body });
+  } catch (error) {
+    return toast('送出失敗：' + error.message);
+  }
   input.value = '';
   openComments(sheetGame);
 }
@@ -682,10 +720,7 @@ async function shareGame(g) {
 /* ---------- 分數上傳 ---------- */
 async function submitScore(gameId, score) {
   if (!online || !user || !score) return;
-  await db.from('scores').upsert(
-    { game_id: gameId, user_id: user.id, score },
-    { onConflict: 'game_id,user_id' }
-  );
+  try { await secureWrite('score', { gameId, score }); } catch (error) {}
 }
 
 /* ---------- 分享成績（含截圖卡片） ---------- */
@@ -997,9 +1032,13 @@ async function saveRemixAsGame() {
   if (!Object.keys(sprites).length) { toast('沒有可儲存的內容'); return; }
   const btn = document.getElementById('remixSave');
   btn.disabled = true; btn.textContent = '發佈中…';
-  const { data, error } = await db.from('remixes')
-    .insert({ base_id: base.id, user_id: user.id, name, author: displayName(user), sprites })
-    .select().single();
+  let data, error;
+  try {
+    const result = await secureWrite('remix', { baseId: base.id, name, sprites });
+    data = result.remix;
+  } catch (caught) {
+    error = caught;
+  }
   btn.disabled = false; btn.textContent = '儲存成新遊戲';
   if (error) { toast('發佈失敗：' + error.message); return; }
   remixRows.push(data);
@@ -1402,6 +1441,7 @@ window.PlayFeedHost = {
   icons: ICONS,
   displayName,
   requireLogin,
+  secureWrite,
   toast,
   setNavVisible,
   setMainNavActive,

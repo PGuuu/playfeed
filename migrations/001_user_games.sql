@@ -52,21 +52,17 @@ create policy "read published user games" on public.user_games
   for select using (status = 'published');
 
 drop policy if exists "write user games" on public.user_games;
-create policy "write user games" on public.user_games
-  for insert with check (true);
 
 drop policy if exists "update user games" on public.user_games;
-create policy "update user games" on public.user_games
-  for update using (true) with check (true);
 
 drop policy if exists "read user game scores" on public.user_game_scores;
 create policy "read user game scores" on public.user_game_scores
   for select using (true);
 
 drop policy if exists "write user game scores" on public.user_game_scores;
-create policy "write user game scores" on public.user_game_scores
-  for insert with check (true);
 
 drop policy if exists "update user game scores" on public.user_game_scores;
-create policy "update user game scores" on public.user_game_scores
-  for update using (true) with check (true);
+
+revoke insert, update, delete, truncate, references, trigger
+  on public.user_games, public.user_game_scores
+  from anon, authenticated;
