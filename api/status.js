@@ -6,21 +6,25 @@ module.exports = async function handler(request, response) {
     return sendJson(response, 405, { error: 'Method not allowed.' });
   }
 
-  const phuzeConfigured = !!(
+  const phuzeSecret = (
     process.env.PHUZE_SECRET_KEY ||
-    process.env.phuze_secret_key
+    process.env.phuze_secret_key ||
+    ''
   );
-  const supabaseConfigured = !!(
+  const supabaseSecret = (
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.supabase_service_role_key
+    process.env.supabase_service_role_key ||
+    ''
   );
+  const phuzeConfigured = !!phuzeSecret;
+  const supabaseConfigured = !!supabaseSecret;
 
   let database = { reachable: false, userGames: null, legacyGames: null };
   if (supabaseConfigured) {
     const [native, legacy] = await Promise.all([
       supabaseRest('user_games', { query: 'select=id' }),
       supabaseRest('remixes', {
-        query: `select=id&base_id=${encodeURIComponent('eq.__playfeed_script_submission__')}`,
+        query: `select=id&base_id=${encodeURIComponent('eq.__playfeed_script_v1__')}`,
       }),
     ]);
     database = {
@@ -37,8 +41,20 @@ module.exports = async function handler(request, response) {
     environment: process.env.VERCEL_ENV || 'unknown',
     deployment: process.env.VERCEL_GIT_COMMIT_SHA || null,
     configuration: {
-      phuzeSecret: phuzeConfigured,
-      supabaseServiceRole: supabaseConfigured,
+      phuzeSecret: {
+        configured: phuzeConfigured,
+        format: !phuzeSecret
+          ? 'missing'
+          : (phuzeSecret.startsWith('sk_') ? 'secret-key' : 'unexpected'),
+      },
+      supabaseServiceRole: {
+        configured: supabaseConfigured,
+        format: !supabaseSecret
+          ? 'missing'
+          : (supabaseSecret.startsWith('sb_secret_')
+              ? 'secret-key'
+              : (supabaseSecret.split('.').length === 3 ? 'legacy-jwt' : 'unexpected')),
+      },
     },
     database,
   });

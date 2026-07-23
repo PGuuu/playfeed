@@ -99,7 +99,9 @@ async function supabaseRest(table, { method = 'GET', query = '', body, prefer = 
     method,
     headers: {
       apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
+      ...(serviceKey.startsWith('sb_secret_')
+        ? {}
+        : { Authorization: `Bearer ${serviceKey}` }),
       'Content-Type': 'application/json',
       ...(prefer ? { Prefer: prefer } : {}),
     },
