@@ -277,7 +277,14 @@ const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
 const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
 let definition=null,game=null,ended=true,score=0,hardTimer=null,autoTimer=null;
 const timers=new Set(),intervals=new Set(),rafs=new Set();
-const real={setTimeout,clearTimeout,setInterval,clearInterval,raf:requestAnimationFrame,caf:cancelAnimationFrame};
+const real={
+  setTimeout:window.setTimeout.bind(window),
+  clearTimeout:window.clearTimeout.bind(window),
+  setInterval:window.setInterval.bind(window),
+  clearInterval:window.clearInterval.bind(window),
+  raf:window.requestAnimationFrame.bind(window),
+  caf:window.cancelAnimationFrame.bind(window)
+};
 window.setTimeout=(fn,ms,...a)=>{const id=real.setTimeout(()=>{timers.delete(id);fn(...a)},Math.min(Number(ms)||0,60000));timers.add(id);return id};
 window.clearTimeout=id=>{timers.delete(id);real.clearTimeout(id)};
 window.setInterval=(fn,ms,...a)=>{const id=real.setInterval(fn,Math.max(16,Number(ms)||0),...a);intervals.add(id);return id};
