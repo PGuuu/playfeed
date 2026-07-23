@@ -256,7 +256,8 @@
 <div id="profile">
   <div class="phead"><b id="profileWho">個人頁</b><button id="logoutBtn">登出</button></div>
   <div class="ptabs">
-    <button class="active" data-tab="mine"><span class="tico" data-ico="remix"></span>我做的</button>
+    <button class="active" data-tab="created"><span class="tico" data-ico="create"></span>自創</button>
+    <button data-tab="remixed"><span class="tico" data-ico="remix"></span>改造</button>
     <button data-tab="saved"><span class="tico" data-ico="save"></span>儲存</button>
     <button data-tab="liked"><span class="tico" data-ico="like"></span>愛心</button>
   </div>
@@ -436,7 +437,7 @@ document.getElementById('navMeMain').addEventListener('click', () => {
 
 /* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
 const profileBox = document.getElementById('profile');
-let profileTab = 'mine';
+let profileTab = 'created';
 function openProfile() {
   closeStandalone();
   document.getElementById('profileWho').textContent = user ? displayName(user) : '個人頁';
@@ -456,11 +457,11 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   toast('已登出');
 });
 function profileData(tab) {
-  if (tab === 'mine') {
-    if (!user) return [];
-    const remixes = remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
-    const scripts = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
-    return remixes.concat(scripts);
+  if (tab === 'created') {
+    return user && window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
+  }
+  if (tab === 'remixed') {
+    return user ? remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean) : [];
   }
   const st = tab === 'saved' ? saveState : likeState;
   return Object.keys(st)
@@ -472,7 +473,8 @@ function renderProfileGrid(tab) {
   const items = profileData(tab);
   grid.innerHTML = '';
   if (!items.length) {
-    const msg = { mine: '還沒有發布或改造遊戲。到「創作」貼上 Script，就能發布第一款。',
+    const msg = { created: '還沒有自創遊戲。到「創作」貼上 Script，就能發布第一款。',
+      remixed: '還沒有改造遊戲。從 Feed 選一款支援改造的遊戲開始。',
       saved: '還沒有收藏。看到喜歡的遊戲按「儲存」。', liked: '還沒按過愛心。' }[tab];
     const empty = document.createElement('div');
     empty.className = 'gempty'; empty.textContent = msg; grid.appendChild(empty);

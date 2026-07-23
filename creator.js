@@ -19,6 +19,11 @@ const LEGACY_BASE_ID = '__playfeed_script_v1__';
 let backendMode = null;
 let draft = null;
 let previewRuntime = null;
+let draftHasPlaytested = false;
+let playtestRuntime = null;
+let playtestRoot = null;
+let playtestGesture = null;
+let playtestDone = null;
 
 function walk(node, visit, parent = null, parentKey = '') {
   if (!node || typeof node !== 'object') return;
@@ -369,21 +374,53 @@ function buildCreatorUI() {
     <header class="creator-head"><b>創作 PlayFeed</b><button id="creatorClose">完成</button></header>
     <div class="creator-scroll"><main class="creator-wrap">
       <section class="creator-intro">
-        <h1>一段 Script，<br>就是一款遊戲。</h1>
-        <p>用任何方式製作符合 PlayFeed v1 規格的 Script，貼上即可驗證、預玩與發布。平台不生成遊戲，也不綁定任何 AI。</p>
+        <h1>五個步驟，<br>發布一款遊戲。</h1>
+        <p>你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。</p>
       </section>
-      <div class="creator-primary">
-        <button id="copyCreatorSpec">複製遊戲創作規格</button>
-        <button id="focusCreatorSource">貼上遊戲 Script</button>
-      </div>
-      <textarea id="creatorSource" spellcheck="false" placeholder="貼上完整 JavaScript；也可以直接貼含有單一 \`\`\`js 程式碼區塊的 AI 回覆。"></textarea>
-      <button class="creator-action creator-submit" id="validateCreatorSource">驗證並建立預玩</button>
-      <p class="creator-hint">Script 只會在隔離沙盒中執行。正式作者與 ID 由平台建立，不採信 Script 內的 author 與 id。</p>
-      <div id="creatorResult"></div>
+      <section class="creator-step" data-step="1">
+        <span class="creator-step-no">1</span><div class="creator-step-content">
+          <h2>複製創作規格</h2>
+          <p>把 PlayFeed 的完整格式、操作限制與遊戲設計原則一起複製。</p>
+          <button class="creator-action" id="copyCreatorSpec">複製遊戲創作規格</button>
+        </div>
+      </section>
+      <section class="creator-step" data-step="2">
+        <span class="creator-step-no">2</span><div class="creator-step-content">
+          <h2>交給自己的 AI 創作</h2>
+          <p>把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。</p>
+        </div>
+      </section>
+      <section class="creator-step" data-step="3">
+        <span class="creator-step-no">3</span><div class="creator-step-content">
+          <h2>貼上生成的程式碼</h2>
+          <p>可以貼純 JavaScript，也可以直接貼含有單一程式碼區塊的完整回覆。</p>
+          <textarea id="creatorSource" spellcheck="false" placeholder="在這裡貼上完整的遊戲 Script"></textarea>
+          <button class="creator-ghost creator-paste" id="focusCreatorSource">從剪貼簿貼上</button>
+        </div>
+      </section>
+      <section class="creator-step" data-step="4">
+        <span class="creator-step-no">4</span><div class="creator-step-content">
+          <h2>驗證</h2>
+          <p>PlayFeed 會擷取顯示資料並檢查 Script；有問題時會產生可複製的修復報告。</p>
+          <button class="creator-action creator-submit" id="validateCreatorSource">驗證遊戲 Script</button>
+          <p class="creator-hint">正式作者與遊戲 ID 由平台建立，不採信 Script 裡的 author 與 id。</p>
+        </div>
+      </section>
+      <section class="creator-step" data-step="5">
+        <span class="creator-step-no">5</span><div class="creator-step-content creator-result-content">
+          <h2>試玩</h2>
+          <p>驗證通過後，全螢幕試玩一次；往上滑或遊戲結束即可離開並發布。</p>
+          <div id="creatorResult"><div class="creator-result-empty">尚未驗證遊戲</div></div>
+        </div>
+      </section>
     </main></div>`;
   document.body.appendChild(root);
   root.querySelector('#creatorClose').addEventListener('click', closeCreator);
-  root.querySelector('#copyCreatorSpec').addEventListener('click', () => copyText(FULL_SPEC, '完整創作規格已複製'));
+  root.querySelector('#copyCreatorSpec').addEventListener('click', event => {
+    copyText(FULL_SPEC, '完整創作規格已複製');
+    event.currentTarget.textContent = '✓ 已複製創作規格';
+    root.querySelector('[data-step="1"]').classList.add('done');
+  });
   root.querySelector('#focusCreatorSource').addEventListener('click', async () => {
     const area = root.querySelector('#creatorSource');
     try {
@@ -409,9 +446,23 @@ function openCreator() {
 }
 
 function closeCreator() {
+  closePlaytest(false);
   creatorRoot.classList.remove('open');
   if (previewRuntime) { previewRuntime.destroy(); previewRuntime = null; }
   host.setMainNavActive('home');
+}
+
+function resetCreator() {
+  closePlaytest(false);
+  if (previewRuntime) { previewRuntime.destroy(); previewRuntime = null; }
+  draft = null;
+  draftHasPlaytested = false;
+  creatorRoot.querySelector('#creatorSource').value = '';
+  creatorRoot.querySelector('#creatorResult').innerHTML = '<div class="creator-result-empty">尚未驗證遊戲</div>';
+  const copy = creatorRoot.querySelector('#copyCreatorSpec');
+  copy.textContent = '複製遊戲創作規格';
+  creatorRoot.querySelector('[data-step="1"]').classList.remove('done');
+  creatorRoot.querySelector('.creator-scroll').scrollTop = 0;
 }
 
 function setDraftMetadataFromEdits(card) {
@@ -424,6 +475,114 @@ function setDraftMetadataFromEdits(card) {
   if (tip) draft.metadata.tip = tip.slice(0, 160);
 }
 
+function closePlaytest(completed, message = '') {
+  if (!playtestRoot) return;
+  if (playtestGesture && playtestRuntime) {
+    playtestRuntime.send('input', {
+      inputType: 'cancel',
+      x: playtestGesture.x,
+      y: playtestGesture.y
+    });
+  }
+  playtestGesture = null;
+  if (playtestRuntime) playtestRuntime.destroy();
+  playtestRuntime = null;
+  playtestRoot.remove();
+  playtestRoot = null;
+  const done = playtestDone;
+  playtestDone = null;
+  if (creatorRoot.classList.contains('open')) host.setNavVisible(true);
+  if (completed) done?.();
+  if (message) host.toast(message);
+}
+
+function openPlaytest(result, onDone) {
+  closePlaytest(false);
+  const root = el('section', 'creator-playtest');
+  root.innerHTML = `
+    <div class="creator-playtest-stage">
+      <div class="creator-playtest-frame"></div>
+      <div class="creator-playtest-input"></div>
+      <div class="creator-playtest-exit">↑ 往上滑離開試玩</div>
+      <div class="creator-playtest-status"></div>
+    </div>`;
+  document.body.appendChild(root);
+  playtestRoot = root;
+  playtestDone = onDone;
+  host.setNavVisible(false);
+
+  const stage = root.querySelector('.creator-playtest-stage');
+  const frameHost = root.querySelector('.creator-playtest-frame');
+  const inputLayer = root.querySelector('.creator-playtest-input');
+  const status = root.querySelector('.creator-playtest-status');
+  const logical = event => {
+    const rect = stage.getBoundingClientRect();
+    return [
+      (event.clientX - rect.left) / rect.width * 400,
+      (event.clientY - rect.top) / rect.height * 700
+    ];
+  };
+
+  playtestRuntime = createRuntime(frameHost, result.source, result.metadata.duration, msg => {
+    if (msg.type === 'over' && root.dataset.failed !== 'true') {
+      status.textContent = `遊戲結束 · ${msg.score}`;
+      status.classList.add('show');
+      setTimeout(() => closePlaytest(true, '試玩完成，可以發布'), 520);
+    }
+    if (msg.type === 'runtime-error') {
+      root.dataset.failed = 'true';
+      playtestRuntime?.send('stop');
+      status.textContent = `執行錯誤：${msg.message} · 往上滑離開`;
+      status.classList.add('show', 'bad');
+    }
+  });
+  playtestRuntime.send('start');
+
+  inputLayer.addEventListener('pointerdown', event => {
+    if (!playtestRuntime) return;
+    event.preventDefault();
+    try { inputLayer.setPointerCapture(event.pointerId); } catch (_) {}
+    const [x, y] = logical(event);
+    playtestGesture = {
+      id: event.pointerId,
+      x0: event.clientX,
+      y0: event.clientY,
+      x,
+      y,
+      exiting: false
+    };
+    playtestRuntime.send('input', { inputType: 'down', x, y });
+  });
+  inputLayer.addEventListener('pointermove', event => {
+    if (!playtestGesture || playtestGesture.id !== event.pointerId || !playtestRuntime) return;
+    event.preventDefault();
+    const [x, y] = logical(event);
+    playtestGesture.x = x;
+    playtestGesture.y = y;
+    const dx = event.clientX - playtestGesture.x0;
+    const dy = event.clientY - playtestGesture.y0;
+    if (!playtestGesture.exiting && dy < -52 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      playtestGesture.exiting = true;
+      playtestRuntime.send('input', { inputType: 'cancel', x, y });
+      const passed = root.dataset.failed !== 'true';
+      closePlaytest(passed, passed ? '已離開試玩，可以發布' : '試玩有執行錯誤，請先修正');
+      return;
+    }
+    if (!playtestGesture.exiting) {
+      playtestRuntime.send('input', { inputType: 'move', x, y });
+    }
+  });
+  const end = (event, cancelled) => {
+    if (!playtestGesture || playtestGesture.id !== event.pointerId || !playtestRuntime) return;
+    event.preventDefault();
+    const [x, y] = logical(event);
+    playtestRuntime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
+    playtestGesture = null;
+  };
+  inputLayer.addEventListener('pointerup', event => end(event, false));
+  inputLayer.addEventListener('pointercancel', event => end(event, true));
+}
+
 function renderValidation(result) {
   const out = creatorRoot.querySelector('#creatorResult');
   out.replaceChildren();
@@ -434,6 +593,7 @@ function renderValidation(result) {
 
   if (result.errors.length) {
     draft = null;
+    draftHasPlaytested = false;
     body.appendChild(el('div', 'creator-status bad', '未通過 v1 驗證'));
     body.appendChild(el('h2', '', '需要修正 Script'));
     const list = el('ol', 'creator-errors');
@@ -458,12 +618,40 @@ function renderValidation(result) {
   }
 
   draft = result;
+  draftHasPlaytested = false;
   body.appendChild(el('div', 'creator-status ok', '✓ 通過 v1 靜態驗證'));
-  body.appendChild(el('h2', '', result.metadata.title));
-  body.appendChild(el('p', 'creator-desc', result.metadata.description));
+  body.appendChild(el('p', 'creator-edit-note', '點一下文字欄位即可直接修改顯示資料'));
+
+  const titleInput = el('input', 'creator-title-input');
+  titleInput.value = result.metadata.title;
+  titleInput.dataset.edit = 'title';
+  titleInput.maxLength = 80;
+  titleInput.setAttribute('aria-label', '遊戲名稱');
+  const descInput = el('textarea', 'creator-desc-input');
+  descInput.value = result.metadata.description;
+  descInput.dataset.edit = 'description';
+  descInput.maxLength = 240;
+  descInput.setAttribute('aria-label', '遊戲介紹');
+  const tipInput = el('input', 'creator-tip-input');
+  tipInput.value = result.metadata.tip;
+  tipInput.dataset.edit = 'tip';
+  tipInput.maxLength = 160;
+  tipInput.setAttribute('aria-label', '操作說明');
+  const directFields = el('div', 'creator-direct-fields');
+  const directField = (label, input) => {
+    const wrap = el('label');
+    wrap.append(el('small', '', label), input);
+    return wrap;
+  };
+  directFields.append(
+    directField('遊戲名稱', titleInput),
+    directField('一句話介紹', descInput),
+    directField('操作說明', tipInput)
+  );
+  body.appendChild(directFields);
+
   const meta = el('div', 'creator-meta');
   const pairs = [
-    ['操作', result.metadata.tip],
     ['預估單局', `${result.metadata.duration} 秒`],
     ['操作類型', result.metadata.controls.join('、')],
     ['Remix 元素', result.metadata.remixSlots.length ? result.metadata.remixSlots.map(x => x.label).join('、') : '無'],
@@ -471,49 +659,37 @@ function renderValidation(result) {
     ['版本', `API v${result.metadata.apiVersion} · 遊戲 ${result.metadata.gameVersion}`]
   ];
   for (const [label, value] of pairs) {
-    const item = el('div'); item.append(el('small', '', label), el('span', '', value)); meta.appendChild(item);
+    const item = el('div');
+    item.append(el('small', '', label), el('span', '', value));
+    meta.appendChild(item);
   }
   body.appendChild(meta);
   if (result.warnings.length) body.appendChild(el('p', 'creator-warnings', result.warnings.join(' ')));
 
-  const edit = el('details', 'creator-edit');
-  edit.innerHTML = '<summary>修改顯示資料（選配）</summary>';
-  const editGrid = el('div', 'creator-edit-grid');
-  const titleInput = el('input'); titleInput.value = result.metadata.title; titleInput.dataset.edit = 'title'; titleInput.maxLength = 80;
-  const descInput = el('textarea'); descInput.value = result.metadata.description; descInput.dataset.edit = 'description'; descInput.maxLength = 240;
-  const tipInput = el('input'); tipInput.value = result.metadata.tip; tipInput.dataset.edit = 'tip'; tipInput.maxLength = 160;
-  editGrid.append(titleInput, descInput, tipInput); edit.appendChild(editGrid); body.appendChild(edit);
-
   const buttons = el('div', 'creator-buttons');
-  const play = el('button', '', '開始預玩');
-  const auto = el('button', '', '自動亂玩測試');
-  const code = el('button', '', '查看 Script');
-  const publish = el('button', 'publish', '發布');
-  buttons.append(play, auto, code, publish); body.appendChild(buttons);
-  const details = el('details', 'creator-edit');
-  details.append(el('summary', '', '完整 Script'), el('pre', 'creator-code', result.source));
-  body.appendChild(details);
-  const preview = el('div', 'creator-preview');
-  preview.style.background = result.metadata.bg;
-  preview.appendChild(el('div', 'creator-preview-note', '按「開始預玩」或「自動亂玩測試」'));
-  card.append(body, preview); out.appendChild(card);
+  const play = el('button', 'creator-play', '開始試玩');
+  const publish = el('button', 'publish', '試玩後即可發布');
+  publish.disabled = true;
+  buttons.append(play, publish);
+  body.appendChild(buttons);
+  const playState = el('p', 'creator-play-state', '先完成一次試玩，發布按鈕就會開啟。');
+  body.appendChild(playState);
+  card.appendChild(body);
+  out.appendChild(card);
 
-  const mount = mode => {
-    preview.replaceChildren();
-    if (previewRuntime) previewRuntime.destroy();
-    previewRuntime = createRuntime(preview, result.source, result.metadata.duration, msg => {
-      if (msg.type === 'runtime-error') {
-        preview.appendChild(el('div', 'sandbox-error', `執行錯誤：${msg.message}`));
-        const err = preview.querySelector('.sandbox-error'); if (err) err.style.display = 'block';
-      }
+  play.addEventListener('click', () => {
+    setDraftMetadataFromEdits(card);
+    openPlaytest(result, () => {
+      draftHasPlaytested = true;
+      publish.disabled = false;
+      publish.textContent = '發布';
+      playState.textContent = '✓ 已完成試玩，可以發布。';
+      playState.classList.add('done');
     });
-    previewRuntime.send(mode);
-  };
-  play.addEventListener('click', () => mount('start'));
-  auto.addEventListener('click', () => mount('auto'));
-  code.addEventListener('click', () => { details.open = !details.open; if (details.open) details.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+  });
   publish.addEventListener('click', () => {
     setDraftMetadataFromEdits(card);
+    if (!draftHasPlaytested) return host.toast('請先完成一次試玩');
     if (!host.requireLogin(publishDraft)) return;
     publishDraft();
   });
@@ -683,6 +859,7 @@ async function publishDraft() {
     const post = addSandboxPost(data);
     host.refreshProfile();
     host.toast('發布成功！已加入 PlayFeed');
+    resetCreator();
     closeCreator();
     setTimeout(() => post.el.scrollIntoView({ behavior: 'smooth' }), 320);
   } catch (error) {
