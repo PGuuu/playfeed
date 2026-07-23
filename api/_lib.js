@@ -47,7 +47,7 @@ async function readJson(request, maxBytes = 700_000) {
 }
 
 async function verifyPhuzeSession(request) {
-  const secret = process.env.PHUZE_SECRET_KEY;
+  const secret = process.env.PHUZE_SECRET_KEY || process.env.phuze_secret_key;
   if (!secret) {
     return { error: { status: 503, message: 'PHUZE_SECRET_KEY is not configured.' } };
   }
@@ -81,7 +81,7 @@ async function verifyPhuzeSession(request) {
 }
 
 async function supabaseRest(table, { method = 'GET', query = '', body, prefer = '' } = {}) {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.supabase_service_role_key;
   if (!serviceKey) {
     return {
       ok: false,
@@ -90,7 +90,11 @@ async function supabaseRest(table, { method = 'GET', query = '', body, prefer = 
       error: 'SUPABASE_SERVICE_ROLE_KEY is not configured.',
     };
   }
-  const baseUrl = String(process.env.SUPABASE_URL || SUPABASE_URL_FALLBACK).replace(/\/+$/, '');
+  const baseUrl = String(
+    process.env.SUPABASE_URL ||
+    process.env.supabase_url ||
+    SUPABASE_URL_FALLBACK
+  ).replace(/\/+$/, '');
   const response = await fetch(`${baseUrl}/rest/v1/${table}${query ? `?${query}` : ''}`, {
     method,
     headers: {
