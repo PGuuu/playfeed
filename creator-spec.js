@@ -55,6 +55,8 @@ GameInstance 必須包含：
 - stop()：停止 requestAnimationFrame、timer 與其他循環。
 - input(type, x, y)：處理 down / move / up / cancel。
 
+可以先宣告三個函式，最後使用 \`return { start, stop, input }\`；create(env) 內的輔助函式也可以正常回傳座標、角色或其他資料物件。平台只把 create(env) 自己直接回傳的物件視為 GameInstance，不會把輔助函式的 \`return { ... }\` 誤認成遊戲實例。
+
 cancel 代表平台接管手勢或遊戲被中止，只能解除按住狀態，不可觸發發射、結算等 up 行為。
 
 ## 3. 硬性限制

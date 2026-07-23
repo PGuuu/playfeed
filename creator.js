@@ -1,5 +1,6 @@
 import { parse } from './vendor/acorn.mjs';
 import { FULL_SPEC, buildRepairPrompt } from './creator-spec.js';
+import { findReturnedGameInstance, hasGameInstanceMethod } from './validator-ast.mjs';
 
 const host = window.PlayFeedHost;
 if (!host) throw new Error('PlayFeedHost 尚未初始化');
@@ -103,14 +104,6 @@ function addIssue(list, message, node) {
   list.push(line ? `第 ${line} 行：${message}` : message);
 }
 
-function findReturnedInstance(createNode) {
-  let found = null;
-  walk(createNode.value, node => {
-    if (!found && node.type === 'ReturnStatement' && node.argument?.type === 'ObjectExpression') found = node.argument;
-  });
-  return found;
-}
-
 function extractScript(raw) {
   const input = String(raw || '').trim();
   if (!input) return { error: '請先貼上完整的 JavaScript Script。' };
@@ -199,13 +192,12 @@ function validateScript(raw) {
   if (!createProp || !['FunctionExpression', 'ArrowFunctionExpression'].includes(createProp.value.type)) {
     addIssue(errors, '缺少 create(env) 方法。', createProp || game);
   } else {
-    const instance = findReturnedInstance(createProp);
+    const instance = findReturnedGameInstance(createProp.value);
     if (!instance) {
       addIssue(errors, 'create(env) 必須回傳 GameInstance 物件。', createProp);
     } else {
       for (const method of ['start', 'stop', 'input']) {
-        const prop = getProperty(instance, method);
-        if (!prop || !['FunctionExpression', 'ArrowFunctionExpression'].includes(prop.value.type)) {
+        if (!hasGameInstanceMethod(createProp.value, instance, method)) {
           addIssue(errors, `GameInstance 缺少 ${method}()。`, instance);
         }
       }

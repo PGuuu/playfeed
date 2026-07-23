@@ -1,4 +1,5 @@
 let acornPromise;
+let validatorAstPromise;
 
 function walk(node, visit, parent = null, parentKey = '') {
   if (!node || typeof node !== 'object') return;
@@ -47,19 +48,11 @@ function registrationObject(program) {
   return array.elements[0]?.type === 'ObjectExpression' ? array.elements[0] : null;
 }
 
-function returnedInstance(createFunction) {
-  let result = null;
-  walk(createFunction.body, node => {
-    if (!result && node.type === 'ReturnStatement' && node.argument?.type === 'ObjectExpression') {
-      result = node.argument;
-    }
-  });
-  return result;
-}
-
 async function validatePublishedScript(source) {
   acornPromise ||= import('../vendor/acorn.mjs');
+  validatorAstPromise ||= import('../validator-ast.mjs');
   const { parse } = await acornPromise;
+  const { findReturnedGameInstance, hasGameInstanceMethod } = await validatorAstPromise;
   let program;
   try {
     program = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
@@ -79,13 +72,12 @@ async function validatePublishedScript(source) {
     return [...errors, 'Script must define create(env).'];
   }
 
-  const instance = returnedInstance(create);
+  const instance = findReturnedGameInstance(create);
   if (!instance) {
     errors.push('create(env) must return a GameInstance.');
   } else {
     for (const method of ['start', 'stop', 'input']) {
-      const value = property(instance, method)?.value;
-      if (!value || !['FunctionExpression', 'ArrowFunctionExpression'].includes(value.type)) {
+      if (!hasGameInstanceMethod(create, instance, method)) {
         errors.push(`GameInstance must define ${method}().`);
       }
     }
