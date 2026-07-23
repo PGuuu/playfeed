@@ -103,28 +103,21 @@ alter table public.user_game_scores enable row level security;
 -- 所以政策先全開（適合小型社群實驗；要更嚴格的防偽造再跟 Claude 說，
 -- 可以升級成用 Supabase Edge Function 驗 Phuze token）。
 create policy "read likes" on public.likes for select using (true);
-create policy "write likes" on public.likes for insert with check (true);
-create policy "remove likes" on public.likes for delete using (true);
 
 create policy "read comments" on public.comments for select using (true);
-create policy "write comments" on public.comments for insert with check (true);
 
 create policy "read scores" on public.scores for select using (true);
-create policy "write scores" on public.scores for insert with check (true);
-create policy "update scores" on public.scores for update using (true) with check (true);
 
 create policy "read saves" on public.saves for select using (true);
-create policy "write saves" on public.saves for insert with check (true);
-create policy "remove saves" on public.saves for delete using (true);
 
 create policy "read remixes" on public.remixes for select using (true);
-create policy "write remixes" on public.remixes for insert with check (true);
-create policy "remove remixes" on public.remixes for delete using (true);
 
 create policy "read published user games" on public.user_games for select using (status = 'published');
-create policy "write user games" on public.user_games for insert with check (true);
-create policy "update user games" on public.user_games for update using (true) with check (true);
 
 create policy "read user game scores" on public.user_game_scores for select using (true);
-create policy "write user game scores" on public.user_game_scores for insert with check (true);
-create policy "update user game scores" on public.user_game_scores for update using (true) with check (true);
+
+-- 瀏覽器只保留讀取權限。寫入必須經過 /api/write 驗證 Phuze 登入身分。
+revoke insert, update, delete, truncate, references, trigger
+  on public.likes, public.comments, public.scores, public.saves,
+     public.remixes, public.user_games, public.user_game_scores
+  from anon, authenticated;

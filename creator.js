@@ -865,10 +865,8 @@ async function publishDraft() {
   const button = creatorRoot.querySelector('.creator-buttons .publish');
   if (button) { button.disabled = true; button.textContent = '發布中…'; }
   try {
-    const slug = await uniqueSlug(draft.metadata.id);
     const screenshot = await captureDraftAutomatically();
     const row = {
-      slug,
       suggested_id: draft.metadata.id,
       api_version: 1,
       game_version: draft.metadata.gameVersion,
@@ -882,44 +880,10 @@ async function publishDraft() {
       score: draft.metadata.score,
       remix_slots: draft.metadata.remixSlots,
       script: draft.source,
-      screenshot,
-      author_id: host.user.id,
-      author_name: host.displayName(host.user),
-      status: 'published'
+      screenshot
     };
-    const mode = await detectBackendMode();
-    let data, error;
-    if (mode === 'user_games') {
-      ({ data, error } = await host.db.from('user_games').insert(row).select().single());
-    } else {
-      const payload = {
-        apiVersion: 1,
-        gameVersion: row.game_version,
-        slug: row.slug,
-        suggestedId: row.suggested_id,
-        title: row.title,
-        description: row.description,
-        tip: row.tip,
-        bg: row.bg,
-        tags: row.tags,
-        controls: row.controls,
-        duration: row.duration,
-        score: row.score,
-        remixSlots: row.remix_slots,
-        script: row.script,
-        screenshot: row.screenshot
-      };
-      const result = await host.db.from('remixes').insert({
-        base_id: LEGACY_BASE_ID,
-        user_id: row.author_id,
-        name: row.title,
-        author: row.author_name,
-        sprites: { playfeedSubmission: payload }
-      }).select().single();
-      error = result.error;
-      data = legacyRowToPublished(result.data);
-    }
-    if (error) throw error;
+    const result = await host.secureWrite('publish-game', { game: row });
+    const data = result.game;
     if (!data) throw new Error('後端沒有回傳已發布的遊戲資料。');
     publishedRows.push(data);
     const post = addSandboxPost(data);
@@ -984,25 +948,17 @@ async function submitPublishedScore(entry, value, bestChip) {
   const score = Math.max(-1e9, Math.min(1e9, Number(value)));
   const previous = await readPublishedBest(entry, bestChip);
   if (!scoreIsBetter(entry.score.order, score, previous)) return;
-  let result;
-  if (entry.storageMode === 'remixes') {
-    result = await host.db.from('scores').upsert({
-      game_id: entry.scoreKey, user_id: host.user.id, score, updated_at: new Date().toISOString()
-    }, { onConflict: 'game_id,user_id' });
-  } else {
-    result = await host.db.from('user_game_scores').upsert({
-      game_id: entry.databaseId,
-      game_version: entry.gameVersion,
-      user_id: host.user.id,
-      score,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'game_id,game_version,user_id' });
-  }
-  const { error } = result;
-  if (!error) {
+  try {
+    await host.secureWrite('user-game-score', {
+      storageMode: entry.storageMode,
+      databaseId: entry.databaseId,
+      gameVersion: entry.gameVersion,
+      scoreKey: entry.scoreKey,
+      score
+    });
     bestChip.style.display = '';
     bestChip.querySelector('.bs').textContent = String(score);
-  }
+  } catch (error) {}
 }
 
 function addSandboxPost(row) {
