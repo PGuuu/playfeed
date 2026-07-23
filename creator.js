@@ -16,6 +16,7 @@ const VERTICAL_CONTROLS = /vertical|swipe[-_ ]?(up|down)|pan[-_ ]?y|drag[-_ ]?y|
 const publishedRows = [];
 const publishedPosts = [];
 const LEGACY_BASE_ID = '__playfeed_script_v1__';
+const DISLIKE_PREFIX = '__dislike__:';
 let backendMode = null;
 let draft = null;
 let previewRuntime = null;
@@ -24,6 +25,7 @@ let playtestRuntime = null;
 let playtestRoot = null;
 let playtestGesture = null;
 let playtestDone = null;
+let validationFeedbackTimer = null;
 
 function walk(node, visit, parent = null, parentKey = '') {
   if (!node || typeof node !== 'object') return;
@@ -395,7 +397,10 @@ function buildCreatorUI() {
           <h2>貼上生成的程式碼</h2>
           <p>可以貼純 JavaScript，也可以直接貼含有單一程式碼區塊的完整回覆。</p>
           <textarea id="creatorSource" spellcheck="false" placeholder="在這裡貼上完整的遊戲 Script"></textarea>
-          <button class="creator-ghost creator-paste" id="focusCreatorSource">從剪貼簿貼上</button>
+          <div class="creator-source-actions">
+            <button class="creator-ghost creator-paste" id="focusCreatorSource">從剪貼簿貼上</button>
+            <button class="creator-ghost creator-clear" id="clearCreatorSource">全部刪除</button>
+          </div>
         </div>
       </section>
       <section class="creator-step" data-step="4">
@@ -420,17 +425,73 @@ function buildCreatorUI() {
     copyText(FULL_SPEC, '完整創作規格已複製');
     event.currentTarget.textContent = '✓ 已複製創作規格';
     root.querySelector('[data-step="1"]').classList.add('done');
+    root.querySelector('[data-step="2"]').classList.add('next');
   });
   root.querySelector('#focusCreatorSource').addEventListener('click', async () => {
     const area = root.querySelector('#creatorSource');
+    let pasted = false;
     try {
       const text = await navigator.clipboard.readText();
-      if (text && !area.value.trim()) area.value = text;
+      if (text && !area.value.trim()) {
+        area.value = text;
+        pasted = true;
+      }
     } catch (_) {}
+    if (pasted) area.dispatchEvent(new Event('input'));
     area.focus();
   });
-  root.querySelector('#validateCreatorSource').addEventListener('click', () => {
-    renderValidation(validateScript(root.querySelector('#creatorSource').value));
+  root.querySelector('#creatorSource').addEventListener('input', event => {
+    if (draft) {
+      draft = null;
+      draftHasPlaytested = false;
+      root.querySelector('#creatorResult').innerHTML = '<div class="creator-result-empty">程式碼已變更，請重新驗證</div>';
+      root.querySelector('[data-step="4"]').classList.remove('done');
+      root.querySelector('[data-step="5"]').classList.remove('next');
+    }
+    if (!event.currentTarget.value.trim()) return;
+    root.querySelector('[data-step="2"]').classList.remove('next');
+    root.querySelector('[data-step="2"]').classList.add('done');
+    root.querySelector('[data-step="3"]').classList.add('next');
+  });
+  root.querySelector('#clearCreatorSource').addEventListener('click', () => {
+    const area = root.querySelector('#creatorSource');
+    const validate = root.querySelector('#validateCreatorSource');
+    clearTimeout(validationFeedbackTimer);
+    area.value = '';
+    draft = null;
+    draftHasPlaytested = false;
+    root.querySelector('#creatorResult').innerHTML = '<div class="creator-result-empty">尚未驗證遊戲</div>';
+    root.querySelector('[data-step="3"]').classList.add('next');
+    root.querySelector('[data-step="4"]').classList.remove('done');
+    root.querySelector('[data-step="5"]').classList.remove('next');
+    validate.classList.remove('checking', 'passed', 'failed');
+    validate.disabled = false;
+    validate.textContent = '驗證遊戲 Script';
+    area.focus();
+    host.toast('程式碼已全部刪除');
+  });
+  root.querySelector('#validateCreatorSource').addEventListener('click', event => {
+    const button = event.currentTarget;
+    const source = root.querySelector('#creatorSource').value;
+    clearTimeout(validationFeedbackTimer);
+    button.disabled = true;
+    button.classList.remove('passed', 'failed');
+    button.classList.add('checking');
+    button.textContent = '驗證中…';
+    setTimeout(() => {
+      const result = validateScript(source);
+      renderValidation(result);
+      button.classList.remove('checking');
+      button.classList.add(result.errors.length ? 'failed' : 'passed');
+      button.textContent = result.errors.length ? '驗證未通過' : '✓ 驗證通過';
+      button.disabled = false;
+      root.querySelector('[data-step="4"]').classList.toggle('done', !result.errors.length);
+      root.querySelector('[data-step="5"]').classList.toggle('next', !result.errors.length);
+      validationFeedbackTimer = setTimeout(() => {
+        button.classList.remove('passed', 'failed');
+        button.textContent = '重新驗證遊戲 Script';
+      }, 1500);
+    }, 180);
   });
   return root;
 }
@@ -460,8 +521,13 @@ function resetCreator() {
   creatorRoot.querySelector('#creatorSource').value = '';
   creatorRoot.querySelector('#creatorResult').innerHTML = '<div class="creator-result-empty">尚未驗證遊戲</div>';
   const copy = creatorRoot.querySelector('#copyCreatorSpec');
+  const validate = creatorRoot.querySelector('#validateCreatorSource');
+  clearTimeout(validationFeedbackTimer);
   copy.textContent = '複製遊戲創作規格';
-  creatorRoot.querySelector('[data-step="1"]').classList.remove('done');
+  validate.classList.remove('checking', 'passed', 'failed');
+  validate.disabled = false;
+  validate.textContent = '驗證遊戲 Script';
+  creatorRoot.querySelectorAll('.creator-step').forEach(step => step.classList.remove('done', 'next'));
   creatorRoot.querySelector('.creator-scroll').scrollTop = 0;
 }
 
@@ -958,15 +1024,19 @@ function addSandboxPost(row) {
   const rail = el('div', 'rail');
   const makeRailButton = (klass, icon, label) => {
     const button = el('button', klass);
+    if (klass === 'like') button.setAttribute('aria-label', '按讚');
+    if (klass === 'dislike') button.setAttribute('aria-label', '倒讚');
     const ic = el('span', 'ic'); ic.innerHTML = host.icons[icon] || '';
-    button.append(ic, el('span', klass === 'like' ? 'lc' : '', klass === 'like' ? '0' : label));
+    const counterClass = klass === 'like' ? 'lc' : (klass === 'dislike' ? 'dc' : '');
+    button.append(ic, el('span', counterClass, counterClass ? '0' : label));
     return button;
   };
   const like = makeRailButton('like', 'like', '');
+  const dislike = makeRailButton('dislike', 'dislike', '');
   const comment = makeRailButton('cmt', 'comment', '留言');
   const save = makeRailButton('sv', 'save', '儲存');
   const share = makeRailButton('shr', 'share', '分享');
-  rail.append(like, comment, save, share);
+  rail.append(like, dislike, comment, save, share);
   const meta = el('div', 'meta');
   meta.append(el('div', 'author', entry.author), el('div', 'title', entry.title), el('div', 'tip', entry.tip));
   const overlay = el('div', 'overlay');
@@ -1060,16 +1130,19 @@ function addSandboxPost(row) {
   inputLayer.addEventListener('pointerup', event => end(event, false));
   inputLayer.addEventListener('pointercancel', event => end(event, true));
 
-  like.addEventListener('click', () => host.toggleLike(entry.id));
+  like.addEventListener('click', () => host.toggleReaction(entry.id, 'like'));
+  dislike.addEventListener('click', () => host.toggleReaction(entry.id, 'dislike'));
   save.addEventListener('click', () => host.toggleSave(entry.id));
   comment.addEventListener('click', () => host.openComments(entry));
   share.addEventListener('click', () => host.shareGame(entry));
   const record = {
-    el: post, entry, like, save,
+    el: post, entry, like, dislike, save,
     activate: startPreview,
     deactivate: stopAll,
-    setLike(count, mine) {
+    setReactions(count, mine, dislikeCount, disliked) {
       like.classList.toggle('liked', mine); like.querySelector('.lc').textContent = String(count);
+      dislike.classList.toggle('disliked', disliked);
+      dislike.querySelector('.dc').textContent = String(dislikeCount);
     },
     setSave(mine) { save.classList.toggle('saved', mine); }
   };
@@ -1091,13 +1164,20 @@ const sandboxObserver = new IntersectionObserver(entries => {
 async function refreshPublishedInteractions() {
   if (!host.db || !publishedPosts.length) return;
   const ids = publishedPosts.map(x => x.entry.id);
+  const reactionIds = ids.concat(ids.map(id => DISLIKE_PREFIX + id));
   const [{ data: likes }, savesResult] = await Promise.all([
-    host.db.from('likes').select('game_id,user_id').in('game_id', ids),
+    host.db.from('likes').select('game_id,user_id').in('game_id', reactionIds),
     host.user ? host.db.from('saves').select('game_id,user_id').in('game_id', ids).eq('user_id', host.user.id) : Promise.resolve({ data: [] })
   ]);
   for (const post of publishedPosts) {
-    const rows = (likes || []).filter(x => x.game_id === post.entry.id);
-    post.setLike(rows.length, !!host.user && rows.some(x => x.user_id === host.user.id));
+    const upRows = (likes || []).filter(x => x.game_id === post.entry.id);
+    const downRows = (likes || []).filter(x => x.game_id === DISLIKE_PREFIX + post.entry.id);
+    post.setReactions(
+      upRows.length,
+      !!host.user && upRows.some(x => x.user_id === host.user.id),
+      downRows.length,
+      !!host.user && downRows.some(x => x.user_id === host.user.id)
+    );
     post.setSave((savesResult.data || []).some(x => x.game_id === post.entry.id));
   }
 }

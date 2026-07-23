@@ -31,6 +31,10 @@
   color: #c5c2ff; background: rgba(92,84,214,.22); font-size: 15px; font-weight: 800;
 }
 .creator-step.done .creator-step-no { color: #08160d; background: #70dc8c; }
+.creator-step.next {
+  border-color: #70dc8c; box-shadow: 0 0 0 2px rgba(112,220,140,.13);
+}
+.creator-step.next .creator-step-no { color: #08160d; background: #70dc8c; }
 .creator-step-content { min-width: 0; }
 .creator-step-content h2 { font-size: 18px; line-height: 1.3; }
 .creator-step-content > p { margin-top: 6px; color: #9898aa; font-size: 13px; line-height: 1.65; }
@@ -48,8 +52,14 @@
   padding: 16px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 #creatorSource:focus { border-color: #6f68df; box-shadow: 0 0 0 3px rgba(111,104,223,.15); }
-.creator-paste { margin-top: 10px; }
+.creator-source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.creator-paste, .creator-clear { margin-top: 0; }
+.creator-clear { color: #ff9ab4; background: rgba(224,53,95,.12); }
 .creator-submit { width: 100%; }
+.creator-submit.checking { background: #d39d32; color: #171108; }
+.creator-submit.passed { background: #43b968; color: #07140b; }
+.creator-submit.failed { background: #d83e65; }
+.creator-submit:disabled { opacity: .82; cursor: wait; }
 .creator-hint { color: #77778d; font-size: 12px; line-height: 1.55; margin-top: 8px; }
 #creatorResult { margin-top: 14px; }
 .creator-result-empty {
