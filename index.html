@@ -35,7 +35,7 @@
   #authChip.on { background: #4b46b8; }
 
   .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
-    gap: 20px; align-items: center; z-index: 5; transition: opacity 0.28s; }
+    gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
   /* 遊戲進行中：淡出側邊鈕與左下資訊，並停用側邊鈕點擊（防誤觸） */
   .stage.playing .rail { opacity: 0; pointer-events: none; }
   .stage.playing .meta { opacity: 0; }
@@ -45,13 +45,14 @@
     backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
     font-size: 21px; transition: transform 0.12s; }
   .rail button:active .ic { transform: scale(0.85); }
-  .rail button.liked .ic { background: #e0355f; }
+  .rail button.liked .ic { background: #43b968; }
+  .rail button.disliked .ic { background: #d83e65; }
   .rail button.saved .ic { background: #d9a13b; }
   .rail button.rmx .ic { background: rgba(120,90,220,0.55); }
   /* 統一的線條圖示（取代原本的 emoji） */
   .ico { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .rail button.liked .ico, .rail button.saved .ico { fill: currentColor; }
+  .rail button.liked .ico, .rail button.disliked .ico, .rail button.saved .ico { fill: currentColor; }
   .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
 
   .meta { position: absolute; left: 16px; right: 76px; bottom: calc(60px + env(safe-area-inset-bottom));
@@ -213,6 +214,10 @@
     font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gcell .badge { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700;
     background: rgba(106,90,208,0.9); color: #fff; padding: 2px 7px; border-radius: 999px; }
+  @media (max-width: 520px) {
+    .ptabs button { font-size: 11px; }
+    .ptabs .tico { margin-right: 2px; font-size: 13px; }
+  }
 
   /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
   #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
@@ -259,7 +264,8 @@
     <button class="active" data-tab="created"><span class="tico" data-ico="create"></span>自創</button>
     <button data-tab="remixed"><span class="tico" data-ico="remix"></span>改造</button>
     <button data-tab="saved"><span class="tico" data-ico="save"></span>儲存</button>
-    <button data-tab="liked"><span class="tico" data-ico="like"></span>愛心</button>
+    <button data-tab="liked"><span class="tico" data-ico="like"></span>按讚</button>
+    <button data-tab="disliked"><span class="tico" data-ico="dislike"></span>倒讚</button>
   </div>
   <div id="pgrid"></div>
 </div>
@@ -337,13 +343,15 @@ const db = online ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_
 const phuzeOn = !!(cfg.PHUZE_PUBLISHABLE_KEY && window.Phuze);
 let user = null;
 let pendingAction = null;   // 被登入擋下的動作，登入成功後自動補做
-const likeState = {};   // game_id -> { count, mine }
+const DISLIKE_PREFIX = '__dislike__:';
+const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
 const saveState = {};   // game_id -> mine
 const bests = {};
 
 /* ---------- 統一的線條圖示（inline SVG，取代原本各處的 emoji） ---------- */
 const ICONS = {
-  like:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19.5 12.6 12 20l-7.5-7.4a4.9 4.9 0 0 1 7-7l.5.5.5-.5a4.9 4.9 0 0 1 7 7Z"/></svg>',
+  like:    '<svg class="ico" viewBox="0 0 24 24"><path d="M7 10v11H3V10h4Z"/><path d="M7 19h10.2a2 2 0 0 0 1.9-1.4l1.7-6A2 2 0 0 0 18.9 9H14l.7-3.2A2.3 2.3 0 0 0 12.5 3L7 10v9Z"/></svg>',
+  dislike: '<svg class="ico" viewBox="0 0 24 24"><path d="M17 14V3h4v11h-4Z"/><path d="M17 5H6.8a2 2 0 0 0-1.9 1.4l-1.7 6A2 2 0 0 0 5.1 15H10l-.7 3.2a2.3 2.3 0 0 0 2.2 2.8L17 14V5Z"/></svg>',
   comment: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5Z"/></svg>',
   save:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
   remix:   '<svg class="ico" viewBox="0 0 24 24"><path d="M4.5 19.5 14.5 9.5"/><path d="M18 2.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor" stroke="none"/></svg>',
@@ -465,7 +473,8 @@ function profileData(tab) {
   }
   const st = tab === 'saved' ? saveState : likeState;
   return Object.keys(st)
-    .filter(id => tab === 'saved' ? st[id] : (st[id] && st[id].mine))
+    .filter(id => tab === 'saved' ? st[id] :
+      (tab === 'disliked' ? st[id]?.disliked : st[id]?.mine))
     .map(entryFor).filter(Boolean);
 }
 function renderProfileGrid(tab) {
@@ -475,7 +484,8 @@ function renderProfileGrid(tab) {
   if (!items.length) {
     const msg = { created: '還沒有自創遊戲。到「創作」貼上 Script，就能發布第一款。',
       remixed: '還沒有改造遊戲。從 Feed 選一款支援改造的遊戲開始。',
-      saved: '還沒有收藏。看到喜歡的遊戲按「儲存」。', liked: '還沒按過愛心。' }[tab];
+      saved: '還沒有收藏。看到喜歡的遊戲按「儲存」。',
+      liked: '還沒有按讚的遊戲。', disliked: '還沒有倒讚的遊戲。' }[tab];
     const empty = document.createElement('div');
     empty.className = 'gempty'; empty.textContent = msg; grid.appendChild(empty);
     return;
@@ -515,15 +525,32 @@ function renderProfileGrid(tab) {
 }
 
 /* ---------- 按讚 ---------- */
+function emptyReaction() {
+  return { count: 0, mine: false, dislikeCount: 0, disliked: false };
+}
+function reactionState(gameId) {
+  return likeState[gameId] || (likeState[gameId] = emptyReaction());
+}
+function reactionDbKey(gameId, reaction) {
+  return reaction === 'dislike' ? DISLIKE_PREFIX + gameId : gameId;
+}
 async function loadLikes() {
   if (!online) return;
   const { data, error } = await db.from('likes').select('game_id,user_id');
   if (error || !data) return;
-  for (const p of posts) likeState[p.id] = { count: 0, mine: false };
+  for (const key of Object.keys(likeState)) delete likeState[key];
+  for (const p of posts) likeState[p.id] = emptyReaction();
   for (const row of data) {
-    if (!likeState[row.game_id]) likeState[row.game_id] = { count: 0, mine: false };
-    likeState[row.game_id].count++;
-    if (user && row.user_id === user.id) likeState[row.game_id].mine = true;
+    const isDislike = row.game_id.startsWith(DISLIKE_PREFIX);
+    const gameId = isDislike ? row.game_id.slice(DISLIKE_PREFIX.length) : row.game_id;
+    const st = reactionState(gameId);
+    if (isDislike) {
+      st.dislikeCount++;
+      if (user && row.user_id === user.id) st.disliked = true;
+    } else {
+      st.count++;
+      if (user && row.user_id === user.id) st.mine = true;
+    }
   }
   for (const p of posts) p.refreshLike();
 }
@@ -531,19 +558,41 @@ function refreshPost(gameId) {
   const p = posts.find(p => p.id === gameId) || (standalonePost && standalonePost.id === gameId ? standalonePost : null);
   if (p) { p.refreshLike(); p.refreshSave(); }
 }
-async function toggleLike(gameId) {
-  if (!requireLogin(() => toggleLike(gameId))) return;
-  const st = likeState[gameId] || (likeState[gameId] = { count: 0, mine: false });
-  if (st.mine) {
-    st.mine = false; st.count--;
-    refreshPost(gameId);
-    await db.from('likes').delete().eq('game_id', gameId).eq('user_id', user.id);
+async function toggleReaction(gameId, reaction) {
+  if (!requireLogin(() => toggleReaction(gameId, reaction))) return;
+  const st = reactionState(gameId);
+  const isLike = reaction === 'like';
+  const active = isLike ? st.mine : st.disliked;
+  const oldKey = reactionDbKey(gameId, isLike ? 'dislike' : 'like');
+  const newKey = reactionDbKey(gameId, reaction);
+  const writes = [];
+
+  if (active) {
+    if (isLike) { st.mine = false; st.count = Math.max(0, st.count - 1); }
+    else { st.disliked = false; st.dislikeCount = Math.max(0, st.dislikeCount - 1); }
+    writes.push(db.from('likes').delete().eq('game_id', newKey).eq('user_id', user.id));
   } else {
-    st.mine = true; st.count++;
-    refreshPost(gameId);
-    await db.from('likes').insert({ game_id: gameId, user_id: user.id });
+    if (isLike) {
+      if (st.disliked) {
+        st.disliked = false;
+        st.dislikeCount = Math.max(0, st.dislikeCount - 1);
+        writes.push(db.from('likes').delete().eq('game_id', oldKey).eq('user_id', user.id));
+      }
+      st.mine = true; st.count++;
+    } else {
+      if (st.mine) {
+        st.mine = false;
+        st.count = Math.max(0, st.count - 1);
+        writes.push(db.from('likes').delete().eq('game_id', oldKey).eq('user_id', user.id));
+      }
+      st.disliked = true; st.dislikeCount++;
+    }
+    writes.push(db.from('likes').insert({ game_id: newKey, user_id: user.id }));
   }
+  refreshPost(gameId);
+  await Promise.all(writes);
   if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
+  if (profileBox.classList.contains('open')) renderProfileGrid(profileTab);
 }
 
 /* ---------- 儲存（收藏到我的頁面） ---------- */
@@ -980,7 +1029,8 @@ function makePost(entry, opts) {
         <span class="chip best-chip" style="display:none">最佳 <span class="bs">0</span></span>
       </div>
       <div class="rail">
-        <button class="like"><span class="ic">${ICONS.like}</span><span class="lc">0</span></button>
+        <button class="like" aria-label="按讚"><span class="ic">${ICONS.like}</span><span class="lc">0</span></button>
+        <button class="dislike" aria-label="倒讚"><span class="ic">${ICONS.dislike}</span><span class="dc">0</span></button>
         <button class="cmt"><span class="ic">${ICONS.comment}</span><span>留言</span></button>
         <button class="sv"><span class="ic">${ICONS.save}</span><span>儲存</span></button>
         ${entry.remixSlots ? '<button class="rmx"><span class="ic">' + ICONS.remix + '</span><span>改造</span></button>' : ''}
@@ -1011,6 +1061,7 @@ function makePost(entry, opts) {
   const bestChip = post.querySelector('.best-chip');
   const bsEl = post.querySelector('.bs');
   const likeBtn = post.querySelector('.like');
+  const dislikeBtn = post.querySelector('.dislike');
   const state = { game: null, running: false };
   const gid = entry.id;
   /* 換皮優先序：遊玩中的即時視訊 → 改造草稿 → 這個 entry 自己的圖（remix 才有） */
@@ -1187,7 +1238,8 @@ function makePost(entry, opts) {
   canvas.addEventListener('pointercancel', endGesture);
 
   const saveBtn = post.querySelector('.sv');
-  likeBtn.addEventListener('click', () => toggleLike(gid));
+  likeBtn.addEventListener('click', () => toggleReaction(gid, 'like'));
+  dislikeBtn.addEventListener('click', () => toggleReaction(gid, 'dislike'));
   saveBtn.addEventListener('click', () => toggleSave(gid));
   post.querySelector('.cmt').addEventListener('click', () => openComments(entry));
   post.querySelector('.shr').addEventListener('click', () => shareGame(entry));
@@ -1199,6 +1251,8 @@ function makePost(entry, opts) {
     if (!st) return;
     likeBtn.classList.toggle('liked', st.mine);
     likeBtn.querySelector('.lc').textContent = st.count;
+    dislikeBtn.classList.toggle('disliked', st.disliked);
+    dislikeBtn.querySelector('.dc').textContent = st.dislikeCount;
   }
   function refreshSave() {
     saveBtn.classList.toggle('saved', !!saveState[gid]);
@@ -1354,7 +1408,7 @@ window.PlayFeedHost = {
   closeProfile,
   closeStandalone,
   refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
-  toggleLike,
+  toggleReaction,
   toggleSave,
   openComments,
   shareGame,
