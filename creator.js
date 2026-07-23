@@ -1140,21 +1140,24 @@ async function refreshPublishedInteractions() {
 
 async function loadPublishedGames() {
   if (!host.db) return;
-  const mode = await detectBackendMode();
-  let result;
-  if (mode === 'user_games') {
-    result = await host.db.from('user_games')
-      .select('*').eq('status', 'published').order('created_at', { ascending: true });
-  } else {
-    result = await host.db.from('remixes')
-      .select('*').eq('base_id', LEGACY_BASE_ID).order('created_at', { ascending: true });
+  const [nativeResult, legacyResult] = await Promise.all([
+    host.db.from('user_games')
+      .select('*').eq('status', 'published').order('created_at', { ascending: true }),
+    host.db.from('remixes')
+      .select('*').eq('base_id', LEGACY_BASE_ID).order('created_at', { ascending: true })
+  ]);
+  if (nativeResult.error) console.warn('PlayFeed 新版投稿載入失敗', nativeResult.error);
+  if (legacyResult.error) console.warn('PlayFeed 舊版投稿載入失敗', legacyResult.error);
+
+  const nativeRows = nativeResult.data || [];
+  const legacyRows = (legacyResult.data || []).map(legacyRowToPublished).filter(Boolean);
+  const rows = [];
+  const seenSlugs = new Set();
+  for (const row of [...nativeRows, ...legacyRows]) {
+    if (!row.slug || seenSlugs.has(row.slug)) continue;
+    seenSlugs.add(row.slug);
+    rows.push(row);
   }
-  const { data, error } = result;
-  if (error) {
-    console.warn('PlayFeed 投稿載入失敗', error);
-    return;
-  }
-  const rows = mode === 'user_games' ? (data || []) : (data || []).map(legacyRowToPublished).filter(Boolean);
   for (const row of rows) {
     publishedRows.push(row);
     addSandboxPost(row);
