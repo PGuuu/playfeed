@@ -47,6 +47,11 @@
   .rail button.liked .ic { background: #e0355f; }
   .rail button.saved .ic { background: #d9a13b; }
   .rail button.rmx .ic { background: rgba(120,90,220,0.55); }
+  /* 統一的線條圖示（取代原本的 emoji） */
+  .ico { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .rail button.liked .ico, .rail button.saved .ico { fill: currentColor; }
+  .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
 
   .meta { position: absolute; left: 16px; right: 76px; bottom: calc(60px + env(safe-area-inset-bottom));
     z-index: 5; pointer-events: none; transition: opacity 0.28s; }
@@ -72,12 +77,15 @@
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
   .overlay .camplay { border: none; cursor: pointer; background: #6a5ad0;
-    color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
+    color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px; }
+  .overlay .camplay .ico { width: 18px; height: 18px; }
   /* 遊玩中視訊指示器 */
   #camChip { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-    z-index: 68; display: none; border: none; cursor: pointer; color: #fff; font-family: inherit;
-    background: #e0355f; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
-  #camChip.show { display: block; }
+    z-index: 68; display: none; align-items: center; gap: 6px; border: none; cursor: pointer; color: #fff;
+    font-family: inherit; background: #e0355f; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
+  #camChip.show { display: inline-flex; }
+  #camChip .ico { width: 16px; height: 16px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
 
@@ -137,7 +145,8 @@
     font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
   .slot .cam { border: 1px solid rgba(255,255,255,0.22); background: none; color: #cfcfe0;
     font-family: inherit; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 12px;
-    cursor: pointer; white-space: nowrap; }
+    cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  .slot .cam .ico { width: 14px; height: 14px; }
   .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
     cursor: pointer; }
   .slot .rst[disabled] { opacity: 0.35; cursor: default; }
@@ -229,7 +238,7 @@
 <body>
 
 <button id="authChip">登入</button>
-<button id="camChip">📷 視訊中 · 點此關閉</button>
+<button id="camChip"><span data-ico="video"></span><span>視訊中 · 點此關閉</span></button>
 <div id="feed"></div>
 <div class="toast" id="toast"></div>
 
@@ -246,16 +255,16 @@
 <div id="profile">
   <div class="phead"><b id="profileWho">個人頁</b><button id="logoutBtn">登出</button></div>
   <div class="ptabs">
-    <button class="active" data-tab="mine">🎨 我做的</button>
-    <button data-tab="saved">🔖 儲存</button>
-    <button data-tab="liked">♥ 愛心</button>
+    <button class="active" data-tab="mine"><span class="tico" data-ico="remix"></span>我做的</button>
+    <button data-tab="saved"><span class="tico" data-ico="save"></span>儲存</button>
+    <button data-tab="liked"><span class="tico" data-ico="like"></span>愛心</button>
   </div>
   <div id="pgrid"></div>
 </div>
 
 <div id="mainNav">
-  <button id="navHomeMain" class="active"><span class="ni">🏠</span>首頁</button>
-  <button id="navMeMain"><span class="ni">👤</span>我的</button>
+  <button id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
+  <button id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
 </div>
 
 <div id="remixView">
@@ -328,6 +337,21 @@ let pendingAction = null;   // 被登入擋下的動作，登入成功後自動�
 const likeState = {};   // game_id -> { count, mine }
 const saveState = {};   // game_id -> mine
 const bests = {};
+
+/* ---------- 統一的線條圖示（inline SVG，取代原本各處的 emoji） ---------- */
+const ICONS = {
+  like:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19.5 12.6 12 20l-7.5-7.4a4.9 4.9 0 0 1 7-7l.5.5.5-.5a4.9 4.9 0 0 1 7 7Z"/></svg>',
+  comment: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5Z"/></svg>',
+  save:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+  remix:   '<svg class="ico" viewBox="0 0 24 24"><path d="M4.5 19.5 14.5 9.5"/><path d="M18 2.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor" stroke="none"/></svg>',
+  share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
+  home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
+  user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
+  create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>',
+  video:   '<svg class="ico" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 9.5 21.5 6v12l-6-3.5"/></svg>'
+};
+function injectIcons(root) { (root || document).querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = ICONS[el.dataset.ico] || ''; }); }
+injectIcons();   /* 填入靜態元素（底部導覽、個人頁分頁、視訊指示器） */
 
 const authChip = document.getElementById('authChip');
 function displayName(u) {
@@ -842,7 +866,7 @@ function renderRemixSlots() {
       '<canvas class="preview" width="58" height="58"></canvas>' +
       '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
       '<div class="acts"><button class="up">' + (cur && cur.img ? '換一張' : '上傳圖片') + '</button>' +
-      '<button class="cam">' + (cur && cur.live ? '關視訊' : '📷 視訊') + '</button>' +
+      '<button class="cam">' + (cur && cur.live ? '關視訊' : ICONS.video + ' 視訊') + '</button>' +
       '<button class="rst"' + (changed ? '' : ' disabled') + '>還原</button></div>';
     const cvs = row.querySelector('canvas');
     drawSlotPreview(cvs, slot, cur);
@@ -919,11 +943,11 @@ function makePost(entry, opts) {
         <span class="chip best-chip" style="display:none">最佳 <span class="bs">0</span></span>
       </div>
       <div class="rail">
-        <button class="like"><span class="ic">&#9829;</span><span class="lc">0</span></button>
-        <button class="cmt"><span class="ic">&#128172;</span><span>留言</span></button>
-        <button class="sv"><span class="ic">&#128278;</span><span>儲存</span></button>
-        ${entry.remixSlots ? '<button class="rmx"><span class="ic">&#127912;</span><span>改造</span></button>' : ''}
-        <button class="shr"><span class="ic">&#10148;</span><span>分享</span></button>
+        <button class="like"><span class="ic">${ICONS.like}</span><span class="lc">0</span></button>
+        <button class="cmt"><span class="ic">${ICONS.comment}</span><span>留言</span></button>
+        <button class="sv"><span class="ic">${ICONS.save}</span><span>儲存</span></button>
+        ${entry.remixSlots ? '<button class="rmx"><span class="ic">' + ICONS.remix + '</span><span>改造</span></button>' : ''}
+        <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
       </div>
       <div class="meta">
         <div class="author">${entry.author}</div>
@@ -936,7 +960,7 @@ function makePost(entry, opts) {
         <p>${entry.tip}</p>
         <div class="ov-btns">
           <button class="go">開始</button>
-          ${entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : ''}
+          ${entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : ''}
         </div>
       </div>
       ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
@@ -1035,7 +1059,7 @@ function makePost(entry, opts) {
         <p>再挑戰一次，或往上滑玩下一款</p>
         <div class="ov-btns">
           <button class="go">再玩一次</button>
-          ${entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : ''}
+          ${entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : ''}
           <button class="share-score">分享成績</button>
         </div>`;
       overlay.classList.remove('hidden');
@@ -1157,7 +1181,7 @@ function makePost(entry, opts) {
       overlay.classList.remove('hidden');
       overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
         `<div class="ov-btns"><button class="go">開始</button>` +
-        (entry.remixSlots ? '<button class="camplay">📷 視訊玩</button>' : '') + `</div>`;
+        (entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : '') + `</div>`;
       wireStart(overlay);
     },
     startLive(keys) { ensureAudio(); liveCam = { postId: gid, keys }; updateCamChip(); begin(); }
