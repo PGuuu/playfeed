@@ -1,14 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" class="booting">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
 <title>PlayFeed — 滑一下，玩一個</title>
 <link rel="stylesheet" href="creator.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-  html, body { height: 100%; background: #0b0b10; color: #f2f2f5; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
+  html, body { height: 100%; background: #5547c9; color: #f8f7ff; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none; }
+  html.booting, html.booting body { background: #fff; }
+  #bootSplash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+    background: #fff; color: #201a3d; opacity: 1; visibility: visible;
+    transition: opacity .32s ease, visibility .32s ease; }
+  #bootSplash.done { opacity: 0; visibility: hidden; pointer-events: none; }
+  .boot-brand { text-align: center; transform: translateY(-2vh); }
+  .boot-logo { font-size: clamp(38px, 11vw, 64px); line-height: 1; font-weight: 900;
+    letter-spacing: -.055em; color: #6757e8; }
+  .boot-tagline { margin-top: 12px; color: #8c86a8; font-size: 14px; font-weight: 650;
+    letter-spacing: .12em; text-transform: lowercase; }
   /* 只有輸入框可以選字（留言、Email） */
   input, textarea { -webkit-user-select: text; user-select: text; }
 
@@ -198,7 +209,7 @@
   .backdrop.open { display: block; }
 
   /* 個人頁（IG 風格全螢幕 + 分頁 + 縮圖網格 + 底部導覽） */
-  #profile { position: fixed; inset: 0; z-index: 65; background: #0b0b10;
+  #profile { position: fixed; inset: 0; z-index: 65; background: linear-gradient(160deg, #5547c9, #342a80);
     display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #profile.open { transform: translateY(0); }
   .phead { display: flex; align-items: center; justify-content: space-between;
@@ -233,7 +244,7 @@
 
   /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
   #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
-    background: rgba(10,10,14,0.68); backdrop-filter: blur(10px);
+    background: rgba(55,42,130,0.78); backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: env(safe-area-inset-bottom);
     transition: transform 0.22s, opacity 0.22s; }
   #mainNav.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
@@ -243,7 +254,7 @@
   #mainNav button.active { color: #fff; }
 
   /* 單一遊戲視圖：從個人頁／版本列表／分享連結進來的改造版，不混進首頁 */
-  #remixView { position: fixed; inset: 0; z-index: 67; background: #0b0b10;
+  #remixView { position: fixed; inset: 0; z-index: 67; background: linear-gradient(160deg, #5547c9, #342a80);
     display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #remixView.open { transform: translateY(0); }
   #remixViewStage { flex: 1; position: relative; overflow: hidden; }
@@ -255,6 +266,12 @@
 </head>
 <body>
 
+<div id="bootSplash" role="status" aria-label="PlayFeed 載入中">
+  <div class="boot-brand">
+    <div class="boot-logo">PlayFeed</div>
+    <div class="boot-tagline">play and swipe</div>
+  </div>
+</div>
 <button id="authChip">登入</button>
 <div id="feed"></div>
 <div class="toast" id="toast"></div>
@@ -393,7 +410,10 @@ function setUser(u) {
   authChip.classList.toggle('on', !!u);
   setTimeout(() => {
     refreshOfficialAuthors();
-    if (window.PlayFeedCreator) window.PlayFeedCreator.refreshAuthors();
+    if (window.PlayFeedCreator) {
+      window.PlayFeedCreator.refreshAuthors();
+      window.PlayFeedCreator.syncOfficialGames();
+    }
   }, 0);
 }
 function currentPhuzeToken(session) {
@@ -1218,7 +1238,21 @@ document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
 
 /* ---------- Feed 引擎 ---------- */
 const feed = document.getElementById('feed');
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 const posts = [];
+const bootStartedAt = performance.now();
+let bootFinished = false;
+function finishBoot() {
+  if (bootFinished) return;
+  bootFinished = true;
+  if (!location.hash) feed.scrollTop = 0;
+  const delay = Math.max(0, 520 - (performance.now() - bootStartedAt));
+  setTimeout(() => {
+    document.documentElement.classList.remove('booting');
+    document.getElementById('bootSplash').classList.add('done');
+  }, delay);
+}
+setTimeout(finishBoot, 8000);
 
 /* 一個 entry = 基本遊戲 或 已發佈的 remix。都用 entry.base.create() 跑，靠 getSprite 換皮。 */
 function makePost(entry, opts) {
@@ -1512,8 +1546,8 @@ function toRemixEntry(r) {
 }
 function addPost(po) { feed.appendChild(po.el); posts.push(po); io.observe(po.el); }
 
-/* 首頁只放原始遊戲，最新註冊的遊戲排最前面（立即顯示，不等網路）。 */
-[...(window.GAMES || [])].reverse().forEach((g, i) => addPost(makePost(toBaseEntry(g), { first: i === 0 })));
+/* 官方遊戲與使用者投稿統一由 Supabase 載入。
+   window.GAMES 只保留為官方 Runtime、換皮與一次性同步的來源。 */
 
 /* 已發佈的 remix：只快取資料，不放進首頁 feed。要看到某個 remix 一律透過
    「個人頁的我做的」／「改造面板的版本列表」／分享連結，用 openStandalone() 開單一遊戲視圖。 */
@@ -1619,6 +1653,7 @@ window.PlayFeedHost = {
   openAuthorProfile,
   openRemix,
   registerOfficialOwner,
+  finishBoot,
   refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
   toggleReaction,
   toggleSave,

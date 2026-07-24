@@ -28,6 +28,8 @@ let playtestGesture = null;
 let playtestDone = null;
 let validationFeedbackTimer = null;
 let mechanicContext = null;
+let publishedLoadComplete = false;
+let officialSyncPromise = null;
 
 function walk(node, visit, parent = null, parentKey = '') {
   if (!node || typeof node !== 'object') return;
@@ -273,7 +275,7 @@ function sandboxDocument(channel, source, duration) {
   const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'">
-<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111}canvas{display:block;width:100%;height:100%;object-fit:contain}</style>
+<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#ece9ff}canvas{display:block;width:100%;height:100%;object-fit:contain}</style>
 </head><body><canvas width="400" height="700"></canvas><script>
 (()=>{'use strict';
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
@@ -945,6 +947,7 @@ function publishedAuthorText(authorId, name) {
 }
 
 function normalisePublished(row) {
+  const officialBase = (window.GAMES || []).find(game => game.id === row.slug) || null;
   const entry = {
     id: `game:${row.slug}`,
     databaseId: row.id,
@@ -961,9 +964,13 @@ function normalisePublished(row) {
     authorName: row.author_name || '玩家',
     duration: row.duration,
     score: row.score || { label: '分數', order: 'higher' },
-    remixSlots: row.remix_slots || [],
+    remixSlots: row.remix_slots?.length ? row.remix_slots : (officialBase?.remixSlots || []),
     screenshot: row.screenshot || null,
-    script: row.script
+    script: row.script,
+    base: officialBase,
+    sprites: {},
+    spriteData: {},
+    isOfficial: !!officialBase
   };
   entry.mechanicContext = publishedMechanicContext(entry);
   return entry;
@@ -1241,8 +1248,74 @@ async function refreshPublishedInteractions() {
   }
 }
 
+function originalCreateExpression(game) {
+  const source = Function.prototype.toString.call(game.create);
+  return /^\s*(?:async\s+)?function\b/.test(source) ? source : `function ${source}`;
+}
+
+function officialSubmission(game) {
+  const createExpression = originalCreateExpression(game);
+  const metadata = {
+    apiVersion: 1,
+    gameVersion: 'official-1.0.0',
+    id: game.id,
+    title: game.title,
+    description: game.tip,
+    author: '@我',
+    tip: game.tip,
+    bg: game.bg,
+    tags: ['official'],
+    controls: ['tap'],
+    score: { label: '分數', order: 'higher' },
+    remixSlots: game.remixSlots || [],
+  };
+  const fields = Object.entries(metadata)
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join(',\n    ');
+  const script = `window.GAMES = (window.GAMES || []).concat([{\n` +
+    `    ${fields},\n` +
+    `    create(env) {\n` +
+    `      const W = env.W, H = env.H, beep = env.beep;\n` +
+    `      const originalCreate = ${createExpression};\n` +
+    `      return originalCreate(env);\n` +
+    `    }\n` +
+    `  }]);`;
+  return {
+    id: game.id,
+    title: game.title,
+    description: game.tip,
+    tip: game.tip,
+    tags: ['official'],
+    controls: ['tap'],
+    score: { label: '分數', order: 'higher' },
+    remix_slots: game.remixSlots || [],
+    script,
+  };
+}
+
+async function syncOfficialGamesIfNeeded() {
+  if (!publishedLoadComplete) return false;
+  const officialIds = new Set((window.GAMES || []).map(game => game.id));
+  const existing = new Set(publishedRows.filter(row => officialIds.has(row.slug)).map(row => row.slug));
+  if (existing.size === officialIds.size) return false;
+  if (!host.user || !host.db || officialSyncPromise) return false;
+  officialSyncPromise = (async () => {
+    try {
+      const games = (window.GAMES || []).map(officialSubmission);
+      await host.secureWrite('sync-official-games', { games });
+      location.reload();
+      return true;
+    } catch (error) {
+      host.toast(`官方遊戲同步失敗：${error.message || error}`);
+      host.finishBoot();
+      return false;
+    }
+  })();
+  return officialSyncPromise;
+}
+
 async function loadPublishedGames() {
-  if (!host.db) return;
+  if (!host.db) { host.finishBoot(); return; }
   const [nativeResult, legacyResult] = await Promise.all([
     host.db.from('user_games')
       .select('*').eq('status', 'published').order('created_at', { ascending: false }),
@@ -1271,18 +1344,25 @@ async function loadPublishedGames() {
   for (const row of rows) {
     publishedRows.push(row);
   }
+  publishedLoadComplete = true;
   for (const row of [...rows].reverse()) {
     addSandboxPost(row);
   }
   refreshPublishedInteractions();
   host.refreshProfile();
   goToPublishedHash();
+  const synchronized = await syncOfficialGamesIfNeeded();
+  if (!synchronized) {
+    if (!location.hash) host.feed.scrollTop = 0;
+    host.finishBoot();
+  }
 }
 
 function goToPublishedHash() {
   if (!location.hash) return;
   const id = decodeURIComponent(location.hash.slice(1));
-  const target = publishedPosts.find(post => post.entry.id === id);
+  const normalizedId = id.startsWith('game:') ? id : `game:${id}`;
+  const target = publishedPosts.find(post => post.entry.id === normalizedId);
   if (target) setTimeout(() => target.el.scrollIntoView(), 80);
 }
 
@@ -1331,6 +1411,7 @@ window.PlayFeedCreator = {
   captureThumbnail: capturePublishedThumbnail,
   refreshAuthors: refreshPublishedAuthors,
   refreshInteractions: refreshPublishedInteractions,
+  syncOfficialGames: syncOfficialGamesIfNeeded,
   entryFor(id) {
     const slug = id.startsWith('game:') ? id.slice(5) : id;
     const row = publishedRows.find(item => item.slug === slug);

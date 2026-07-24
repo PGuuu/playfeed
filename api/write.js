@@ -12,6 +12,27 @@ const { validatePublishedScript } = require('./_validate');
 
 const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
+const OFFICIAL_GAME_IDS = [
+  'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
+  'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
+  'crossy-chicken', 'softserve',
+];
+const OFFICIAL_BACKGROUNDS = {
+  dodge: '#65C7C4',
+  boba: '#FFD6A5',
+  timing: '#8176F2',
+  bubble: '#5CC9E4',
+  stack: '#B99CF2',
+  mole: '#83D475',
+  redlight: '#FFE08A',
+  slice: '#FF8C7E',
+  react: '#FFACC7',
+  sheep: '#8FD8FF',
+  'pixel-guess': '#70D899',
+  'potato-peel': '#FFD2A1',
+  'crossy-chicken': '#91DF72',
+  softserve: '#FFB7D2',
+};
 const recentRequests = new Map();
 
 function rateLimit(request, userId, action) {
@@ -272,6 +293,64 @@ async function insertPublishedGame(user, rawGame) {
   throw Object.assign(new Error('Could not create a unique game address.'), { status: 409 });
 }
 
+async function syncOfficialGames(user, body) {
+  const existing = await supabaseRest('user_games', {
+    query: 'select=author_id&order=created_at.asc&limit=1',
+  });
+  if (!existing.ok) throw Object.assign(new Error(existing.error), { status: existing.status });
+  const firstAuthor = Array.isArray(existing.data) ? existing.data[0]?.author_id : null;
+  if (firstAuthor && firstAuthor !== user.id) {
+    throw Object.assign(new Error('Only the PlayFeed owner can synchronize official games.'), { status: 403 });
+  }
+
+  const submitted = Array.isArray(body.games) ? body.games : [];
+  if (submitted.length !== OFFICIAL_GAME_IDS.length) {
+    throw Object.assign(new Error('The official game package is incomplete.'), { status: 400 });
+  }
+  const byId = new Map(submitted.map(game => [String(game?.id || ''), game]));
+  if (byId.size !== OFFICIAL_GAME_IDS.length || OFFICIAL_GAME_IDS.some(id => !byId.has(id))) {
+    throw Object.assign(new Error('The official game package does not match PlayFeed.'), { status: 400 });
+  }
+
+  const rows = OFFICIAL_GAME_IDS.map((id, index) => {
+    const game = byId.get(id);
+    const script = safeText(game.script, { name: 'official script', max: 150_000 });
+    if (!script.includes('window.GAMES') || !script.includes('create(env)')) {
+      throw Object.assign(new Error(`Official game ${id} has an invalid Script.`), { status: 400 });
+    }
+    return {
+      slug: id,
+      suggested_id: id,
+      api_version: 1,
+      game_version: 'official-1.0.0',
+      title: safeText(game.title, { name: 'title', max: 80 }),
+      description: safeText(game.description || game.tip, { name: 'description', max: 240 }),
+      tip: safeText(game.tip, { name: 'tip', max: 160 }),
+      bg: OFFICIAL_BACKGROUNDS[id],
+      tags: cleanStringArray(game.tags || ['official'], 12, 30),
+      controls: cleanStringArray(game.controls || ['tap'], 8, 30),
+      duration: 45,
+      score: cleanScoreConfig(game.score),
+      remix_slots: cleanRemixSlots(game.remix_slots || []),
+      script,
+      screenshot: null,
+      author_id: user.id,
+      author_name: publicName(user),
+      status: 'published',
+      created_at: new Date(Date.UTC(2025, 0, 1 + index)).toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  });
+  const result = await supabaseRest('user_games', {
+    method: 'POST',
+    query: 'on_conflict=slug',
+    body: rows,
+    prefer: 'resolution=merge-duplicates,return=representation',
+  });
+  if (!result.ok) throw Object.assign(new Error(result.error), { status: result.status });
+  return { games: result.data };
+}
+
 async function submitUserGameScore(user, body) {
   const score = finiteScore(body.score);
   if (body.storageMode === 'remixes') {
@@ -312,6 +391,7 @@ const actions = {
   score: submitScore,
   remix: createRemix,
   'publish-game': (user, body) => insertPublishedGame(user, body.game),
+  'sync-official-games': syncOfficialGames,
   'user-game-score': submitUserGameScore,
 };
 

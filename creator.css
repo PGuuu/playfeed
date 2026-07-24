@@ -1,5 +1,5 @@
 #creator {
-  position: fixed; inset: 0; z-index: 64; background: #0b0b10;
+  position: fixed; inset: 0; z-index: 64; background: #352a82;
   display: flex; flex-direction: column; transform: translateY(100%);
   transition: transform .28s;
 }
@@ -31,7 +31,7 @@
 .creator-step {
   position: relative; display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
   margin-top: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.09);
-  border-radius: 20px; background: #14141b;
+  border-radius: 20px; background: rgba(255,255,255,.1);
 }
 .creator-intro + .creator-step { margin-top: 24px; }
 .creator-step-no {
@@ -56,7 +56,7 @@
 .creator-primary button:last-child { background: #272735; }
 #creatorSource {
   width: 100%; min-height: 230px; margin-top: 14px; resize: vertical; border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px; outline: none; background: #14141b; color: #f1f1f5;
+  border-radius: 16px; outline: none; background: rgba(23,17,69,.46); color: #f8f7ff;
   padding: 16px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 #creatorSource:focus { border-color: #6f68df; box-shadow: 0 0 0 3px rgba(111,104,223,.15); }
@@ -76,7 +76,7 @@
 }
 .creator-card {
   border: 1px solid rgba(255,255,255,.1); border-radius: 20px;
-  background: #15151d; overflow: hidden;
+  background: rgba(255,255,255,.1); overflow: hidden;
 }
 .creator-card-body { padding: 20px; }
 .creator-status {
@@ -105,7 +105,7 @@
   display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px;
   margin-top: 16px;
 }
-.creator-meta div { border-radius: 12px; background: #20202a; padding: 10px 12px; }
+.creator-meta div { border-radius: 12px; background: rgba(255,255,255,.11); padding: 10px 12px; }
 .creator-meta small { display: block; color: #808094; margin-bottom: 3px; }
 .creator-errors { margin: 14px 0 0 20px; color: #ff9ab4; line-height: 1.65; font-size: 13px; }
 .creator-warnings { color: #e7c86d; margin-top: 12px; font-size: 12px; line-height: 1.6; }
