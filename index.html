@@ -19,19 +19,26 @@
     overflow: hidden; isolation: isolate; background: #fff; color: #fff; opacity: 1; visibility: visible; }
   #bootSplash.done { pointer-events: none; animation: bootSplashExit .9s ease forwards; }
   .boot-color-fade { position: absolute; inset: 0; z-index: 0; background: #fff; }
-  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 1200vh; display: grid;
-    grid-auto-rows: 100vh; animation: bootColorSwipe 4.8s linear infinite; will-change: transform; }
+  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 2400vh; display: grid;
+    grid-auto-rows: 100vh; animation: bootColorSwipe 2.65s both; will-change: transform, filter;
+    transform-origin: center; }
   .boot-color-panel:nth-child(6n+1) { background: #ff2d6f; }
   .boot-color-panel:nth-child(6n+2) { background: #ff8a00; }
   .boot-color-panel:nth-child(6n+3) { background: #ffd60a; }
   .boot-color-panel:nth-child(6n+4) { background: #00d7c8; }
   .boot-color-panel:nth-child(6n+5) { background: #2878ff; }
   .boot-color-panel:nth-child(6n+6) { background: #8d36ff; }
-  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .68s ease forwards; }
-  #bootSplash.done .boot-brand { animation: bootBrandFade .72s ease forwards; }
+  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .58s ease-out forwards; }
+  #bootSplash.done .boot-brand { animation: bootBrandFade .58s ease-out forwards; }
   @keyframes bootColorSwipe {
-    from { transform: translateY(0); }
-    to { transform: translateY(-600vh); }
+    0% { transform: translateY(0) scaleY(1); filter: blur(0); }
+    18% { transform: translateY(-22vh) scaleY(1); filter: blur(0); }
+    38% { transform: translateY(-105vh) scaleY(1); filter: blur(0); }
+    57% { transform: translateY(-330vh) scaleY(1.005); filter: blur(.4px); }
+    72% { transform: translateY(-720vh) scaleY(1.015); filter: blur(1.5px); }
+    84% { transform: translateY(-1210vh) scaleY(1.035); filter: blur(4px); }
+    93% { transform: translateY(-1740vh) scaleY(1.07); filter: blur(8px) brightness(1.08); }
+    100% { transform: translateY(-2200vh) scaleY(1.12); filter: blur(14px) brightness(1.18); }
   }
   @keyframes bootColorsToWhite {
     0%, 22% { opacity: 1; }
@@ -62,7 +69,7 @@
     display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: pan-y; }
   .standalone-post { touch-action: none; }
   .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
-    margin-bottom: var(--main-nav-height); max-width: none; background: inherit; }
+    margin-bottom: var(--main-nav-height); max-width: none; background: #000; }
   .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
   /* 首頁的垂直手勢交給原生 scroll-snap，水平手勢仍交給遊戲；
      個人頁開啟的單一遊戲則用互動式拖曳，以便即時顯示前後遊戲。 */
@@ -81,17 +88,21 @@
     .standalone-post .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
   }
 
-  .hud { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 120px;
-    display: flex; align-items: center; gap: 10px; pointer-events: none; }
-  .chip { background: rgba(0,0,0,0.45); backdrop-filter: blur(6px); border-radius: 999px;
-    padding: 6px 14px; font-size: 14px; font-weight: 500; }
+  .hud { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: var(--game-top-height);
+    padding: env(safe-area-inset-top) 62px 0 14px; color: #fff;
+    background: #000; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+  .chip { background: transparent; border-radius: 999px; padding: 6px 4px;
+    font-size: 13px; font-weight: 600; white-space: nowrap; }
   .score-chip b { font-size: 18px; font-weight: 600; margin-left: 4px; }
+  .best-chip { display: none !important; }
+  .game-title-chip { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    text-align: center; font-size: 14px; font-weight: 750; }
 
-  #authChip { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 40;
-    border: none; cursor: pointer; color: #fff; font-family: inherit;
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
-    border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
-  #authChip.on { background: #0095f6; }
+  #authChip { position: fixed; top: calc(9px + env(safe-area-inset-top)); right: 12px; z-index: 40;
+    width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.38); cursor: pointer;
+    color: #000; font-family: inherit; background: #fff; border-radius: 50%; padding: 0;
+    display: grid; place-items: center; font-size: 12px; font-weight: 850; letter-spacing: -.02em; }
+  #authChip.on { background: #fff; color: #000; }
 
   .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
     gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
@@ -397,10 +408,10 @@
   .ptabs button { color: #737373; }
   .ptabs button.active { color: #262626; border-bottom-color: #262626; }
   #pgrid .gempty { color: #737373; }
-  #mainNav { background: rgba(255,255,255,.96); border-top-color: #dbdbdb; }
-  #mainNav button { color: #8e8e8e; }
-  #mainNav button.active { color: #262626; }
-  #authChip.on, #cmtSend, #remixSave, .slot .up { background: #0095f6; }
+  #mainNav { background: #000; border-top-color: #000; }
+  #mainNav button { color: rgba(255,255,255,.68); }
+  #mainNav button.active { color: #fff; }
+  #cmtSend, #remixSave, .slot .up { background: #0095f6; }
   #login, #sheet { color: #262626; }
   #login .box, #sheet, #remixSheet { background: #fff; color: #262626; }
   #login p, #login .ghost { color: #737373; }
@@ -436,6 +447,12 @@
 <div id="bootSplash" role="status" aria-label="PlayFeed 載入中">
   <div class="boot-color-fade" aria-hidden="true">
     <div class="boot-color-stream">
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
@@ -636,7 +653,14 @@ function displayName(u) {
 }
 function setUser(u) {
   user = u;
-  authChip.textContent = u ? displayName(u) : '登入';
+  const name = u ? displayName(u) : '登入';
+  const clean = String(name || '').replace(/^@/, '').trim();
+  const initials = /^[\x00-\x7F]+$/.test(clean)
+    ? clean.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+    : Array.from(clean).slice(0, 1).join('');
+  authChip.textContent = initials || '登入';
+  authChip.title = name;
+  authChip.setAttribute('aria-label', u ? `帳號：${name}` : '登入');
   authChip.classList.toggle('on', !!u);
   setTimeout(() => {
     refreshOfficialAuthors();
@@ -1984,7 +2008,7 @@ function finishBoot() {
   if (bootFinished) return;
   bootFinished = true;
   if (!location.hash) feed.scrollTop = 0;
-  const delay = Math.max(0, 1650 - (performance.now() - bootStartedAt));
+  const delay = Math.max(0, 2720 - (performance.now() - bootStartedAt));
   setTimeout(() => {
     document.documentElement.classList.remove('booting');
     document.getElementById('bootSplash').classList.add('done');
@@ -2004,6 +2028,7 @@ function makePost(entry, opts) {
       <canvas class="game" width="${W}" height="${H}"></canvas>
       <div class="hud">
         <span class="chip score-chip">分數<b class="sc">0</b></span>
+        <span class="chip game-title-chip">${entry.title}</span>
         <span class="chip best-chip" style="display:none">最佳 <span class="bs">0</span></span>
       </div>
       <div class="rail">

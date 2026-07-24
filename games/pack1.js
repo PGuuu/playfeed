@@ -361,8 +361,8 @@ window.GAMES = (window.GAMES || []).concat([
     const { ctx, setScore, over } = env;
     const sprite = env.sprite || (() => false);
     const cols = [72, 200, 328], rows = [210, 370, 530];
-    let moles, score, misses, frames, spawnT, raf, alive;
-    function reset() { moles = []; score = 0; misses = 0; frames = 0; spawnT = 26; alive = true; }
+    let moles, hits, score, misses, frames, spawnT, raf, alive;
+    function reset() { moles = []; hits = []; score = 0; misses = 0; frames = 0; spawnT = 26; alive = true; }
     function end() { alive = false; cancelAnimationFrame(raf); beep(300, 60, 0.3, 0.22, 'sawtooth'); over(score); }
     function loop() {
       frames++;
@@ -386,6 +386,8 @@ window.GAMES = (window.GAMES || []).concat([
         }
       }
       moles = moles.filter(m => !m.dead);
+      for (const hit of hits) hit.t--;
+      hits = hits.filter(hit => hit.t > 0);
       ctx.fillStyle = '#3f6b3a'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = 'rgba(255,255,255,0.06)';
       for (let i = 0; i < 14; i++) ctx.fillRect((i*61)%W, (i*127)%H, 20, 5);
@@ -410,6 +412,35 @@ window.GAMES = (window.GAMES || []).concat([
           ctx.fillStyle = '#e58a8a'; ctx.beginPath(); ctx.arc(x, y+3, 5, 0, 7); ctx.fill();
         }
       }
+      for (const hit of hits) {
+        const p = 1 - hit.t / 18;
+        ctx.save();
+        ctx.translate(hit.x, hit.y + 16 + p * 7);
+        ctx.scale(1.18 + p * .28, Math.max(.16, .42 - p * .2));
+        if (!sprite('mole', 0, 0, 68)) {
+          ctx.fillStyle = '#7a5230'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, 7); ctx.fill();
+          ctx.fillStyle = '#a8794f'; ctx.beginPath(); ctx.arc(0, 9, 17, 0, 7); ctx.fill();
+          ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-15,-8); ctx.lineTo(-5,-2); ctx.moveTo(-5,-8); ctx.lineTo(-15,-2);
+          ctx.moveTo(5,-8); ctx.lineTo(15,-2); ctx.moveTo(15,-8); ctx.lineTo(5,-2);
+          ctx.stroke();
+        }
+        ctx.restore();
+        const flash = Math.max(0, 1 - p * 1.35);
+        ctx.strokeStyle = `rgba(255,235,90,${flash})`; ctx.lineWidth = 5;
+        for (let a = 0; a < 8; a++) {
+          const angle = a * Math.PI / 4, r1 = 42 + p * 12, r2 = 58 + p * 22;
+          ctx.beginPath();
+          ctx.moveTo(hit.x + Math.cos(angle) * r1, hit.y + Math.sin(angle) * r1);
+          ctx.lineTo(hit.x + Math.cos(angle) * r2, hit.y + Math.sin(angle) * r2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = Math.max(0, 1 - p);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 24px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('+10', hit.x, hit.y - 52 - p * 28);
+        ctx.globalAlpha = 1;
+      }
       for (let i = 0; i < 3; i++) {
         ctx.fillStyle = i < 3 - misses ? '#e0355f' : 'rgba(255,255,255,0.2)';
         ctx.beginPath(); ctx.arc(28 + i*30, 90, 9, 0, 7); ctx.fill();
@@ -425,7 +456,7 @@ window.GAMES = (window.GAMES || []).concat([
           const mx = cols[m.cell%3], my = rows[(m.cell/3)|0] - m.pop * 26 + 10;
           if ((x-mx)*(x-mx) + (y-my)*(y-my) < 44*44) {
             if (m.bomb) { end(); return; }
-            m.dead = true; score += 10; setScore(score);
+            m.dead = true; hits.push({ x: mx, y: my, t: 18 }); score += 10; setScore(score);
             beep(500 + Math.random()*250, 950, 0.09, 0.14);
             return;
           }

@@ -1086,10 +1086,11 @@ function addSandboxPost(row, options = {}) {
   const hud = el('div', 'hud');
   const scoreChip = el('span', 'chip score-chip');
   scoreChip.append(document.createTextNode(`${entry.score.label || '分數'} `), el('b', 'sc', '0'));
+  const titleChip = el('span', 'chip game-title-chip', entry.title);
   const bestChip = el('span', 'chip best-chip');
   bestChip.style.display = 'none';
   bestChip.append(document.createTextNode('最佳 '), el('span', 'bs', '0'));
-  hud.append(scoreChip, bestChip);
+  hud.append(scoreChip, titleChip, bestChip);
   const rail = el('div', 'rail');
   const makeRailButton = (klass, icon, label) => {
     const button = el('button', klass);
