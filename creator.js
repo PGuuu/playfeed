@@ -941,7 +941,7 @@ async function publishDraft() {
 }
 
 function normalisePublished(row) {
-  return {
+  const entry = {
     id: `game:${row.slug}`,
     databaseId: row.id,
     storageMode: row.storage_mode || 'user_games',
@@ -957,8 +957,12 @@ function normalisePublished(row) {
     authorName: row.author_name || '玩家',
     duration: row.duration,
     score: row.score || { label: '分數', order: 'higher' },
+    remixSlots: row.remix_slots || [],
+    screenshot: row.screenshot || null,
     script: row.script
   };
+  entry.mechanicContext = publishedMechanicContext(entry);
+  return entry;
 }
 
 function publishedMechanicContext(entry) {
@@ -1046,32 +1050,52 @@ function addSandboxPost(row) {
   const save = makeRailButton('sv', 'save', '儲存');
   const share = makeRailButton('shr', 'share', '分享');
   rail.append(like, dislike, comment, save, share);
-  const gameInfo = el('div', 'game-info');
-  const gameInfoCopy = el('div', 'game-info-copy');
-  const author = el('button', 'author-link', entry.author);
-  const tip = el('div', 'game-tip', `操作：${entry.tip}`);
-  const mechanic = el('button', 'mechanic-create', '二創');
-  gameInfoCopy.append(author, tip);
-  gameInfo.append(gameInfoCopy, mechanic);
   const overlay = el('div', 'overlay');
   const resetOverlay = (finalScore = null) => {
     overlay.replaceChildren();
     const card = el('div', 'overlay-main');
+    const author = el('button', 'author-link', entry.author);
+    author.addEventListener('click', event => {
+      event.stopPropagation();
+      destroyRuntime();
+      playing = false;
+      previewing = false;
+      stage.classList.remove('playing');
+      host.openAuthorProfile(entry.authorId, entry.authorName);
+    });
     if (finalScore === null) {
-      card.append(el('h2', '', entry.title.split('：')[0]));
+      card.append(author, el('h2', '', entry.title.split('：')[0]));
     } else {
       card.append(el('div', 'final', String(finalScore)));
     }
     const buttons = el('div', 'ov-btns');
+    if (finalScore === null) buttons.classList.add('initial-actions');
+    if (finalScore !== null) {
+      const shareResult = el('button', 'share-score', '分享成績');
+      shareResult.addEventListener('click', event => {
+        event.stopPropagation();
+        host.shareResult(entry, finalScore);
+      });
+      buttons.append(shareResult);
+    }
     const go = el('button', 'go', finalScore === null ? '開始' : '再玩一次');
     go.addEventListener('click', event => { event.stopPropagation(); begin(); });
-    buttons.append(go);
+    const mechanic = el('button', 'mechanic-create', '二創');
+    mechanic.addEventListener('click', event => {
+      event.stopPropagation();
+      destroyRuntime();
+      playing = false;
+      previewing = false;
+      stage.classList.remove('playing');
+      host.openRemix(entry);
+    });
+    buttons.append(go, mechanic);
     card.appendChild(buttons);
     overlay.appendChild(card);
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, gameInfo, overlay, errorBox);
+  stage.append(frameHost, inputLayer, hud, rail, overlay, errorBox);
   post.appendChild(stage); host.feed.prepend(post);
 
   let runtime = null;
@@ -1079,22 +1103,6 @@ function addSandboxPost(row) {
   let previewing = false;
   let gesture = null;
   const destroyRuntime = () => { if (runtime) runtime.destroy(); runtime = null; frameHost.replaceChildren(); };
-  author.addEventListener('click', event => {
-    event.stopPropagation();
-    destroyRuntime();
-    playing = false;
-    previewing = false;
-    stage.classList.remove('playing');
-    host.openAuthorProfile(entry.authorId, entry.authorName);
-  });
-  mechanic.addEventListener('click', event => {
-    event.stopPropagation();
-    destroyRuntime();
-    playing = false;
-    previewing = false;
-    stage.classList.remove('playing');
-    openMechanicCreator(publishedMechanicContext(entry));
-  });
   const spawn = mode => {
     destroyRuntime();
     errorBox.style.display = 'none';
@@ -1256,11 +1264,49 @@ function goToPublishedHash() {
   if (target) setTimeout(() => target.el.scrollIntoView(), 80);
 }
 
+const publishedThumbnailJobs = new Map();
+function capturePublishedThumbnail(id) {
+  const slug = id.startsWith('game:') ? id.slice(5) : id;
+  const row = publishedRows.find(item => item.slug === slug);
+  if (!row) return Promise.resolve(null);
+  if (row.screenshot) return Promise.resolve(row.screenshot);
+  if (publishedThumbnailJobs.has(slug)) return publishedThumbnailJobs.get(slug);
+  const job = new Promise(resolve => {
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:400px;height:700px;overflow:hidden;';
+    document.body.appendChild(holder);
+    let settled = false;
+    let runtime = null;
+    const finish = image => {
+      if (settled) return;
+      settled = true;
+      runtime?.destroy();
+      holder.remove();
+      if (image) row.screenshot = image;
+      resolve(image || null);
+    };
+    runtime = createRuntime(holder, row.script, row.duration, msg => {
+      if (msg.type === 'ready') {
+        runtime.send('auto');
+        setTimeout(() => runtime?.send('capture'), 900);
+      } else if (msg.type === 'capture') {
+        finish(msg.image);
+      } else if (msg.type === 'runtime-error') {
+        finish(null);
+      }
+    });
+    setTimeout(() => finish(null), 2800);
+  });
+  publishedThumbnailJobs.set(slug, job);
+  return job;
+}
+
 window.PlayFeedCreator = {
   open: openCreator,
   openMechanic: openMechanicCreator,
   close: closeCreator,
   validateScript,
+  captureThumbnail: capturePublishedThumbnail,
   refreshInteractions: refreshPublishedInteractions,
   entryFor(id) {
     const slug = id.startsWith('game:') ? id.slice(5) : id;

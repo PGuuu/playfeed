@@ -37,7 +37,7 @@
   .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
     gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
   /* 遊戲進行中：淡出側邊鈕與下方資訊，並停用點擊（防誤觸） */
-  .stage.playing .rail, .stage.playing .game-info { opacity: 0; pointer-events: none; }
+  .stage.playing .rail { opacity: 0; pointer-events: none; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
   .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
@@ -60,24 +60,12 @@
   .overlay.hidden { display: none; }
   .overlay-main { width: min(86%, 360px); display: flex; flex-direction: column; align-items: center;
     gap: 13px; padding: 16px 18px; border-radius: 20px; pointer-events: auto;
-    background: rgba(8,8,12,.42); backdrop-filter: blur(7px); box-shadow: 0 10px 32px rgba(0,0,0,.18); }
+    border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.18);
+    backdrop-filter: blur(5px); box-shadow: 0 10px 32px rgba(0,0,0,.12); }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
-  .game-info { position: absolute; left: 14px; right: 78px;
-    bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 5;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 12px; border-radius: 16px; transition: opacity .25s;
-    background: rgba(8,8,12,.52); backdrop-filter: blur(8px); }
-  .game-info-copy { min-width: 0; text-align: left; }
-  .game-info .author-link { display: block; max-width: 100%; border: 0; background: transparent;
-    color: #9bdfaa; cursor: pointer; font: 700 13px inherit; padding: 0 0 3px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .game-info .game-tip { color: rgba(255,255,255,.78); font-size: 12px; line-height: 1.35;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .game-info .mechanic-create { flex: none; border: 1px solid rgba(255,255,255,.32); cursor: pointer;
-    background: rgba(255,255,255,.1); color: #fff; font: 700 13px inherit;
-    padding: 8px 13px; border-radius: 999px; }
-  .standalone-post .game-info { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
+    font: 700 13px inherit; padding: 1px 8px; opacity: .9; text-shadow: 0 1px 6px rgba(0,0,0,.55); }
   .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
     display: flex; align-items: center; gap: 6px; }
   .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
@@ -86,9 +74,14 @@
   .overlay .go { border: none; cursor: pointer; background: #fff; color: #111;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
   .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+  .overlay .ov-btns.initial-actions { flex-direction: column; width: min(100%, 190px); }
+  .overlay .ov-btns.initial-actions button { width: 100%; }
   .overlay .share-score { border: none; cursor: pointer; background: rgba(255,255,255,0.18);
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
+  .overlay .mechanic-create { border: 1px solid rgba(255,255,255,.5); cursor: pointer;
+    background: rgba(255,255,255,.14); color: #fff; font-family: inherit;
+    font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
 
@@ -146,6 +139,7 @@
   .remix-choice span { display: block; margin-top: 7px; color: #9b9bad; font-size: 12px; line-height: 1.55; }
   .remix-choice.mechanic { border-color: rgba(112,220,140,.32); background: rgba(112,220,140,.08); }
   .remix-choice.mechanic strong { color: #8bea9e; }
+  .remix-choice:disabled { cursor: not-allowed; opacity: .42; }
   @media (max-width: 380px) {
     #remixChoice { grid-template-columns: 1fr; }
     .remix-choice { min-height: 104px; }
@@ -222,8 +216,9 @@
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
   .gcell { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
     display: flex; align-items: center; justify-content: center; }
-  .gcell .hero { font-size: 46px; line-height: 1; }
-  .gcell .hero img { width: 60%; height: 60%; object-fit: contain; }
+  .gcell .hero { width: 100%; height: 100%; font-size: 46px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; }
+  .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
   .gcell .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px;
     background: linear-gradient(0deg, rgba(0,0,0,0.75), transparent);
     font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -296,10 +291,10 @@
 </div>
 
 <div id="remixSheet">
-  <div class="head"><b id="remixTitle">改造這個遊戲</b><button id="remixClose">&#10005;</button></div>
+  <div class="head"><b id="remixTitle">二創這個遊戲</b><button id="remixClose">&#10005;</button></div>
   <div id="remixChoice">
-    <button class="remix-choice image" id="chooseImageRemix"><strong>換圖片改造</strong><span>玩法不變，替換角色或物件的外觀。</span></button>
-    <button class="remix-choice mechanic" id="chooseMechanicRemix"><strong>用這個玩法創作</strong><span>保留核心機制，交給自己的 AI 製作不同主題。</span></button>
+    <button class="remix-choice image" id="chooseImageRemix"><strong>換皮</strong><span>玩法不變，替換角色或物件的外觀。</span></button>
+    <button class="remix-choice mechanic" id="chooseMechanicRemix"><strong>複製玩法創作</strong><span>複製玩法規格，交給自己的 AI 製作不同主題。</span></button>
   </div>
   <div id="remixVersions"></div>
   <div class="note" id="remixNote">上傳圖片替換遊戲元素（支援透明圖檔）。圖片會置中縮放、對齊虛線輪廓，並即時顯示在上面的畫面。儲存後會變成大家都能玩的新遊戲（需登入）。</div>
@@ -577,6 +572,65 @@ function profileData(tab) {
       (tab === 'disliked' ? st[id]?.disliked : st[id]?.mine))
     .map(entryFor).filter(Boolean);
 }
+const profilePreviewJobs = new Map();
+function captureBuiltInThumbnail(entry) {
+  if (!entry?.base?.create) return Promise.resolve(null);
+  if (entry.screenshot) return Promise.resolve(entry.screenshot);
+  if (profilePreviewJobs.has(entry.id)) return profilePreviewJobs.get(entry.id);
+  const job = new Promise(resolve => {
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const getSprite = key => spriteReady(entry.sprites && entry.sprites[key]);
+    const drawSprite = (key, cx, cy, size, flip) => {
+      const image = getSprite(key);
+      if (!image) return false;
+      const scale = Math.min(size / mediaW(image), size / mediaH(image));
+      const width = mediaW(image) * scale, height = mediaH(image) * scale;
+      ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
+      ctx.drawImage(image, -width / 2, -height / 2, width, height); ctx.restore();
+      return true;
+    };
+    let game = null;
+    let finished = false;
+    let inputTimer = null;
+    let captureTimer = null;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearInterval(inputTimer); clearTimeout(captureTimer);
+      try { game?.stop(); } catch (_) {}
+      let image = null;
+      try { image = canvas.toDataURL('image/webp', .78); } catch (_) {}
+      if (image) entry.screenshot = image;
+      resolve(image);
+    };
+    const env = {
+      W, H, ctx, beep: () => {}, getSprite, sprite: drawSprite,
+      setScore: () => {}, over: () => setTimeout(finish, 30)
+    };
+    try {
+      game = entry.base.create(env);
+      game.start();
+      inputTimer = setInterval(() => {
+        const x = 60 + Math.random() * 280, y = 130 + Math.random() * 450;
+        game.input('down', x, y);
+        if (Math.random() < .45) game.input('move', Math.max(20, Math.min(380, x + (Math.random() - .5) * 180)), y);
+        setTimeout(() => { if (!finished) game.input('up', x, y); }, 80);
+      }, 180);
+      captureTimer = setTimeout(finish, 900);
+    } catch (_) {
+      finish();
+    }
+  });
+  profilePreviewJobs.set(entry.id, job);
+  return job;
+}
+function profileThumbnailFor(entry) {
+  if (entry.screenshot) return Promise.resolve(entry.screenshot);
+  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id);
+  return captureBuiltInThumbnail(entry);
+}
 function renderProfileGrid(tab) {
   const grid = document.getElementById('pgrid');
   const items = profileData(tab);
@@ -594,13 +648,18 @@ function renderProfileGrid(tab) {
     const cell = document.createElement('div');
     cell.className = 'gcell';
     cell.style.background = e.bg;
-    const firstSprite = e.spriteData && Object.values(e.spriteData)[0];
     const hero = document.createElement('span');
     hero.className = 'hero';
-    if (e.screenshot || firstSprite) {
-      const image = document.createElement('img'); image.src = e.screenshot || firstSprite; hero.appendChild(image);
-    } else {
-      hero.textContent = e.remixSlots && e.remixSlots[0] ? e.remixSlots[0].default : '🎮';
+    const showPreview = source => {
+      if (!source) return;
+      const image = document.createElement('img');
+      image.src = source;
+      hero.replaceChildren(image);
+    };
+    if (e.screenshot) showPreview(e.screenshot);
+    else {
+      hero.textContent = '🎮';
+      profileThumbnailFor(e).then(showPreview);
     }
     cell.appendChild(hero);
     if (e.remixOf || e.userScript) {
@@ -896,6 +955,19 @@ async function toggleFollow(authorId) {
     toast('操作失敗：' + error.message);
   }
 }
+async function shareResult(g, score) {
+  const url = location.origin + location.pathname + '#' + g.id;
+  const text = `我在 PlayFeed 玩《${g.title.split('：')[0]}》拿了 ${score} 分！來挑戰`;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'PlayFeed', text, url }); return; } catch (e) {}
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast('成績與連結已複製');
+  } catch (e) {
+    toast(url);
+  }
+}
 function authorLabel(value) {
   return String(value || '玩家').replace(/^@/, '').replace(/·改造$/, '');
 }
@@ -908,6 +980,7 @@ function officialAuthorId(name) {
   return `official-${(hash >>> 0).toString(16)}`;
 }
 function mechanicTemplateFor(entry) {
+  if (entry && entry.mechanicContext) return entry.mechanicContext;
   const base = entry && entry.base;
   const baseId = base && base.id;
   const recipe = baseId && window.PLAYFEED_MECHANIC_TEMPLATES &&
@@ -968,15 +1041,27 @@ function draftSpriteFor(entryId, key) {
   return null;
 }
 function openRemix(entry) {
-  if (!entry.remixSlots) return;
+  const mechanicTemplate = mechanicTemplateFor(entry);
+  const canChangeSkin = !!(entry.base && entry.remixSlots && entry.remixSlots.length);
+  if (!canChangeSkin && !mechanicTemplate) return toast('這款遊戲目前沒有可用的二創方式');
   const draft = {};
   for (const k in (entry.spriteData || {})) draft[k] = { dataURL: entry.spriteData[k], img: imgFrom(entry.spriteData[k]) };
   activeRemix = { entry, draft };
-  document.getElementById('remixTitle').textContent = '改造《' + entry.title.split('：')[0] + '》';
+  document.getElementById('remixTitle').textContent = '二創《' + entry.title.split('：')[0] + '》';
   document.getElementById('remixName').value = '';
-  renderRemixVersions();
-  renderRemixSlots();
-  remixSheet.classList.toggle('choosing', !!mechanicTemplateFor(entry));
+  const imageChoice = document.getElementById('chooseImageRemix');
+  imageChoice.disabled = !canChangeSkin;
+  imageChoice.querySelector('span').textContent = canChangeSkin
+    ? '玩法不變，替換角色或物件的外觀。'
+    : '這款遊戲目前沒有提供可替換的外觀元素。';
+  if (canChangeSkin) {
+    renderRemixVersions();
+    renderRemixSlots();
+  } else {
+    document.getElementById('remixVersions').innerHTML = '';
+    document.getElementById('remixSlots').innerHTML = '';
+  }
+  remixSheet.classList.toggle('choosing', !!mechanicTemplate);
   remixSheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
   const p = posts.find(p => p.id === entry.id) || (standalonePost && standalonePost.id === entry.id ? standalonePost : null);
   if (p) p.activate();   /* 讓上面的畫面在跑，才看得到即時預覽 */
@@ -988,6 +1073,7 @@ function closeRemix() {
 }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
 document.getElementById('chooseImageRemix').addEventListener('click', () => {
+  if (document.getElementById('chooseImageRemix').disabled) return;
   remixSheet.classList.remove('choosing');
 });
 document.getElementById('chooseMechanicRemix').addEventListener('click', () => {
@@ -1136,21 +1222,15 @@ function makePost(entry, opts) {
         <button class="dislike" aria-label="倒讚"><span class="ic">${ICONS.dislike}</span><span class="dc">0</span></button>
         <button class="cmt"><span class="ic">${ICONS.comment}</span><span>留言</span></button>
         <button class="sv"><span class="ic">${ICONS.save}</span><span>儲存</span></button>
-        ${entry.remixSlots ? '<button class="rmx"><span class="ic">' + ICONS.remix + '</span><span>改造</span></button>' : ''}
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
-      </div>
-      <div class="game-info">
-        <div class="game-info-copy">
-          <button class="author-link">${entry.author}</button>
-          <div class="game-tip">操作：${entry.tip}</div>
-        </div>
-        ${mechanicTemplateFor(entry) ? '<button class="mechanic-create">二創</button>' : ''}
       </div>
       <div class="overlay">
         <div class="overlay-main">
+          <button class="author-link">${entry.author}</button>
           <h2>${entry.title.split('：')[0]}</h2>
-          <div class="ov-btns">
+          <div class="ov-btns initial-actions">
             <button class="go">開始</button>
+            <button class="mechanic-create">二創</button>
           </div>
         </div>
       </div>
@@ -1248,8 +1328,9 @@ function makePost(entry, opts) {
           <div class="final">${score}</div>
           ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
           <div class="ov-btns">
-            <button class="go">再玩一次</button>
             <button class="share-score">分享成績</button>
+            <button class="go">再玩一次</button>
+            <button class="mechanic-create">二創</button>
           </div>
         </div>`;
       overlay.classList.remove('hidden');
@@ -1277,26 +1358,26 @@ function makePost(entry, opts) {
   function wireStart(root) {
     const go = root.querySelector('.go');
     if (go) go.addEventListener('click', e => { e.stopPropagation(); begin(); });
+    const author = root.querySelector('.author-link');
+    if (author) author.addEventListener('click', e => {
+      e.stopPropagation();
+      stopPreview();
+      if (state.game && state.running) state.game.stop();
+      state.running = false;
+      stage.classList.remove('playing');
+      openAuthorProfile(entry.authorId, entry.authorName || entry.author);
+    });
+    const mechanic = root.querySelector('.mechanic-create');
+    if (mechanic) mechanic.addEventListener('click', e => {
+      e.stopPropagation();
+      stopPreview();
+      if (state.game && state.running) state.game.stop();
+      state.running = false;
+      stage.classList.remove('playing');
+      openRemix(entry);
+    });
   }
   wireStart(overlay);
-  const authorButton = post.querySelector('.game-info .author-link');
-  if (authorButton) authorButton.addEventListener('click', e => {
-    e.stopPropagation();
-    stopPreview();
-    if (state.game && state.running) state.game.stop();
-    state.running = false;
-    stage.classList.remove('playing');
-    openAuthorProfile(entry.authorId, entry.authorName || entry.author);
-  });
-  const mechanicButton = post.querySelector('.game-info .mechanic-create');
-  if (mechanicButton) mechanicButton.addEventListener('click', e => {
-    e.stopPropagation();
-    stopPreview();
-    if (state.game && state.running) state.game.stop();
-    state.running = false;
-    stage.classList.remove('playing');
-    openMechanicCreator(entry);
-  });
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
@@ -1378,8 +1459,9 @@ function makePost(entry, opts) {
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="overlay-main"><h2>${entry.title.split('：')[0]}</h2>` +
-        `<div class="ov-btns"><button class="go">開始</button></div></div>`;
+      overlay.innerHTML = `<div class="overlay-main"><button class="author-link">${entry.author}</button>` +
+        `<h2>${entry.title.split('：')[0]}</h2><div class="ov-btns initial-actions">` +
+        `<button class="go">開始</button><button class="mechanic-create">二創</button></div></div>`;
       wireStart(overlay);
     }
   };
@@ -1518,11 +1600,13 @@ window.PlayFeedHost = {
   closeProfile,
   closeStandalone,
   openAuthorProfile,
+  openRemix,
   refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
   toggleReaction,
   toggleSave,
   openComments,
   shareGame,
+  shareResult,
   submitScore
 };
 </script>
