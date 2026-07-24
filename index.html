@@ -97,8 +97,9 @@
     display: grid; place-items: center; font-size: 12px; font-weight: 850; letter-spacing: -.02em; }
   #authChip.on { background: #fff; color: #000; }
 
-  .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
-    gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
+  .rail { position: absolute; right: 10px; top: calc(var(--game-top-height) + 10px); bottom: 14px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    gap: clamp(4px, 1.2dvh, 14px); align-items: center; z-index: 5; transition: opacity 0.28s; }
   /* 遊戲進行中：淡出側邊鈕並停用點擊（防誤觸） */
   .stage.playing .rail { opacity: 0; pointer-events: none; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
@@ -111,6 +112,11 @@
   .rail button.disliked .ic { background: #d83e65; }
   .rail button.saved .ic { background: #d9a13b; }
   .rail button.rmx .ic { background: rgba(0,149,246,.58); }
+  @media (max-height: 700px) {
+    .rail { top: calc(var(--game-top-height) + 6px); bottom: 8px; gap: 3px; }
+    .rail button { gap: 1px; font-size: 10px; line-height: 1.1; }
+    .rail .ic { width: 40px; height: 40px; font-size: 19px; }
+  }
   /* 統一的線條圖示（取代原本的 emoji） */
   .ico { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
