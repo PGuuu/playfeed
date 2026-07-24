@@ -104,6 +104,8 @@
     color: #fff; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.16);
     backdrop-filter: blur(3px); box-shadow: 0 10px 32px rgba(0,0,0,.12);
     text-shadow: 0 1px 7px rgba(0,0,0,.48); }
+  .overlay-main.start-only { width: auto; padding: 0; border: 0; background: transparent;
+    backdrop-filter: none; box-shadow: none; text-shadow: none; }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
   .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
@@ -116,20 +118,13 @@
   .overlay .go { border: none; cursor: pointer; background: #262626; color: #fff;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
   .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
-  .overlay .ov-btns.initial-actions { flex-direction: column; width: min(100%, 190px); }
-  .overlay .ov-btns.initial-actions button { width: 100%; }
   .overlay .share-score { border: none; cursor: pointer; background: #efefef;
     color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .mechanic-create { border: 1px solid rgba(255,255,255,.55); cursor: pointer;
-    background: rgba(255,255,255,.16); color: #fff; font-family: inherit;
-    font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
+  .overlay .result-score-label { display: block; margin-bottom: 3px; font-size: 12px;
+    font-weight: 650; opacity: .78; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
-
-  .swipe-hint { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
-    font-size: 13px; opacity: 0.55; z-index: 4; pointer-events: none; animation: bob 1.6s ease-in-out infinite; }
-  @keyframes bob { 0%,100% { transform: translate(-50%,0);} 50% { transform: translate(-50%,-8px);} }
 
   .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
     background: rgba(255,255,255,0.92); color: #111; font-size: 14px; font-weight: 500;
@@ -1973,18 +1968,13 @@ function makePost(entry, opts) {
         <button class="cmt"><span class="ic">${ICONS.comment}</span><span>留言</span></button>
         <button class="sv"><span class="ic">${ICONS.save}</span><span>儲存</span></button>
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
+        <button class="rmx"><span class="ic">${ICONS.remix}</span><span>二創</span></button>
       </div>
       <div class="overlay">
-        <div class="overlay-main">
-          <button class="author-link">${entry.author}</button>
-          <h2>${entry.title.split('：')[0]}</h2>
-          <div class="ov-btns initial-actions">
-            <button class="go">開始</button>
-            <button class="mechanic-create">二創</button>
-          </div>
+        <div class="overlay-main start-only">
+          <button class="go">開始</button>
         </div>
       </div>
-      ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
     </div>`;
 
   const canvas = post.querySelector('canvas');
@@ -2087,12 +2077,13 @@ function makePost(entry, opts) {
       bestChip.style.display = ''; bsEl.textContent = bests[gid] || 0;
       overlay.innerHTML = `
         <div class="overlay-main">
-          <div class="final">${score}</div>
+          <button class="author-link">${entry.author}</button>
+          <h2>${entry.title}</h2>
+          <div class="final"><span class="result-score-label">分數</span>${score}</div>
           ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
           <div class="ov-btns">
-            <button class="share-score">分享成績</button>
-            <button class="go">再玩一次</button>
-            <button class="mechanic-create">二創</button>
+            <button class="go">重新玩</button>
+            <button class="share-score">分享</button>
           </div>
         </div>`;
       overlay.classList.remove('hidden');
@@ -2129,15 +2120,6 @@ function makePost(entry, opts) {
       state.running = false;
       stage.classList.remove('playing');
       openAuthorProfile(entry.authorId, entry.authorName || entry.author);
-    });
-    const mechanic = root.querySelector('.mechanic-create');
-    if (mechanic) mechanic.addEventListener('click', e => {
-      e.stopPropagation();
-      stopPreview();
-      if (state.game && state.running) state.game.stop();
-      state.running = false;
-      stage.classList.remove('playing');
-      openRemix(entry);
     });
   }
   wireStart(overlay);
@@ -2237,9 +2219,7 @@ function makePost(entry, opts) {
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="overlay-main"><button class="author-link">${entry.author}</button>` +
-        `<h2>${entry.title.split('：')[0]}</h2><div class="ov-btns initial-actions">` +
-        `<button class="go">開始</button><button class="mechanic-create">二創</button></div></div>`;
+      overlay.innerHTML = `<div class="overlay-main start-only"><button class="go">開始</button></div>`;
       wireStart(overlay);
     }
   };

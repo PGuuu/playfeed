@@ -1105,10 +1105,27 @@ function addSandboxPost(row, options = {}) {
   const comment = makeRailButton('cmt', 'comment', '留言');
   const save = makeRailButton('sv', 'save', '儲存');
   const share = makeRailButton('shr', 'share', '分享');
-  rail.append(like, dislike, comment, save, share);
+  const remix = makeRailButton('rmx', 'remix', '二創');
+  remix.addEventListener('click', event => {
+    event.stopPropagation();
+    destroyRuntime();
+    playing = false;
+    previewing = false;
+    stage.classList.remove('playing');
+    host.openRemix(entry);
+  });
+  rail.append(like, dislike, comment, save, share, remix);
   const overlay = el('div', 'overlay');
   const resetOverlay = (finalScore = null) => {
     overlay.replaceChildren();
+    if (finalScore === null) {
+      const startOnly = el('div', 'overlay-main start-only');
+      const go = el('button', 'go', '開始');
+      go.addEventListener('click', event => { event.stopPropagation(); begin(); });
+      startOnly.appendChild(go);
+      overlay.appendChild(startOnly);
+      return;
+    }
     const card = el('div', 'overlay-main');
     const author = el('button', 'author-link', entry.author);
     author.addEventListener('click', event => {
@@ -1119,33 +1136,18 @@ function addSandboxPost(row, options = {}) {
       stage.classList.remove('playing');
       host.openAuthorProfile(entry.authorId, entry.authorName);
     });
-    if (finalScore === null) {
-      card.append(author, el('h2', '', entry.title.split('：')[0]));
-    } else {
-      card.append(el('div', 'final', String(finalScore)));
-    }
+    const scoreResult = el('div', 'final');
+    scoreResult.append(el('span', 'result-score-label', entry.score.label || '分數'), document.createTextNode(String(finalScore)));
+    card.append(author, el('h2', '', entry.title), scoreResult);
     const buttons = el('div', 'ov-btns');
-    if (finalScore === null) buttons.classList.add('initial-actions');
-    if (finalScore !== null) {
-      const shareResult = el('button', 'share-score', '分享成績');
-      shareResult.addEventListener('click', event => {
-        event.stopPropagation();
-        host.shareResult(entry, finalScore);
-      });
-      buttons.append(shareResult);
-    }
-    const go = el('button', 'go', finalScore === null ? '開始' : '再玩一次');
+    const go = el('button', 'go', '重新玩');
     go.addEventListener('click', event => { event.stopPropagation(); begin(); });
-    const mechanic = el('button', 'mechanic-create', '二創');
-    mechanic.addEventListener('click', event => {
+    const shareResult = el('button', 'share-score', '分享');
+    shareResult.addEventListener('click', event => {
       event.stopPropagation();
-      destroyRuntime();
-      playing = false;
-      previewing = false;
-      stage.classList.remove('playing');
-      host.openRemix(entry);
+      host.shareResult(entry, finalScore);
     });
-    buttons.append(go, mechanic);
+    buttons.append(go, shareResult);
     card.appendChild(buttons);
     overlay.appendChild(card);
   };
