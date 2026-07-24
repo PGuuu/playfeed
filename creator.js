@@ -177,8 +177,11 @@ function validateScript(raw) {
   } else if (metadata.controls.some(x => VERTICAL_CONTROLS.test(x))) {
     errors.push('controls 包含垂直操作；垂直手勢必須保留給 Feed。');
   }
-  if (!Number.isInteger(metadata.duration) || metadata.duration < 20 || metadata.duration > 60) {
-    errors.push('duration 必須是 20～60 的整數秒數。');
+  if (metadata.duration === undefined) {
+    metadata.duration = 45;
+  } else if (!Number.isInteger(metadata.duration) || metadata.duration <= 0) {
+    warnings.push('duration 只供平台估計；目前值無效，發布時會使用 45 秒。');
+    metadata.duration = 45;
   }
   const scoreOrder = metadata.score?.order || metadata.score?.mode;
   if (!metadata.score || typeof metadata.score.label !== 'string' || !['higher', 'lower'].includes(scoreOrder)) {
@@ -267,7 +270,7 @@ function encodeSource(source) {
 
 function sandboxDocument(channel, source, duration) {
   const encoded = encodeSource(source);
-  const hardLimit = Math.min(65, Math.max(25, Number(duration || 45) + 5));
+  const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'">
 <style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111}canvas{display:block;width:100%;height:100%;object-fit:contain}</style>
@@ -756,7 +759,7 @@ function renderValidation(result) {
 
   const meta = el('div', 'creator-meta');
   const pairs = [
-    ['預估單局', `${result.metadata.duration} 秒`],
+    ['結束方式', '依遊戲本身規則'],
     ['操作類型', result.metadata.controls.join('、')],
     ['Remix 元素', result.metadata.remixSlots.length ? result.metadata.remixSlots.map(x => x.label).join('、') : '無'],
     ['排行榜', `${result.metadata.score.label} · ${result.metadata.score.order === 'higher' ? '愈高愈好' : '愈低愈好'}`],
@@ -914,7 +917,7 @@ async function publishDraft() {
       bg: draft.metadata.bg,
       tags: draft.metadata.tags,
       controls: draft.metadata.controls,
-      duration: draft.metadata.duration,
+      duration: Math.min(60, Math.max(20, draft.metadata.duration || 45)),
       score: draft.metadata.score,
       remix_slots: draft.metadata.remixSlots,
       script: draft.source,
@@ -950,9 +953,21 @@ function normalisePublished(row) {
     tip: row.tip,
     bg: row.bg,
     author: `@${row.author_name || '玩家'}`,
+    authorId: row.author_id,
+    authorName: row.author_name || '玩家',
     duration: row.duration,
     score: row.score || { label: '分數', order: 'higher' },
     script: row.script
+  };
+}
+
+function publishedMechanicContext(entry) {
+  return {
+    sourceGameId: entry.id,
+    sourceTitle: entry.title,
+    summary: `${entry.description || ''} 操作方式：${entry.tip || '依畫面提示操作'}`.trim(),
+    preserve: ['保留來源遊戲的核心操作、勝負條件、計分方式與主要節奏'],
+    sourceScript: entry.script
   };
 }
 
@@ -1031,24 +1046,49 @@ function addSandboxPost(row) {
   const save = makeRailButton('sv', 'save', '儲存');
   const share = makeRailButton('shr', 'share', '分享');
   rail.append(like, dislike, comment, save, share);
-  const meta = el('div', 'meta');
-  meta.append(el('div', 'author', entry.author), el('div', 'title', entry.title), el('div', 'tip', entry.tip));
   const overlay = el('div', 'overlay');
   const resetOverlay = (finalScore = null) => {
     overlay.replaceChildren();
+    const card = el('div', 'overlay-card');
+    const author = el('button', 'author-link', entry.author);
+    author.addEventListener('click', event => {
+      event.stopPropagation();
+      destroyRuntime();
+      playing = false;
+      previewing = false;
+      stage.classList.remove('playing');
+      host.openAuthorProfile(entry.authorId, entry.authorName);
+    });
     if (finalScore === null) {
-      overlay.append(el('div', 'pv-tag', '投稿遊戲預覽'), el('h2', '', entry.title.split('：')[0]), el('p', '', entry.tip));
+      card.append(
+        el('div', 'pv-tag', '投稿遊戲預覽'),
+        author,
+        el('h2', '', entry.title.split('：')[0]),
+        el('p', '', entry.description || entry.tip),
+        el('p', '', `操作：${entry.tip}`)
+      );
     } else {
-      overlay.append(el('div', 'final', String(finalScore)), el('p', '', '再挑戰一次，或往上滑玩下一款'));
+      card.append(author, el('div', 'final', String(finalScore)), el('p', '', '再挑戰一次，或往上滑玩下一款'));
     }
     const buttons = el('div', 'ov-btns');
     const go = el('button', 'go', finalScore === null ? '開始' : '再玩一次');
     go.addEventListener('click', event => { event.stopPropagation(); begin(); });
-    buttons.appendChild(go); overlay.appendChild(buttons);
+    const mechanic = el('button', 'mechanic-create', '用這個玩法創作');
+    mechanic.addEventListener('click', event => {
+      event.stopPropagation();
+      destroyRuntime();
+      playing = false;
+      previewing = false;
+      stage.classList.remove('playing');
+      openMechanicCreator(publishedMechanicContext(entry));
+    });
+    buttons.append(go, mechanic);
+    card.appendChild(buttons);
+    overlay.appendChild(card);
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, meta, overlay, errorBox);
+  stage.append(frameHost, inputLayer, hud, rail, overlay, errorBox);
   post.appendChild(stage); host.feed.prepend(post);
 
   let runtime = null;
@@ -1232,6 +1272,8 @@ window.PlayFeedCreator = {
       title: row.title,
       bg: row.bg,
       screenshot: row.screenshot,
+      authorId: row.author_id,
+      authorName: row.author_name || '玩家',
       userScript: true
     };
   },
@@ -1241,6 +1283,8 @@ window.PlayFeedCreator = {
       title: row.title,
       bg: row.bg,
       screenshot: row.screenshot,
+      authorId: row.author_id,
+      authorName: row.author_name || '玩家',
       userScript: true
     }));
   },

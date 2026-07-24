@@ -11,6 +11,7 @@ const {
 const { validatePublishedScript } = require('./_validate');
 
 const DISLIKE_PREFIX = '__dislike__:';
+const FOLLOW_PREFIX = '__follow__:';
 const recentRequests = new Map();
 
 function rateLimit(request, userId, action) {
@@ -94,6 +95,27 @@ async function replaceSave(user, body) {
   if (!removed.ok) throw Object.assign(new Error(removed.error), { status: removed.status });
   if (active) {
     const inserted = await supabaseRest('saves', {
+      method: 'POST',
+      body: { game_id: gameId, user_id: user.id },
+      prefer: 'return=representation',
+    });
+    if (!inserted.ok) throw Object.assign(new Error(inserted.error), { status: inserted.status });
+  }
+  return { active };
+}
+
+async function replaceFollow(user, body) {
+  const authorId = safeText(body.authorId, { name: 'authorId', max: 180 });
+  if (authorId === user.id) throw Object.assign(new Error('You cannot follow yourself.'), { status: 400 });
+  const gameId = `${FOLLOW_PREFIX}${authorId}`;
+  const active = body.active === true;
+  const removed = await supabaseRest('likes', {
+    method: 'DELETE',
+    query: `game_id=${encodeEq(gameId)}&user_id=${encodeEq(user.id)}`,
+  });
+  if (!removed.ok) throw Object.assign(new Error(removed.error), { status: removed.status });
+  if (active) {
+    const inserted = await supabaseRest('likes', {
       method: 'POST',
       body: { game_id: gameId, user_id: user.id },
       prefer: 'return=representation',
@@ -201,10 +223,10 @@ async function insertPublishedGame(user, rawGame) {
   if (scriptErrors.length) {
     throw Object.assign(new Error(`Script validation failed: ${scriptErrors.slice(0, 3).join(' ')}`), { status: 400 });
   }
-  const duration = Number(rawGame.duration);
-  if (!Number.isInteger(duration) || duration < 20 || duration > 60) {
-    throw Object.assign(new Error('Duration must be from 20 to 60 seconds.'), { status: 400 });
-  }
+  const requestedDuration = Number(rawGame.duration);
+  const duration = Number.isInteger(requestedDuration) && requestedDuration >= 20 && requestedDuration <= 60
+    ? requestedDuration
+    : 45;
   const base = slugBase(rawGame.suggested_id || rawGame.slug);
   const common = {
     suggested_id: safeText(rawGame.suggested_id || base, { name: 'suggested ID', max: 80 }),
@@ -284,6 +306,7 @@ async function submitUserGameScore(user, body) {
 
 const actions = {
   reaction: replaceReaction,
+  follow: replaceFollow,
   save: replaceSave,
   comment: createComment,
   score: submitScore,

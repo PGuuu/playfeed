@@ -38,7 +38,6 @@
     gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
   /* 遊戲進行中：淡出側邊鈕與左下資訊，並停用側邊鈕點擊（防誤觸） */
   .stage.playing .rail { opacity: 0; pointer-events: none; }
-  .stage.playing .meta { opacity: 0; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
   .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
@@ -55,18 +54,17 @@
   .rail button.liked .ico, .rail button.disliked .ico, .rail button.saved .ico { fill: currentColor; }
   .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
 
-  .meta { position: absolute; left: 16px; right: 76px; bottom: calc(60px + env(safe-area-inset-bottom));
-    z-index: 5; pointer-events: none; transition: opacity 0.28s; }
-  .meta .author { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-  .meta .title { font-size: 14px; opacity: 0.9; }
-  .meta .tip { font-size: 12px; opacity: 0.6; margin-top: 6px; }
-
   .overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 14px; background: rgba(8,8,12,0.32);
+    align-items: center; justify-content: center; background: rgba(8,8,12,0.12);
     text-align: center; padding: 24px; }
   .overlay.hidden { display: none; }
-  .overlay h2 { font-size: 26px; font-weight: 700; text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8); }
-  .overlay p { font-size: 15px; opacity: 0.95; line-height: 1.6; text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.8); }
+  .overlay-card { width: min(100%, 430px); display: flex; flex-direction: column; align-items: center;
+    gap: 13px; padding: 22px 20px; border: 1px solid rgba(255,255,255,.13); border-radius: 24px;
+    background: rgba(12,12,18,.72); backdrop-filter: blur(14px); box-shadow: 0 16px 50px rgba(0,0,0,.28); }
+  .overlay h2 { font-size: 26px; font-weight: 700; }
+  .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
+  .overlay .author-link { border: 0; background: transparent; color: #9bdfaa; cursor: pointer;
+    font: 700 13px inherit; padding: 2px 8px; }
   .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
     display: flex; align-items: center; gap: 6px; }
   .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
@@ -202,10 +200,12 @@
   .phead b { font-size: 17px; font-weight: 700; }
   .phead button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
     font-family: inherit; font-size: 12px; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .phead button.following { background: rgba(67,185,104,.2); color: #8be2a0; }
   .ptabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .ptabs button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
     font-size: 13px; font-weight: 600; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
   .ptabs button.active { color: #fff; border-bottom-color: #fff; }
+  .ptabs button[hidden] { display: none; }
   #pgrid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
@@ -263,7 +263,7 @@
 </div>
 
 <div id="profile">
-  <div class="phead"><b id="profileWho">個人頁</b><button id="logoutBtn">登出</button></div>
+  <div class="phead"><b id="profileWho">個人頁</b><button id="profileActionBtn">登出</button></div>
   <div class="ptabs">
     <button class="active" data-tab="created"><span class="tico" data-ico="create"></span>自創</button>
     <button data-tab="remixed"><span class="tico" data-ico="remix"></span>改造</button>
@@ -353,7 +353,9 @@ let user = null;
 let phuzeToken = '';
 let pendingAction = null;   // 被登入擋下的動作，登入成功後自動補做
 const DISLIKE_PREFIX = '__dislike__:';
+const FOLLOW_PREFIX = '__follow__:';
 const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
+const followState = {}; // author_id -> { count, mine }
 const saveState = {};   // game_id -> mine
 const bests = {};
 
@@ -484,12 +486,54 @@ document.getElementById('navMeMain').addEventListener('click', () => {
 /* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
 const profileBox = document.getElementById('profile');
 let profileTab = 'created';
-function openProfile() {
+let profileOwner = null;
+function ownProfileView() {
+  return !!(user && profileOwner && profileOwner.id === user.id);
+}
+function updateProfileAction() {
+  const button = document.getElementById('profileActionBtn');
+  if (!profileOwner) { button.style.display = 'none'; return; }
+  button.style.display = '';
+  if (ownProfileView()) {
+    button.textContent = '登出';
+    button.classList.remove('following');
+    return;
+  }
+  const state = followState[profileOwner.id] || { count: 0, mine: false };
+  button.textContent = `${state.mine ? '已追蹤' : '追蹤'} · ${state.count}`;
+  button.classList.toggle('following', state.mine);
+}
+function configureProfileTabs() {
+  const own = ownProfileView();
+  document.querySelectorAll('.ptabs button').forEach(button => {
+    const personal = ['saved', 'liked', 'disliked'].includes(button.dataset.tab);
+    button.hidden = !own && personal;
+  });
+  if (!own && !['created', 'remixed'].includes(profileTab)) profileTab = 'created';
+  document.querySelectorAll('.ptabs button').forEach(button =>
+    button.classList.toggle('active', button.dataset.tab === profileTab)
+  );
+}
+function openProfile(owner = null) {
+  if (owner) {
+    profileOwner = { id: owner.id, name: authorLabel(owner.name) };
+  } else if (user) {
+    profileOwner = { id: user.id, name: displayName(user) };
+  } else {
+    return;
+  }
   closeStandalone();
-  document.getElementById('profileWho').textContent = user ? displayName(user) : '個人頁';
+  document.getElementById('profileWho').textContent = profileOwner.name;
+  configureProfileTabs();
+  updateProfileAction();
   renderProfileGrid(profileTab);
   profileBox.classList.add('open');
-  setMainNavActive('me');
+  setMainNavActive(ownProfileView() ? 'me' : 'home');
+}
+function openAuthorProfile(authorId, name) {
+  if (!authorId) return;
+  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
+  openProfile({ id: authorId, name });
 }
 function closeProfile() { profileBox.classList.remove('open'); setMainNavActive('home'); }
 document.querySelectorAll('.ptabs button').forEach(b => b.addEventListener('click', () => {
@@ -497,18 +541,26 @@ document.querySelectorAll('.ptabs button').forEach(b => b.addEventListener('clic
   document.querySelectorAll('.ptabs button').forEach(x => x.classList.toggle('active', x === b));
   renderProfileGrid(profileTab);
 }));
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  closeProfile();
-  if (phuzeOn) await Phuze.logout();
-  toast('已登出');
+document.getElementById('profileActionBtn').addEventListener('click', async () => {
+  if (ownProfileView()) {
+    closeProfile();
+    if (phuzeOn) await Phuze.logout();
+    toast('已登出');
+    return;
+  }
+  if (profileOwner) toggleFollow(profileOwner.id);
 });
 function profileData(tab) {
+  const ownerId = profileOwner && profileOwner.id;
   if (tab === 'created') {
-    return user && window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
+    const official = posts.map(post => post.entry).filter(entry => entry.authorId === ownerId);
+    const submitted = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(ownerId) : [];
+    return [...submitted, ...official];
   }
   if (tab === 'remixed') {
-    return user ? remixRows.filter(r => r.user_id === user.id).map(cacheRemixEntry).filter(Boolean) : [];
+    return remixRows.filter(r => r.user_id === ownerId).map(cacheRemixEntry).filter(Boolean);
   }
+  if (!ownProfileView()) return [];
   const st = tab === 'saved' ? saveState : likeState;
   return Object.keys(st)
     .filter(id => tab === 'saved' ? st[id] :
@@ -578,7 +630,15 @@ async function loadLikes() {
   if (error || !data) return;
   for (const key of Object.keys(likeState)) delete likeState[key];
   for (const p of posts) likeState[p.id] = emptyReaction();
+  for (const key of Object.keys(followState)) delete followState[key];
   for (const row of data) {
+    if (row.game_id.startsWith(FOLLOW_PREFIX)) {
+      const authorId = row.game_id.slice(FOLLOW_PREFIX.length);
+      const state = followState[authorId] || (followState[authorId] = { count: 0, mine: false });
+      state.count++;
+      if (user && row.user_id === user.id) state.mine = true;
+      continue;
+    }
     const isDislike = row.game_id.startsWith(DISLIKE_PREFIX);
     const gameId = isDislike ? row.game_id.slice(DISLIKE_PREFIX.length) : row.game_id;
     const st = reactionState(gameId);
@@ -591,6 +651,7 @@ async function loadLikes() {
     }
   }
   for (const p of posts) p.refreshLike();
+  if (profileBox.classList.contains('open')) updateProfileAction();
 }
 function refreshPost(gameId) {
   const p = posts.find(p => p.id === gameId) || (standalonePost && standalonePost.id === gameId ? standalonePost : null);
@@ -807,6 +868,34 @@ function entryFor(id) {
     return row ? cacheRemixEntry(row) : null;
   }
   return baseEntryById(id);
+}
+
+async function toggleFollow(authorId) {
+  if (!requireLogin(() => toggleFollow(authorId))) return;
+  if (authorId === user.id) return;
+  const state = followState[authorId] || (followState[authorId] = { count: 0, mine: false });
+  const previous = { ...state };
+  state.mine = !state.mine;
+  state.count = Math.max(0, state.count + (state.mine ? 1 : -1));
+  updateProfileAction();
+  try {
+    await secureWrite('follow', { authorId, active: state.mine });
+  } catch (error) {
+    Object.assign(state, previous);
+    updateProfileAction();
+    toast('操作失敗：' + error.message);
+  }
+}
+function authorLabel(value) {
+  return String(value || '玩家').replace(/^@/, '').replace(/·改造$/, '');
+}
+function officialAuthorId(name) {
+  let hash = 2166136261;
+  for (const char of String(name || 'PlayFeed')) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `official-${(hash >>> 0).toString(16)}`;
 }
 function mechanicTemplateFor(entry) {
   const base = entry && entry.base;
@@ -1039,17 +1128,16 @@ function makePost(entry, opts) {
         ${entry.remixSlots ? '<button class="rmx"><span class="ic">' + ICONS.remix + '</span><span>改造</span></button>' : ''}
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
       </div>
-      <div class="meta">
-        <div class="author">${entry.author}</div>
-        <div class="title">${entry.title}</div>
-        <div class="tip">${entry.tip}</div>
-      </div>
       <div class="overlay">
-        <div class="pv-tag">遊戲實況預覽</div>
-        <h2>${entry.title.split('：')[0]}</h2>
-        <p>${entry.tip}</p>
-        <div class="ov-btns">
-          <button class="go">開始</button>
+        <div class="overlay-card">
+          <div class="pv-tag">遊戲實況預覽</div>
+          <button class="author-link">${entry.author}</button>
+          <h2>${entry.title.split('：')[0]}</h2>
+          <p>${entry.tip}</p>
+          <div class="ov-btns">
+            <button class="go">開始</button>
+            ${mechanicTemplateFor(entry) ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}
+          </div>
         </div>
       </div>
       ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
@@ -1142,13 +1230,16 @@ function makePost(entry, opts) {
       if (isBest) { bests[gid] = score; submitScore(gid, score); }
       bestChip.style.display = ''; bsEl.textContent = bests[gid] || 0;
       overlay.innerHTML = `
-        <div class="final">${score}</div>
-        ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
-        <p>再挑戰一次，或往上滑玩下一款</p>
-        <div class="ov-btns">
-          <button class="go">再玩一次</button>
-          ${mechanicTemplate ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}
-          <button class="share-score">分享成績</button>
+        <div class="overlay-card">
+          <button class="author-link">${entry.author}</button>
+          <div class="final">${score}</div>
+          ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
+          <p>再挑戰一次，或往上滑玩下一款</p>
+          <div class="ov-btns">
+            <button class="go">再玩一次</button>
+            ${mechanicTemplate ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}
+            <button class="share-score">分享成績</button>
+          </div>
         </div>`;
       overlay.classList.remove('hidden');
       wireStart(overlay);
@@ -1175,6 +1266,15 @@ function makePost(entry, opts) {
   function wireStart(root) {
     const go = root.querySelector('.go');
     if (go) go.addEventListener('click', e => { e.stopPropagation(); begin(); });
+    const author = root.querySelector('.author-link');
+    if (author) author.addEventListener('click', e => {
+      e.stopPropagation();
+      stopPreview();
+      if (state.game && state.running) state.game.stop();
+      state.running = false;
+      stage.classList.remove('playing');
+      openAuthorProfile(entry.authorId, entry.authorName || entry.author);
+    });
     const mechanic = root.querySelector('.mechanic-create');
     if (mechanic) mechanic.addEventListener('click', e => {
       e.stopPropagation();
@@ -1265,8 +1365,10 @@ function makePost(entry, opts) {
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
-        `<div class="ov-btns"><button class="go">開始</button></div>`;
+      overlay.innerHTML = `<div class="overlay-card"><div class="pv-tag">遊戲實況預覽</div>` +
+        `<button class="author-link">${entry.author}</button><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
+        `<div class="ov-btns"><button class="go">開始</button>` +
+        `${mechanicTemplate ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}</div></div>`;
       wireStart(overlay);
     }
   };
@@ -1284,14 +1386,17 @@ const io = new IntersectionObserver(ents => {
 
 /* entry 建構 */
 function toBaseEntry(g) {
-  return { id: g.id, base: g, title: g.title, author: g.author, tip: g.tip, bg: g.bg,
+  return { id: g.id, base: g, title: g.title, author: g.author,
+           authorId: officialAuthorId(g.author), authorName: authorLabel(g.author),
+           tip: g.tip, bg: g.bg,
            remixSlots: g.remixSlots, sprites: {}, spriteData: {} };
 }
 function toRemixEntry(r) {
   const base = (window.GAMES || []).find(g => g.id === r.base_id);
   if (!base) return null;
   return { id: 'remix:' + r.id, base, title: r.name,
-           author: '@' + (r.author || '玩家') + '·改造', tip: base.tip, bg: base.bg,
+           author: '@' + (r.author || '玩家') + '·改造',
+           authorId: r.user_id, authorName: r.author || '玩家', tip: base.tip, bg: base.bg,
            remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
            spriteData: r.sprites || {}, remixOf: r.base_id, remixMeta: r };
 }
@@ -1401,6 +1506,7 @@ window.PlayFeedHost = {
   setMainNavActive,
   closeProfile,
   closeStandalone,
+  openAuthorProfile,
   refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
   toggleReaction,
   toggleSave,

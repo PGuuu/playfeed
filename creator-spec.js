@@ -21,7 +21,6 @@ window.GAMES = (window.GAMES || []).concat([
     bg: '#18354a',
     tags: [],
     controls: ['tap'],
-    duration: 45,
     score: { label: '分數', order: 'higher', decimals: 0 },
 
     create(env) {
@@ -53,7 +52,7 @@ metadata 規則：
 - bg 必須是十六進位色碼。
 - tags 是字串陣列，可以為空。
 - controls 至少一項，可使用 tap、hold、horizontal-drag、left-right 或它們的組合。
-- duration 是預估單局秒數，目前必須是 20～60 的整數。
+- duration 是選配的預估秒數，不是時間限制。可以省略，遊戲可依命數、目標、失敗條件或自己的規則結束。
 - score.order 使用 higher 或 lower；decimals 建議為 0。
 
 ## 2. Runtime API
@@ -127,6 +126,14 @@ shape 可使用 free、circle、wide、tall。繪製該元素時可呼叫 env.sp
 
 export function buildMechanicPrompt(template) {
   const preserve = (template.preserve || []).map(item => `- ${item}`).join('\n');
+  const reference = template.sourceScript ? `
+
+以下來源 Script 只供理解核心機制。不要直接複製名稱、文字、角色或主題；請重新製作符合新主題的完整遊戲：
+
+\`\`\`js
+${template.sourceScript}
+\`\`\`
+` : '';
   return `# 使用 PlayFeed 玩法模板創作
 
 請使用下面的玩法骨架製作一款新的 PlayFeed 遊戲。
@@ -145,6 +152,7 @@ ${preserve}
 - 數值、速度、難度與細節規則
 
 請保留玩法的核心互動，但不要複製來源遊戲的名稱、角色、情境或文案。使用者會在下一則訊息告訴你想製作的主題；請依照他的要求發展，不要自行限定題材。
+${reference}
 
 ---
 
