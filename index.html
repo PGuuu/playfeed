@@ -38,6 +38,16 @@
   #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none;
     overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
   #feed::-webkit-scrollbar { display: none; }
+  #feed.swipe-demo { animation: firstSwipeDemo 1.35s cubic-bezier(.36,.02,.2,1);
+    will-change: transform; }
+  @keyframes firstSwipeDemo {
+    0%, 12% { transform: translateY(0); }
+    43%, 61% { transform: translateY(-64px); }
+    100% { transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #feed.swipe-demo { animation: none; }
+  }
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
     display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: pan-y; }
@@ -1936,6 +1946,28 @@ document.getElementById('standalonePager').addEventListener('click', event => {
 const posts = [];
 const bootStartedAt = performance.now();
 let bootFinished = false;
+const FIRST_SWIPE_DEMO_KEY = 'playfeed:first-swipe-demo:v1';
+let firstSwipeDemoTimer = null;
+let firstSwipeDemoCancelled = false;
+function cancelFirstSwipeDemo() {
+  firstSwipeDemoCancelled = true;
+  clearTimeout(firstSwipeDemoTimer);
+  firstSwipeDemoTimer = null;
+  feed.classList.remove('swipe-demo');
+}
+function scheduleFirstSwipeDemo() {
+  if (firstSwipeDemoCancelled || location.hash || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  try {
+    if (localStorage.getItem(FIRST_SWIPE_DEMO_KEY)) return;
+  } catch (_) {}
+  firstSwipeDemoTimer = setTimeout(() => {
+    if (document.hidden || feed.scrollTop > 2 || document.querySelector('.stage.playing')) return;
+    try { localStorage.setItem(FIRST_SWIPE_DEMO_KEY, '1'); } catch (_) {}
+    feed.classList.add('swipe-demo');
+    setTimeout(() => feed.classList.remove('swipe-demo'), 1450);
+  }, 720);
+}
+document.addEventListener('pointerdown', cancelFirstSwipeDemo, { capture: true, once: true });
 function finishBoot() {
   if (bootFinished) return;
   bootFinished = true;
@@ -1944,6 +1976,7 @@ function finishBoot() {
   setTimeout(() => {
     document.documentElement.classList.remove('booting');
     document.getElementById('bootSplash').classList.add('done');
+    scheduleFirstSwipeDemo();
   }, delay);
 }
 setTimeout(finishBoot, 8000);
