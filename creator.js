@@ -374,7 +374,7 @@ function buildCreatorUI() {
       <section class="creator-step" data-step="1">
         <span class="creator-step-no">1</span><div class="creator-step-content">
           <h2>複製創作規格</h2>
-          <p>把 PlayFeed 的完整格式、操作限制與遊戲設計原則一起複製。</p>
+          <p>複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
           <button class="creator-action" id="copyCreatorSpec">複製遊戲創作規格</button>
         </div>
       </section>
