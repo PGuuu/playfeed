@@ -16,13 +16,9 @@ window.GAMES = (window.GAMES || []).concat([
     const W = env.W, H = env.H;
     /* 可換圖元素：有上傳圖片就畫圖，否則畫預設 emoji */
     function spr(key, emoji, cx, cy, size, flip) {
-      const im = env.getSprite && env.getSprite(key);
+      if (env.sprite && env.sprite(key, cx, cy, size, flip)) return;
       ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
-      if (im) {
-        const iw = im.videoWidth || im.naturalWidth || im.width, ih = im.videoHeight || im.naturalHeight || im.height;
-        const s = Math.min(size / iw, size / ih), w = iw * s, hh = ih * s;
-        ctx.drawImage(im, -w/2, -hh/2, w, hh);
-      } else { ctx.font = size + 'px serif'; ctx.fillText(emoji, 0, 0); }
+      ctx.font = size + 'px serif'; ctx.fillText(emoji, 0, 0);
       ctx.restore();
     }
     const T = 58, NC = 6, CW = W / NC, BASE = H - 190;
@@ -224,12 +220,8 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.save();
       ctx.translate(px, py - 8 + arc);
       ctx.scale(1 + land * 0.22, 1 - land * 0.22);
-      const pim = alive && env.getSprite && env.getSprite('player');
-      if (pim) {
-        const iw = pim.videoWidth || pim.naturalWidth || pim.width, ih = pim.videoHeight || pim.naturalHeight || pim.height;
-        const s = Math.min(44 / iw, 44 / ih), w = iw * s, hh = ih * s;
-        ctx.drawImage(pim, -w/2, -hh/2, w, hh);
-      } else {
+      const playerDrawn = alive && env.sprite && env.sprite('player', 0, 0, 44);
+      if (!playerDrawn) {
         ctx.font = '44px serif';
         ctx.fillText(alive ? '🐔' : deadGlyph, 0, 0);
       }

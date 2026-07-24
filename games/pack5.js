@@ -6,8 +6,14 @@ window.GAMES = (window.GAMES || []).concat([
 {
   id: 'softserve', title: '冰淇淋機：倒越高分越高', author: '@夏日限定工讀生', tip: '按住螢幕倒冰淇淋，放開停止。越高分越高，但倒過頭整坨會塌',
   bg: '#ffe8ef',
+  remixSlots: [
+    { key: 'machine', label: '冰淇淋機', hint: '畫面上方的出料機器', default: '冰淇淋機', shape: 'wide' },
+    { key: 'cone', label: '甜筒', hint: '承接冰淇淋的甜筒', default: '🍦', shape: 'tall' },
+    { key: 'topper', label: '完美裝飾', hint: '完美出餐時放在頂端的裝飾', default: '🍒', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
+    const sprite = env.sprite || (() => false);
     const W = env.W, H = env.H;
     const NOZZLE_Y = 150, CONE_TOP = 520, CONE_W = 92;
     const FLAVORS = [
@@ -127,10 +133,12 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(-20, 600, W + 40, 8);
 
       /* 機器 */
-      ctx.fillStyle = '#cfd6de';
-      ctx.beginPath(); ctx.roundRect(W/2 - 96, 20, 192, 110, 18); ctx.fill();
-      ctx.fillStyle = '#aab4c0';
-      ctx.beginPath(); ctx.roundRect(W/2 - 26, 118, 52, 34, 8); ctx.fill();
+      if (!sprite('machine', W/2, 80, 192)) {
+        ctx.fillStyle = '#cfd6de';
+        ctx.beginPath(); ctx.roundRect(W/2 - 96, 20, 192, 110, 18); ctx.fill();
+        ctx.fillStyle = '#aab4c0';
+        ctx.beginPath(); ctx.roundRect(W/2 - 26, 118, 52, 34, 8); ctx.fill();
+      }
       ctx.fillStyle = '#8e99a6';
       ctx.beginPath(); ctx.roundRect(W/2 - 18, NOZZLE_Y - 6, 36, 12, 5); ctx.fill();
       ctx.fillStyle = '#7f8b98'; ctx.font = '600 13px system-ui'; ctx.textAlign = 'center';
@@ -196,29 +204,33 @@ window.GAMES = (window.GAMES || []).concat([
         }
         /* 完美櫻桃 */
         if (topper) {
-          ctx.font = '26px serif'; ctx.textAlign = 'center';
-          ctx.fillText(topper, tx, CONE_TOP - h - 10);
+          if (!sprite('topper', tx, CONE_TOP - h - 18, 30)) {
+            ctx.font = '26px serif'; ctx.textAlign = 'center';
+            ctx.fillText(topper, tx, CONE_TOP - h - 10);
+          }
         }
       }
 
       /* 甜筒 */
       const cw = CONE_W / 2;
-      ctx.fillStyle = '#d9a05b';
-      ctx.beginPath();
-      ctx.moveTo(W/2 - cw, CONE_TOP);
-      ctx.lineTo(W/2 + cw, CONE_TOP);
-      ctx.lineTo(W/2, CONE_TOP + 104);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(140,88,36,0.45)'; ctx.lineWidth = 2;
-      for (let i = 1; i <= 3; i++) {
-        const t = i / 4;
+      if (!sprite('cone', W/2, CONE_TOP + 50, 112)) {
+        ctx.fillStyle = '#d9a05b';
         ctx.beginPath();
-        ctx.moveTo(W/2 - cw * (1 - t), CONE_TOP + 104 * t);
-        ctx.lineTo(W/2 + cw * (1 - t), CONE_TOP + 104 * t);
-        ctx.stroke();
+        ctx.moveTo(W/2 - cw, CONE_TOP);
+        ctx.lineTo(W/2 + cw, CONE_TOP);
+        ctx.lineTo(W/2, CONE_TOP + 104);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(140,88,36,0.45)'; ctx.lineWidth = 2;
+        for (let i = 1; i <= 3; i++) {
+          const t = i / 4;
+          ctx.beginPath();
+          ctx.moveTo(W/2 - cw * (1 - t), CONE_TOP + 104 * t);
+          ctx.lineTo(W/2 + cw * (1 - t), CONE_TOP + 104 * t);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#c98f4a';
+        ctx.beginPath(); ctx.roundRect(W/2 - cw - 3, CONE_TOP - 7, cw * 2 + 6, 14, 6); ctx.fill();
       }
-      ctx.fillStyle = '#c98f4a';
-      ctx.beginPath(); ctx.roundRect(W/2 - cw - 3, CONE_TOP - 7, cw * 2 + 6, 14, 6); ctx.fill();
 
       /* HUD：生命與提示 */
       ctx.textAlign = 'left'; ctx.font = '600 22px serif';

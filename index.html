@@ -9,7 +9,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
   :root {
-    --main-nav-height: calc(58px + env(safe-area-inset-bottom));
+    --main-nav-height: calc(70px + env(safe-area-inset-bottom));
     --game-top-height: calc(56px + env(safe-area-inset-top));
   }
   html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
@@ -246,6 +246,29 @@
   #notifications { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
     display: none; flex-direction: column; }
   #notifications.open { display: flex; }
+  #searchPage { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
+    display: none; flex-direction: column; }
+  #searchPage.open { display: flex; }
+  .search-head { padding: max(14px, env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid #efefef; }
+  .search-head b { display: block; margin-bottom: 10px; font-size: 17px; }
+  #searchInput { width: 100%; height: 42px; border: 0; border-radius: 10px; outline: none;
+    background: #efefef; color: #262626; padding: 0 14px; font: 15px inherit; }
+  #searchResults { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
+  .search-section-title { padding: 18px 16px 8px; color: #737373; font-size: 12px; font-weight: 750; }
+  .search-result { width: 100%; display: grid; grid-template-columns: 50px minmax(0,1fr); gap: 12px;
+    align-items: center; border: 0; border-bottom: 1px solid #efefef; background: #fff;
+    color: #262626; padding: 10px 16px; text-align: left; cursor: pointer; font-family: inherit; }
+  .search-result:active { background: #f7f7f7; }
+  .search-result-thumb { width: 50px; height: 50px; border-radius: 10px; display: grid;
+    place-items: center; overflow: hidden; background: #efefef center/cover no-repeat;
+    color: #262626; font-size: 19px; font-weight: 750; }
+  .search-result.account .search-result-thumb { border-radius: 50%; }
+  .search-result-copy { min-width: 0; }
+  .search-result-copy strong, .search-result-copy span { display: block; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .search-result-copy strong { font-size: 14px; }
+  .search-result-copy span { margin-top: 3px; color: #737373; font-size: 12px; }
+  .search-empty { padding: 70px 24px; color: #737373; text-align: center; font-size: 14px; }
   #notificationList { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
   .notification-empty { padding: 64px 24px; color: #737373; text-align: center; font-size: 14px; }
   .notification-item { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
@@ -295,12 +318,12 @@
   .profile-editor-actions button[type="submit"] { background: #0095f6; color: #fff; }
   #pgrid { flex: 1; min-height: 0; overflow-y: auto; display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row;
+    grid-auto-rows: var(--profile-grid-row-height, 220px);
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
   .gcell { position: relative; width: 100%; min-width: 0; overflow: hidden;
-    cursor: pointer; display: block; contain: layout paint; }
-  .gcell::before { content: ""; display: block; width: 100%; padding-top: 175%; }
+    height: 100%; cursor: pointer; display: block; contain: layout paint; }
   .gcell .hero { position: absolute; inset: 0; width: 100%; height: 100%; font-size: 46px; line-height: 1;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
@@ -318,10 +341,13 @@
   /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
   #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
     background: rgba(55,42,130,0.78); backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: env(safe-area-inset-bottom); }
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 5px 0 calc(8px + env(safe-area-inset-bottom)); }
   #mainNav.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
   #mainNav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
-    font-size: 11px; cursor: pointer; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    min-width: 0; min-height: 52px; font-size: 11px; cursor: pointer; padding: 6px 2px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    touch-action: manipulation; pointer-events: auto; }
   #mainNav button .ni { font-size: 21px; line-height: 1; }
   #mainNav button.active { color: #fff; }
 
@@ -438,11 +464,21 @@
   <div id="notificationList"></div>
 </div>
 
+<div id="searchPage">
+  <div class="search-head">
+    <b>搜尋</b>
+    <input id="searchInput" type="search" enterkeyhint="search" autocomplete="off"
+      placeholder="搜尋帳號或遊戲">
+  </div>
+  <div id="searchResults"></div>
+</div>
+
 <div id="mainNav">
-  <button id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
-  <button id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
-  <button id="navNotificationsMain"><span class="ni" data-ico="bell"></span><span id="notificationBadge" hidden></span>通知</button>
-  <button id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
+  <button type="button" id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
+  <button type="button" id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
+  <button type="button" id="navSearchMain"><span class="ni" data-ico="search"></span>搜尋</button>
+  <button type="button" id="navNotificationsMain"><span class="ni" data-ico="bell"></span><span id="notificationBadge" hidden></span>通知</button>
+  <button type="button" id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
 </div>
 <div id="desktopPager" aria-label="切換遊戲">
   <button type="button" data-direction="-1" aria-label="上一個遊戲">↑</button>
@@ -546,6 +582,7 @@ const ICONS = {
   remix:   '<svg class="ico" viewBox="0 0 24 24"><path d="M4.5 19.5 14.5 9.5"/><path d="M18 2.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor" stroke="none"/></svg>',
   share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
   bell:    '<svg class="ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
+  search:  '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>',
   home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
   user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
   create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>'
@@ -651,21 +688,23 @@ function restoreNavVisibility() { setNavVisible(!document.getElementById('remixV
 function setMainNavActive(tab) {
   document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
   document.getElementById('navCreateMain').classList.toggle('active', tab === 'create');
+  document.getElementById('navSearchMain').classList.toggle('active', tab === 'search');
   document.getElementById('navNotificationsMain').classList.toggle('active', tab === 'notifications');
   document.getElementById('navMeMain').classList.toggle('active', tab === 'me');
 }
 document.getElementById('navHomeMain').addEventListener('click', () => {
   if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeProfile(); closeNotifications(); closeStandalone();
+  closeProfile(); closeSearch(); closeNotifications(); closeStandalone();
 });
 document.getElementById('navCreateMain').addEventListener('click', () => {
-  closeProfile(); closeNotifications(); closeStandalone();
+  closeProfile(); closeSearch(); closeNotifications(); closeStandalone();
   if (window.PlayFeedCreator) window.PlayFeedCreator.open();
   else toast('創作工具載入中，請再按一次');
 });
+document.getElementById('navSearchMain').addEventListener('click', openSearch);
 document.getElementById('navMeMain').addEventListener('click', () => {
   if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeNotifications();
+  closeSearch(); closeNotifications();
   if (user) return openProfile();
   if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
   pendingAction = () => openProfile();
@@ -678,6 +717,150 @@ document.getElementById('navNotificationsMain').addEventListener('click', () => 
   }
   openNotifications();
 });
+
+/* ---------- 搜尋：帳號與遊戲 ---------- */
+const searchPage = document.getElementById('searchPage');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+let searchProfileIndexLoaded = false;
+function searchGames() {
+  const games = [];
+  for (const row of window.PlayFeedCreator?.rows || []) {
+    games.push({
+      id: `game:${row.slug}`,
+      title: row.title || row.slug,
+      authorId: row.author_id,
+      authorName: row.author_name || '玩家',
+      description: row.description || row.tip || '',
+      bg: row.bg || '#efefef',
+      screenshot: row.screenshot || '',
+    });
+  }
+  for (const row of remixRows || []) {
+    games.push({
+      id: `remix:${row.id}`,
+      title: row.name || '改造遊戲',
+      authorId: row.user_id,
+      authorName: row.author || '玩家',
+      description: '換皮改造',
+      bg: baseEntryById(row.base_id)?.bg || '#efefef',
+      screenshot: '',
+    });
+  }
+  return uniqueProfileEntries(games);
+}
+function searchAccounts() {
+  const accounts = new Map();
+  const add = (id, name) => {
+    if (!id) return;
+    const detail = profileDetails[id] || {};
+    accounts.set(id, {
+      id,
+      name: detail.display_name || name || '玩家',
+      bio: detail.bio || '',
+      avatar: detail.avatar || '',
+    });
+  };
+  for (const row of window.PlayFeedCreator?.rows || []) add(row.author_id, row.author_name);
+  for (const row of remixRows || []) add(row.user_id, row.author);
+  for (const id of Object.keys(profileDetails)) add(id, profileDetails[id]?.display_name);
+  return [...accounts.values()];
+}
+async function loadSearchProfiles() {
+  if (searchProfileIndexLoaded || !online) return;
+  searchProfileIndexLoaded = true;
+  const { data, error } = await db.from('comments').select('game_id,user_id,name,body')
+    .like('game_id', PROFILE_PREFIX + '%').order('created_at', { ascending: false }).limit(500);
+  if (error) return;
+  for (const row of data || []) {
+    if (profileDetails[row.user_id]) continue;
+    try {
+      const stored = JSON.parse(row.body);
+      profileDetails[row.user_id] = {
+        display_name: stored.display_name || stored.d || row.name || '玩家',
+        bio: stored.bio || stored.b || '',
+        website: stored.website || stored.w || '',
+      };
+    } catch (_) {}
+  }
+}
+function appendSearchTitle(text) {
+  const title = document.createElement('div');
+  title.className = 'search-section-title';
+  title.textContent = text;
+  searchResults.appendChild(title);
+}
+function renderSearchResults() {
+  const query = searchInput.value.trim().toLocaleLowerCase('zh-Hant');
+  searchResults.innerHTML = '';
+  if (!query) {
+    searchResults.innerHTML = '<div class="search-empty">輸入遊戲名稱或創作者帳號</div>';
+    return;
+  }
+  const accounts = searchAccounts().filter(account =>
+    `${account.name} ${account.bio}`.toLocaleLowerCase('zh-Hant').includes(query)
+  ).slice(0, 30);
+  const games = searchGames().filter(game =>
+    `${game.title} ${game.description} ${game.authorName}`.toLocaleLowerCase('zh-Hant').includes(query)
+  ).slice(0, 60);
+  if (accounts.length) appendSearchTitle('帳號');
+  for (const account of accounts) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'search-result account';
+    const thumb = document.createElement('span');
+    thumb.className = 'search-result-thumb';
+    if (account.avatar) thumb.style.backgroundImage = `url("${account.avatar}")`;
+    else thumb.textContent = [...account.name][0]?.toUpperCase() || 'P';
+    const copy = document.createElement('span');
+    copy.className = 'search-result-copy';
+    const name = document.createElement('strong'); name.textContent = account.name;
+    const bio = document.createElement('span'); bio.textContent = account.bio || '查看創作者頁面';
+    copy.append(name, bio); button.append(thumb, copy);
+    button.addEventListener('click', () => {
+      closeSearch();
+      openAuthorProfile(account.id, account.name);
+    });
+    searchResults.appendChild(button);
+  }
+  if (games.length) appendSearchTitle('遊戲');
+  for (const game of games) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'search-result game';
+    const thumb = document.createElement('span');
+    thumb.className = 'search-result-thumb';
+    thumb.style.backgroundColor = game.bg;
+    if (game.screenshot) thumb.style.backgroundImage = `url("${game.screenshot}")`;
+    else thumb.textContent = '🎮';
+    const copy = document.createElement('span');
+    copy.className = 'search-result-copy';
+    const title = document.createElement('strong'); title.textContent = game.title;
+    const author = document.createElement('span'); author.textContent = `@${game.authorName}`;
+    copy.append(title, author); button.append(thumb, copy);
+    button.addEventListener('click', () => {
+      closeSearch();
+      openStandalone(game.id);
+    });
+    searchResults.appendChild(button);
+  }
+  if (!accounts.length && !games.length) {
+    searchResults.innerHTML = '<div class="search-empty">找不到符合的帳號或遊戲</div>';
+  }
+}
+async function openSearch() {
+  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
+  closeProfile(); closeNotifications(); closeStandalone();
+  searchPage.classList.add('open');
+  setMainNavActive('search');
+  await loadSearchProfiles();
+  renderSearchResults();
+  setTimeout(() => searchInput.focus(), 30);
+}
+function closeSearch() {
+  searchPage.classList.remove('open');
+}
+searchInput.addEventListener('input', renderSearchResults);
 
 /* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
 const profileBox = document.getElementById('profile');
@@ -771,6 +954,7 @@ function openProfile(owner = null) {
   } else {
     return;
   }
+  closeSearch();
   closeStandalone();
   configureProfileTabs();
   updateProfileAction();
@@ -987,6 +1171,7 @@ function openNotifications() {
   if (!user) return openLogin();
   if (window.PlayFeedCreator) window.PlayFeedCreator.close();
   closeProfile();
+  closeSearch();
   closeStandalone();
   notificationsBox.classList.add('open');
   setMainNavActive('notifications');
@@ -1026,6 +1211,18 @@ function uniqueProfileEntries(entries) {
   });
 }
 const profilePreviewJobs = new Map();
+function updateProfileGridRowHeight() {
+  const grid = document.getElementById('pgrid');
+  const width = grid.clientWidth;
+  if (!width) return;
+  const columnWidth = Math.max(1, (width - 12) / 3);
+  grid.style.setProperty('--profile-grid-row-height', `${columnWidth * 7 / 4}px`);
+}
+if ('ResizeObserver' in window) {
+  new ResizeObserver(updateProfileGridRowHeight).observe(document.getElementById('pgrid'));
+} else {
+  window.addEventListener('resize', updateProfileGridRowHeight);
+}
 function captureBuiltInThumbnail(entry) {
   if (!entry?.base?.create) return Promise.resolve(null);
   if (entry.screenshot) return Promise.resolve(entry.screenshot);
@@ -1080,7 +1277,9 @@ function captureBuiltInThumbnail(entry) {
   return job;
 }
 function profileThumbnailFor(entry) {
-  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id, false);
+  if (entry.userScript && window.PlayFeedCreator) {
+    return window.PlayFeedCreator.captureThumbnail(entry.id, false, entry);
+  }
   if (entry.screenshot) return Promise.resolve(entry.screenshot);
   return captureBuiltInThumbnail(entry);
 }
@@ -1088,6 +1287,7 @@ let profileGridObserver = null;
 function renderProfileGrid(tab) {
   const grid = document.getElementById('pgrid');
   const items = profileData(tab);
+  updateProfileGridRowHeight();
   profileGridObserver?.disconnect();
   const observer = new IntersectionObserver(entries => {
     for (const observed of entries) {
@@ -1507,6 +1707,20 @@ const remixSheet = document.getElementById('remixSheet');
 const remixFile = document.getElementById('remixFile');
 let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} } }
 let remixSlotKey = null;
+function activeRemixSpriteData() {
+  if (!activeRemix) return {};
+  const data = { ...(activeRemix.originalSpriteData || {}) };
+  for (const [key, value] of Object.entries(activeRemix.draft)) {
+    if (value?.dataURL) data[key] = value.dataURL;
+  }
+  return data;
+}
+function previewActiveRemix() {
+  if (!activeRemix?.entry?.userScript) return;
+  const data = activeRemixSpriteData();
+  if (standalonePost?.id === activeRemix.entry.id) standalonePost.setSpriteData?.(data);
+  window.PlayFeedCreator?.previewSprites(activeRemix.entry.id, data);
+}
 /* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
 function draftSpriteFor(entryId, key) {
   if (activeRemix && activeRemix.entry.id === entryId) {
@@ -1515,13 +1729,21 @@ function draftSpriteFor(entryId, key) {
   }
   return null;
 }
+function remixBaseIdFor(entry) {
+  return entry?.remixOf || entry?.base?.id || entry?.sourceGameId || entry?.id;
+}
+function remixBaseEntryFor(entry) {
+  if (entry?.base) return toBaseEntry(entry.base);
+  const baseId = remixBaseIdFor(entry);
+  return baseId ? entryFor(baseId) : entry;
+}
 function openRemix(entry) {
   const mechanicTemplate = mechanicTemplateFor(entry);
-  const canChangeSkin = !!(entry.base && entry.remixSlots && entry.remixSlots.length);
+  const canChangeSkin = !!(entry.remixSlots && entry.remixSlots.length);
   if (!canChangeSkin && !mechanicTemplate) return toast('這款遊戲目前沒有可用的二創方式');
   const draft = {};
   for (const k in (entry.spriteData || {})) draft[k] = { dataURL: entry.spriteData[k], img: imgFrom(entry.spriteData[k]) };
-  activeRemix = { entry, draft };
+  activeRemix = { entry, draft, originalSpriteData: { ...(entry.spriteData || {}) } };
   document.getElementById('remixTitle').textContent = '二創《' + entry.title.split('：')[0] + '》';
   document.getElementById('remixName').value = '';
   const imageChoice = document.getElementById('chooseImageRemix');
@@ -1543,6 +1765,11 @@ function openRemix(entry) {
 }
 function closeRemix() {
   const resumeId = activeRemix?.entry?.id || null;
+  if (activeRemix?.entry?.userScript) {
+    const original = activeRemix.originalSpriteData || {};
+    if (standalonePost?.id === resumeId) standalonePost.setSpriteData?.(original);
+    window.PlayFeedCreator?.previewSprites(resumeId, original);
+  }
   remixSheet.classList.remove('open', 'choosing'); backdrop.classList.remove('open');
   restoreNavVisibility();
   activeRemix = null;
@@ -1564,7 +1791,8 @@ document.getElementById('chooseMechanicRemix').addEventListener('click', () => {
 /* 這個遊戲已有的改造版：可直接跳過去玩（來源是 remixRows，跟這些版本目前有沒有在畫面上無關） */
 function renderRemixVersions() {
   const host = document.getElementById('remixVersions');
-  const baseId = activeRemix.entry.base.id;
+  const baseId = remixBaseIdFor(activeRemix.entry);
+  const baseEntry = remixBaseEntryFor(activeRemix.entry);
   const siblings = remixRows.filter(r => r.base_id === baseId);
   if (!siblings.length) { host.innerHTML = ''; return; }
   host.innerHTML = '<div class="vhead" style="padding-left:0">這個遊戲的版本（' + (siblings.length + 1) + '）：點縮圖直接玩</div>';
@@ -1572,11 +1800,15 @@ function renderRemixVersions() {
   row.style.cssText = 'display:flex;gap:8px;overflow-x:auto;';
   const baseChip = document.createElement('div');
   baseChip.className = 'verchip' + (activeRemix.entry.id === baseId ? ' cur' : '');
-  baseChip.innerHTML = '<span class="sw" style="background:' + activeRemix.entry.base.bg + '"></span><span class="nm">原版</span>';
+  baseChip.innerHTML = '<span class="sw" style="background:' + (baseEntry?.bg || '#efefef') + '"></span><span class="nm">原版</span>';
   baseChip.addEventListener('click', () => {
     closeRemix(); closeStandalone();
-    const p = posts.find(x => x.id === baseId);
-    if (p) setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60);
+    if (String(baseId).startsWith('game:')) {
+      openStandalone(baseId);
+    } else {
+      const p = posts.find(x => x.id === baseId);
+      if (p) setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60);
+    }
   });
   row.appendChild(baseChip);
   for (const r of siblings) {
@@ -1633,7 +1865,11 @@ function renderRemixSlots() {
     const cvs = row.querySelector('canvas');
     drawSlotPreview(cvs, slot, cur);
     row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
-    row.querySelector('.rst').addEventListener('click', () => { delete activeRemix.draft[slot.key]; renderRemixSlots(); });
+    row.querySelector('.rst').addEventListener('click', () => {
+      delete activeRemix.draft[slot.key];
+      renderRemixSlots();
+      previewActiveRemix();
+    });
     host.appendChild(row);
   }
 }
@@ -1645,6 +1881,7 @@ remixFile.addEventListener('change', () => {
     d.img.onload = renderRemixSlots;
     activeRemix.draft[remixSlotKey] = d;
     renderRemixSlots();   /* 即時更新縮圖；上面的遊戲畫面下一幀就換成新圖 */
+    previewActiveRemix();
     toast('換好了！看上面的畫面 👆');
   });
 });
@@ -1653,8 +1890,9 @@ async function saveRemixAsGame() {
   const keys = Object.keys(activeRemix.draft);
   if (!keys.length) { toast('先換上至少一張圖再儲存'); return; }
   if (!requireLogin(saveRemixAsGame)) return;   /* 未登入 → 跳登入，登入後自動續存 */
-  const base = activeRemix.entry.base;
-  const name = (document.getElementById('remixName').value.trim() || (base.title.split('：')[0] + ' Remix')).slice(0, 40);
+  const base = remixBaseEntryFor(activeRemix.entry);
+  const baseId = remixBaseIdFor(activeRemix.entry);
+  const name = (document.getElementById('remixName').value.trim() || ((base?.title || activeRemix.entry.title).split('：')[0] + ' Remix')).slice(0, 40);
   const sprites = {};
   for (const k of keys) {
     const d = activeRemix.draft[k];
@@ -1666,7 +1904,7 @@ async function saveRemixAsGame() {
   btn.disabled = true; btn.textContent = '發佈中…';
   let data, error;
   try {
-    const result = await secureWrite('remix', { baseId: base.id, name, sprites });
+    const result = await secureWrite('remix', { baseId, name, sprites });
     data = result.remix;
   } catch (caught) {
     error = caught;
@@ -2025,6 +2263,29 @@ function toBaseEntry(g) {
            remixSlots: g.remixSlots, sprites: {}, spriteData: {} };
 }
 function toRemixEntry(r) {
+  if (String(r.base_id || '').startsWith('game:')) {
+    const base = window.PlayFeedCreator?.entryFor(r.base_id);
+    if (!base) return null;
+    return {
+      id: 'remix:' + r.id,
+      title: r.name,
+      author: '@' + (r.author || '玩家') + '·改造',
+      authorId: r.user_id,
+      authorName: r.author || '玩家',
+      tip: base.tip,
+      description: base.description,
+      bg: base.bg,
+      remixSlots: base.remixSlots || [],
+      sprites: {},
+      spriteData: r.sprites || {},
+      remixOf: r.base_id,
+      sourceGameId: r.base_id,
+      remixMeta: r,
+      userScript: true,
+      storageMode: 'remixes',
+      scoreKey: `remix:${r.id}`,
+    };
+  }
   const base = (window.GAMES || []).find(g => g.id === r.base_id);
   if (!base) return null;
   return { id: 'remix:' + r.id, base, title: r.name,
@@ -2066,7 +2327,7 @@ function mountStandaloneEntry(entry) {
     handleStandaloneDrag(phase, dy, timeStamp, startedAt);
   let record;
   if (entry.userScript && window.PlayFeedCreator) {
-    record = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, drag);
+    record = window.PlayFeedCreator.mountStandalone(entry, remixViewStage, drag);
   } else {
     record = makePost(entry, { standalone: true, onStandaloneDrag: drag });
     remixViewStage.appendChild(record.el);
@@ -2205,7 +2466,7 @@ function navigateStandalone(direction) {
 function openStandalone(id, sequence = null, returnContext = null) {
   const entry = entryFor(id);
   if (!entry) { toast('找不到這個遊戲'); return; }
-  closeProfile(); closeRemix(); closeSheet();
+  closeProfile(); closeSearch(); closeRemix(); closeSheet();
   standaloneSequence = (sequence || [entry]).map(item =>
     typeof item === 'string' ? entryFor(item) : item
   ).filter(Boolean);
@@ -2301,6 +2562,7 @@ window.PlayFeedHost = {
   setNavVisible,
   setMainNavActive,
   closeProfile,
+  closeSearch,
   closeStandalone,
   openAuthorProfile,
   openRemix,

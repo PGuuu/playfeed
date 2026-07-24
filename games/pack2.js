@@ -6,8 +6,12 @@ window.GAMES = (window.GAMES || []).concat([
 
 {
   id: 'pixel-guess', title: '像素猜猜：馬賽克裡是什麼', author: '@眼力檢定所', tip: '圖會慢慢變清楚，越早猜中分越高，猜錯扣 30', bg: '#0f2a1a',
+  remixSlots: [
+    { key: 'mascot', label: '猜題吉祥物', hint: '題目畫面右上角的裝飾角色', default: '🔍', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
+    const sprite = env.sprite || (() => false);
     /* ---- 題庫與參數（與獨立版相同） ---- */
     const POOL = {
       "動物": [["🐶","狗"],["🐱","貓"],["🦊","狐狸"],["🐼","熊貓"],["🐷","豬"],["🐸","青蛙"],["🦁","獅子"],["🐵","猴子"],["🐧","企鵝"],["🦉","貓頭鷹"],["🐢","烏龜"],["🐙","章魚"],["🦀","螃蟹"],["🦋","蝴蝶"],["🐘","大象"],["🦈","鯊魚"],["🐔","雞"],["🦄","獨角獸"]],
@@ -91,6 +95,9 @@ window.GAMES = (window.GAMES || []).concat([
       /* 標題列 */
       ctx.fillStyle = C.mid; ctx.font = '700 15px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       ctx.fillText('第 ' + roundNo + ' / ' + ROUNDS + ' 題', 32, 50);
+      if (!sprite('mascot', 360, 36, 42)) {
+        ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillText('🔍', 360, 45);
+      }
       /* 圖框 */
       ctx.fillStyle = C.panel;
       ctx.beginPath(); ctx.roundRect(IMG.x - 8, IMG.y - 8, IMG.s + 16, IMG.s + 16, 14); ctx.fill();

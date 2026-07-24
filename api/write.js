@@ -293,14 +293,26 @@ function cleanScoreConfig(value) {
   };
 }
 
-function cleanRemixSlots(value) {
-  if (!Array.isArray(value) || value.length > 8) throw Object.assign(new Error('Remix slots are invalid.'), { status: 400 });
+function cleanRemixSlots(value, required = false) {
+  if (!Array.isArray(value) || value.length > 8 || (required && value.length === 0)) {
+    throw Object.assign(new Error('At least one valid Remix slot is required.'), { status: 400 });
+  }
+  const keys = new Set();
   return value.map(slot => ({
-    key: safeText(slot?.key, { name: 'slot key', max: 40, pattern: /^[\w-]+$/u }),
+    key: (() => {
+      const key = safeText(slot?.key, { name: 'slot key', max: 40, pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ });
+      if (keys.has(key)) throw Object.assign(new Error('Remix slot keys must be unique.'), { status: 400 });
+      keys.add(key);
+      return key;
+    })(),
     label: safeText(slot?.label, { name: 'slot label', max: 40 }),
-    hint: safeText(slot?.hint || slot?.label, { name: 'slot hint', max: 100 }),
+    hint: safeText(slot?.hint, { name: 'slot hint', max: 100 }),
     default: safeText(slot?.default || '🎮', { name: 'slot default', max: 20 }),
-    shape: safeText(slot?.shape || 'square', { name: 'slot shape', max: 20 }),
+    shape: safeText(slot?.shape || 'free', {
+      name: 'slot shape',
+      max: 20,
+      pattern: /^(free|circle|wide|tall)$/,
+    }),
   }));
 }
 
@@ -343,7 +355,7 @@ async function insertPublishedGame(user, rawGame) {
     controls: cleanStringArray(rawGame.controls || [], 8, 30),
     duration,
     score: cleanScoreConfig(rawGame.score),
-    remix_slots: cleanRemixSlots(rawGame.remix_slots || []),
+    remix_slots: cleanRemixSlots(rawGame.remix_slots || [], true),
     script,
     screenshot: cleanDataImage(rawGame.screenshot, 500_000),
     author_id: user.id,

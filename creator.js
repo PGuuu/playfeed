@@ -192,7 +192,31 @@ function validateScript(raw) {
     metadata.score.order = scoreOrder;
     metadata.score.decimals = Number.isInteger(metadata.score.decimals) ? metadata.score.decimals : 0;
   }
-  if (!Array.isArray(metadata.remixSlots)) errors.push('remixSlots 必須是陣列。');
+  if (!Array.isArray(metadata.remixSlots) || metadata.remixSlots.length === 0) {
+    errors.push('每款遊戲都必須提供至少一個 remixSlots 換皮元素。');
+  } else {
+    const keys = new Set();
+    for (const slot of metadata.remixSlots) {
+      if (!slot || typeof slot !== 'object') {
+        errors.push('remixSlots 的每一項都必須是物件。');
+        continue;
+      }
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slot.key || '')) {
+        errors.push('remixSlots.key 只能使用小寫英文字母、數字與連字號。');
+      } else if (keys.has(slot.key)) {
+        errors.push(`remixSlots.key 不可重複：${slot.key}`);
+      }
+      keys.add(slot.key);
+      if (typeof slot.label !== 'string' || !slot.label.trim()) errors.push('每個 remix slot 都需要 label。');
+      if (typeof slot.hint !== 'string' || !slot.hint.trim()) errors.push('每個 remix slot 都需要 hint。');
+      if (!['free', 'circle', 'wide', 'tall'].includes(slot.shape)) {
+        errors.push('remixSlots.shape 必須是 free、circle、wide 或 tall。');
+      }
+    }
+    const usesSprite = /\benv\s*\.\s*sprite\b/.test(source) ||
+      /(?:const|let|var)\s*\{[^}]*\bsprite\b[^}]*\}\s*=\s*env\b/s.test(source);
+    if (!usesSprite) errors.push('已提供 remixSlots，但程式沒有使用 env.sprite() 繪製換皮元素。');
+  }
 
   const createProp = getProperty(game, 'create');
   if (!createProp || !['FunctionExpression', 'ArrowFunctionExpression'].includes(createProp.value.type)) {
@@ -270,7 +294,7 @@ function encodeSource(source) {
   return btoa(binary);
 }
 
-function sandboxDocument(channel, source, duration) {
+function sandboxDocument(channel, source, duration, spriteData = {}) {
   const encoded = encodeSource(source);
   const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -279,8 +303,10 @@ function sandboxDocument(channel, source, duration) {
 </head><body><canvas width="400" height="700"></canvas><script>
 (()=>{'use strict';
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
+const SPRITE_SOURCES=${JSON.stringify(spriteData || {})},SPRITES={};
 const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3);
 const ctx=canvas.getContext('2d');
+for(const [key,url] of Object.entries(SPRITE_SOURCES)){const image=new Image();image.src=url;SPRITES[key]=image}
 function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),pw=Math.round(w*DPR),ph=Math.round(h*DPR);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;ctx.setTransform(pw/400,0,0,ph/700,0,0)}}
 fitCanvas();
 let definition=null,game=null,ended=true,score=0,hardTimer=null,autoTimer=null;
@@ -304,7 +330,8 @@ function finite(n){n=Number(n);return Number.isFinite(n)?Math.max(-1e9,Math.min(
 function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of intervals)real.clearInterval(id);for(const id of rafs)real.caf(id);timers.clear();intervals.clear();rafs.clear();if(hardTimer)real.clearTimeout(hardTimer);if(autoTimer)real.clearInterval(autoTimer);hardTimer=autoTimer=null}
 function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();ended=true}
 function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+Math.min(2,Math.max(.01,finite(dur))))}catch(e){}}
-const env={W:400,H:700,ctx,beep,sprite:()=>false,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
+function sprite(key,cx,cy,size,flip){const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
+const env={W:400,H:700,ctx,beep,sprite,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
 function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setInterval(()=>{if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)},380+Math.random()*240)}
@@ -314,13 +341,13 @@ try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c
 })();<\/script></body></html>`;
 }
 
-function createRuntime(container, source, duration, onMessage) {
+function createRuntime(container, source, duration, onMessage, spriteData = {}) {
   const channel = `pf_${crypto.randomUUID()}`;
   const frame = document.createElement('iframe');
   frame.className = 'sandbox-frame';
   frame.setAttribute('sandbox', 'allow-scripts');
   frame.setAttribute('title', 'PlayFeed 沙盒遊戲');
-  frame.srcdoc = sandboxDocument(channel, source, duration);
+  frame.srcdoc = sandboxDocument(channel, source, duration, spriteData);
   container.appendChild(frame);
   let ready = false;
   const queue = [];
@@ -533,6 +560,7 @@ function setCreatorMode(context) {
 
 function showCreator() {
   host.closeProfile();
+  host.closeSearch();
   host.closeStandalone();
   creatorRoot.classList.add('open');
   host.setMainNavActive('create');
@@ -1042,7 +1070,11 @@ async function submitPublishedScore(entry, value, bestChip) {
 }
 
 function addSandboxPost(row, options = {}) {
-  const entry = normalisePublished(row);
+  const entry = Object.assign(normalisePublished(row), options.entryOverrides || {});
+  if (options.spriteData) {
+    entry.spriteData = options.spriteData;
+    entry.sprites = options.spriteData;
+  }
   const post = el('section', 'post sandbox-post');
   if (options.standalone) post.classList.add('standalone-post');
   post.dataset.gameId = entry.id;
@@ -1220,6 +1252,10 @@ function addSandboxPost(row, options = {}) {
     el: post, id: entry.id, entry, like, dislike, save,
     activate: startPreview,
     deactivate: stopAll,
+    setSpriteData(spriteData) {
+      entry.spriteData = { ...(spriteData || {}) };
+      if (runtime) spawn(playing ? 'start' : 'auto');
+    },
     setReactions(count, mine, dislikeCount, disliked) {
       like.classList.toggle('liked', mine); like.querySelector('.lc').textContent = String(count);
       dislike.classList.toggle('disliked', disliked);
@@ -1384,12 +1420,14 @@ function goToPublishedHash() {
 }
 
 const publishedThumbnailJobs = new Map();
-function capturePublishedThumbnail(id, force = false) {
-  const slug = id.startsWith('game:') ? id.slice(5) : id;
+function capturePublishedThumbnail(id, force = false, entryOverride = null) {
+  const sourceId = entryOverride?.sourceGameId || entryOverride?.remixOf || id;
+  const slug = sourceId.startsWith('game:') ? sourceId.slice(5) : sourceId;
   const row = publishedRows.find(item => item.slug === slug);
   if (!row) return Promise.resolve(null);
-  if (row.screenshot && !force) return Promise.resolve(row.screenshot);
-  if (publishedThumbnailJobs.has(slug)) return publishedThumbnailJobs.get(slug);
+  const jobKey = entryOverride?.id || slug;
+  if (row.screenshot && !force && !entryOverride?.spriteData) return Promise.resolve(row.screenshot);
+  if (publishedThumbnailJobs.has(jobKey)) return publishedThumbnailJobs.get(jobKey);
   const job = new Promise(resolve => {
     const holder = document.createElement('div');
     holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:400px;height:700px;overflow:hidden;';
@@ -1401,7 +1439,10 @@ function capturePublishedThumbnail(id, force = false) {
       settled = true;
       runtime?.destroy();
       holder.remove();
-      if (image) row.screenshot = image;
+      if (image) {
+        if (entryOverride) entryOverride.screenshot = image;
+        else row.screenshot = image;
+      }
       resolve(image || null);
     };
     runtime = createRuntime(holder, row.script, row.duration, msg => {
@@ -1413,10 +1454,10 @@ function capturePublishedThumbnail(id, force = false) {
       } else if (msg.type === 'runtime-error') {
         finish(null);
       }
-    });
+    }, entryOverride?.spriteData || {});
     setTimeout(() => finish(null), 3800);
   });
-  publishedThumbnailJobs.set(slug, job);
+  publishedThumbnailJobs.set(jobKey, job);
   return job;
 }
 
@@ -1428,16 +1469,35 @@ window.PlayFeedCreator = {
   captureThumbnail: capturePublishedThumbnail,
   refreshAuthors: refreshPublishedAuthors,
   refreshInteractions: refreshPublishedInteractions,
+  previewSprites(id, spriteData) {
+    const post = publishedPosts.find(item => item.id === id);
+    post?.setSpriteData?.(spriteData);
+  },
   syncOfficialGames: syncOfficialGamesIfNeeded,
   resumePreview(id) {
     const post = publishedPosts.find(item => item.entry.id === id);
     if (post) setTimeout(() => post.activate(), 40);
   },
-  mountStandalone(id, container, onDrag) {
-    const slug = id.startsWith('game:') ? id.slice(5) : id;
+  mountStandalone(source, container, onDrag) {
+    const sourceEntry = typeof source === 'string' ? null : source;
+    const sourceId = sourceEntry?.sourceGameId || sourceEntry?.remixOf || sourceEntry?.id || source;
+    const slug = sourceId.startsWith('game:') ? sourceId.slice(5) : sourceId;
     const row = publishedRows.find(item => item.slug === slug);
     if (!row) return null;
-    const record = addSandboxPost(row, { container, onDrag, standalone: true });
+    const record = addSandboxPost(row, {
+      container,
+      onDrag,
+      standalone: true,
+      spriteData: sourceEntry?.spriteData || {},
+      entryOverrides: sourceEntry ? {
+        ...sourceEntry,
+        script: row.script,
+        databaseId: row.id,
+        storageMode: sourceEntry.storageMode || row.storage_mode || 'user_games',
+        scoreKey: sourceEntry.scoreKey || `game:${row.slug}@${row.game_version || '1.0.0'}`,
+        gameVersion: row.game_version || '1.0.0',
+      } : {},
+    });
     record.activate();
     return record;
   },
@@ -1452,6 +1512,10 @@ window.PlayFeedCreator = {
       screenshot: row.screenshot,
       authorId: row.author_id,
       authorName: row.author_name || '玩家',
+      description: row.description || '',
+      tip: row.tip || '',
+      remixSlots: row.remix_slots || [],
+      sourceGameId: `game:${row.slug}`,
       userScript: true
     };
   },

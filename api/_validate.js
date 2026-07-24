@@ -96,6 +96,7 @@ async function validatePublishedScript(source) {
   let hasOver = false;
   let hasSetScore = false;
   let hasCancel = false;
+  let hasSprite = false;
 
   walk(create, (node, parent, parentKey) => {
     if (node.type === 'Literal' && node.value === 'cancel') hasCancel = true;
@@ -118,12 +119,14 @@ async function validatePublishedScript(source) {
         : (node.callee?.object?.name === 'env' ? memberName(node.callee) : '');
       if (called === 'over') hasOver = true;
       if (called === 'setScore') hasSetScore = true;
+      if (called === 'sprite') hasSprite = true;
     }
   });
 
   if (!hasOver) errors.push('Script must call env.over(score).');
   if (!hasSetScore) errors.push('Script must call env.setScore(number).');
   if (!hasCancel) errors.push('input() must handle cancel.');
+  if (!hasSprite) errors.push('Script must use env.sprite() for at least one Remix element.');
   return [...new Set(errors)];
 }
 

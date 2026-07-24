@@ -161,8 +161,12 @@ window.GAMES = (window.GAMES || []).concat([
 /* 3. 對頻打卡：指針掃過綠區時點擊 */
 {
   id: 'timing', title: '對頻打卡：手速與節奏', author: '@節奏檢定中心', tip: '指針進綠區的瞬間點擊，連續命中倍率翻倍', bg: '#1d2430',
+  remixSlots: [
+    { key: 'life', label: '生命標記', hint: '圓盤下方剩餘機會的圖示', default: '❤️', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
+    const sprite = env.sprite || (() => false);
     let ang, sp, zoneA, zoneW, score, combo, misses, raf, alive, flash;
     function reset() { ang = 0; sp = 0.035; zoneA = Math.random()*6.283; zoneW = 0.85; score = 0; combo = 0; misses = 0; alive = true; flash = 0; }
     function norm(a) { a %= 6.283; return a < 0 ? a + 6.283 : a; }
@@ -183,8 +187,10 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.font = '500 15px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.fillText('連擊倍率', cx, cy + 42);
       for (let i = 0; i < 3; i++) {
+        const lx = cx - 30 + i*30, ly = cy + R + 70;
+        if (i < 3 - misses && sprite('life', lx, ly, 22)) continue;
         ctx.fillStyle = i < 3 - misses ? '#e0355f' : 'rgba(255,255,255,0.15)';
-        ctx.beginPath(); ctx.arc(cx - 30 + i*30, cy + R + 70, 9, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(lx, ly, 9, 0, 7); ctx.fill();
       }
       if (alive) raf = requestAnimationFrame(loop);
     }
@@ -277,8 +283,12 @@ window.GAMES = (window.GAMES || []).concat([
 /* 5. 疊高高：點擊放下滑動的樓層 */
 {
   id: 'stack', title: '疊高高：違章建築大賽', author: '@都更小組', tip: '樓層對準的瞬間點擊放下，歪掉會越疊越窄', bg: '#241d33',
+  remixSlots: [
+    { key: 'block', label: '樓層積木', hint: '正在移動與已堆疊的樓層', default: '🏢', shape: 'wide' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
+    const sprite = env.sprite || (() => false);
     let tower, cur, dir, score, raf, alive, camY;
     const BH = 42;
     const palette = ['#7f77dd','#d4537e','#1d9e75','#ef9f27','#378add'];
@@ -303,11 +313,17 @@ window.GAMES = (window.GAMES || []).concat([
       const base = H - 90;
       for (let i = 0; i < tower.length; i++) {
         const b = tower[i];
-        ctx.fillStyle = palette[i % palette.length];
-        ctx.fillRect(b.x, base - (i+1)*BH + camY, b.w, BH - 3);
+        const by = base - (i+1)*BH + camY;
+        if (!sprite('block', b.x + b.w/2, by + (BH-3)/2, Math.max(b.w, BH))) {
+          ctx.fillStyle = palette[i % palette.length];
+          ctx.fillRect(b.x, by, b.w, BH - 3);
+        }
       }
-      ctx.fillStyle = palette[tower.length % palette.length];
-      ctx.fillRect(cur.x, base - (tower.length+1)*BH + camY, cur.w, BH - 3);
+      const cy = base - (tower.length+1)*BH + camY;
+      if (!sprite('block', cur.x + cur.w/2, cy + (BH-3)/2, Math.max(cur.w, BH))) {
+        ctx.fillStyle = palette[tower.length % palette.length];
+        ctx.fillRect(cur.x, cy, cur.w, BH - 3);
+      }
       if (alive) raf = requestAnimationFrame(loop);
     }
     return {
@@ -612,8 +628,12 @@ window.GAMES = (window.GAMES || []).concat([
 /* 9. 閃電反應：變綠瞬間點下去 */
 {
   id: 'react', title: '閃電反應：毫秒之戰', author: '@神經科實驗室', tip: '變綠的瞬間點下去，偷跑直接出局', bg: '#2a1f2e',
+  remixSlots: [
+    { key: 'signal', label: '反應信號', hint: '畫面中央提示點擊或等待的信號', default: '⚡', shape: 'circle' }
+  ],
   create(env) {
     const { ctx, setScore, over } = env;
+    const sprite = env.sprite || (() => false);
     let state, waitT, goStart, goT, score, round, lastMs, raf, alive;
     function reset() { state = 'wait'; waitT = 60 + Math.random()*110; goT = 0; score = 0; round = 1; lastMs = null; alive = true; }
     function next() { state = 'wait'; waitT = 45 + Math.random()*110; round++; }
@@ -627,8 +647,9 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fillStyle = state === 'go' ? '#2f9e44' : '#a83232';
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-      ctx.font = '700 62px system-ui';
-      ctx.fillText(state === 'go' ? '點！' : '等…', W/2, H/2 - 20);
+      const hasSignal = sprite('signal', W/2, H/2 - 45, 150);
+      ctx.font = hasSignal ? '700 28px system-ui' : '700 62px system-ui';
+      ctx.fillText(state === 'go' ? '點！' : '等…', W/2, hasSignal ? H/2 + 45 : H/2 - 20);
       ctx.font = '500 17px system-ui';
       ctx.fillText(state === 'go' ? '' : '偷跑會直接出局', W/2, H/2 + 30);
       if (lastMs !== null) {
