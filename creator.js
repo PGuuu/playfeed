@@ -1041,9 +1041,10 @@ async function submitPublishedScore(entry, value, bestChip) {
   } catch (error) {}
 }
 
-function addSandboxPost(row) {
+function addSandboxPost(row, options = {}) {
   const entry = normalisePublished(row);
   const post = el('section', 'post sandbox-post');
+  if (options.standalone) post.classList.add('standalone-post');
   post.dataset.gameId = entry.id;
   post.style.background = entry.bg;
   const stage = el('div', 'stage');
@@ -1119,7 +1120,9 @@ function addSandboxPost(row) {
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
   stage.append(frameHost, inputLayer, hud, rail, overlay, errorBox);
-  post.appendChild(stage); host.feed.prepend(post);
+  post.appendChild(stage);
+  if (options.container) options.container.appendChild(post);
+  else host.feed.prepend(post);
 
   let runtime = null;
   let playing = false;
@@ -1179,6 +1182,10 @@ function addSandboxPost(row) {
       else if (Math.abs(dy) > 46 && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gesture.swiped = true;
         if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'cancel', x, y });
+        if (options.onSwipe) {
+          options.onSwipe(dy < 0 ? 1 : -1);
+          return;
+        }
         const all = [...host.feed.querySelectorAll(':scope > .post')];
         const index = all.indexOf(post);
         const next = (index + (dy < 0 ? 1 : -1) + all.length) % all.length;
@@ -1205,7 +1212,7 @@ function addSandboxPost(row) {
   comment.addEventListener('click', () => host.openComments(entry));
   share.addEventListener('click', () => host.shareGame(entry));
   const record = {
-    el: post, entry, like, dislike, save,
+    el: post, id: entry.id, entry, like, dislike, save,
     activate: startPreview,
     deactivate: stopAll,
     setReactions(count, mine, dislikeCount, disliked) {
@@ -1215,8 +1222,10 @@ function addSandboxPost(row) {
     },
     setSave(mine) { save.classList.toggle('saved', mine); }
   };
-  publishedPosts.push(record);
-  sandboxObserver.observe(post);
+  if (!options.standalone) {
+    publishedPosts.push(record);
+    sandboxObserver.observe(post);
+  }
   readPublishedBest(entry, bestChip);
   return record;
 }
@@ -1415,6 +1424,18 @@ window.PlayFeedCreator = {
   refreshAuthors: refreshPublishedAuthors,
   refreshInteractions: refreshPublishedInteractions,
   syncOfficialGames: syncOfficialGamesIfNeeded,
+  resumePreview(id) {
+    const post = publishedPosts.find(item => item.entry.id === id);
+    if (post) setTimeout(() => post.activate(), 40);
+  },
+  mountStandalone(id, container, onSwipe) {
+    const slug = id.startsWith('game:') ? id.slice(5) : id;
+    const row = publishedRows.find(item => item.slug === slug);
+    if (!row) return null;
+    const record = addSandboxPost(row, { container, onSwipe, standalone: true });
+    record.activate();
+    return record;
+  },
   entryFor(id) {
     const slug = id.startsWith('game:') ? id.slice(5) : id;
     const row = publishedRows.find(item => item.slug === slug);

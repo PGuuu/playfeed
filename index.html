@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="creator.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+  :root { --main-nav-height: calc(58px + env(safe-area-inset-bottom)); }
   html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none; }
   html.booting, html.booting body { background: #fff; }
@@ -35,13 +36,17 @@
   #feed::-webkit-scrollbar { display: none; }
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
-    display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .stage { position: relative; width: 100%; height: 100%; max-width: none; }
+    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+  .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
+    margin-bottom: var(--main-nav-height); max-width: none; }
+  .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
   /* touch-action:none：點擊/水平動作全給遊戲，絕不誤觸發捲動；
      上下滑改由 JS 偵測「明確的垂直滑動」才換遊戲（見 pointer 手勢處理） */
   canvas.game { width: 100%; height: 100%; display: block; touch-action: none; }
   @media (orientation: landscape) {
-    .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
+    .stage { width: min(100vw, calc((100dvh - var(--main-nav-height)) * 4 / 7));
+      height: calc(100dvh - var(--main-nav-height)); }
+    .standalone-post .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
   }
 
   .hud { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 120px;
@@ -234,11 +239,31 @@
     font-size: 13px; font-weight: 600; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
   .ptabs button.active { color: #fff; border-bottom-color: #fff; }
   .ptabs button[hidden] { display: none; }
+  .profile-summary { padding: 12px 18px 14px; border-bottom: 1px solid #efefef; }
+  .profile-summary-row { display: flex; align-items: center; gap: 22px; }
+  #profileAvatar { width: 76px; height: 76px; flex: none; border-radius: 50%; display: grid;
+    place-items: center; background: #efefef; color: #262626; font-size: 28px; font-weight: 750; }
+  .profile-stats { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); text-align: center; gap: 8px; }
+  .profile-stat b { display: block; font-size: 17px; }
+  .profile-stat span { display: block; margin-top: 2px; color: #737373; font-size: 12px; }
+  #profileBio { margin-top: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+  #profileWebsite { display: inline-block; margin-top: 5px; color: #00376b; font-size: 13px;
+    font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
+  #profileEditBtn { width: 100%; margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px;
+    background: #efefef; color: #262626; font: 650 13px inherit; cursor: pointer; }
+  #profileEditor { display: grid; gap: 8px; margin-top: 12px; }
+  #profileEditor[hidden] { display: none; }
+  #profileEditor input, #profileEditor textarea { width: 100%; border: 1px solid #dbdbdb; border-radius: 8px;
+    background: #fafafa; color: #262626; padding: 9px 11px; font: 13px/1.4 inherit; resize: vertical; }
+  .profile-editor-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .profile-editor-actions button { border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    background: #efefef; color: #262626; font: 650 13px inherit; }
+  .profile-editor-actions button[type="submit"] { background: #0095f6; color: #fff; }
   #pgrid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
-  .gcell { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
+  .gcell { position: relative; aspect-ratio: 3 / 4; overflow: hidden; cursor: pointer;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero { width: 100%; height: 100%; font-size: 46px; line-height: 1;
     display: flex; align-items: center; justify-content: center; }
@@ -305,8 +330,13 @@
     background: rgba(255,255,255,.94); color: #262626; box-shadow: 0 2px 12px rgba(0,0,0,.12);
     cursor: pointer; font: 700 23px/1 system-ui; }
   #desktopPager button:hover { background: #f2f2f2; }
+  #standalonePager { display: none; position: absolute; right: 24px; bottom: 24px; z-index: 12;
+    flex-direction: column; gap: 10px; }
+  #standalonePager button { width: 46px; height: 46px; border: 1px solid #dbdbdb; border-radius: 50%;
+    background: rgba(255,255,255,.94); color: #262626; box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    cursor: pointer; font: 700 23px/1 system-ui; }
   @media (orientation: landscape) and (pointer: fine) {
-    #desktopPager { display: flex; }
+    #desktopPager, #standalonePager { display: flex; }
   }
 </style>
 </head>
@@ -334,6 +364,28 @@
 
 <div id="profile">
   <div class="phead"><b id="profileWho">個人頁</b><button id="profileActionBtn">登出</button></div>
+  <div class="profile-summary">
+    <div class="profile-summary-row">
+      <div id="profileAvatar">P</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><b id="profilePostCount">0</b><span>遊戲</span></div>
+        <div class="profile-stat"><b id="profileFollowerCount">0</b><span>被追蹤</span></div>
+        <div class="profile-stat"><b id="profileFollowingCount">0</b><span>追蹤中</span></div>
+      </div>
+    </div>
+    <div id="profileBio"></div>
+    <a id="profileWebsite" target="_blank" rel="noopener noreferrer" hidden></a>
+    <button id="profileEditBtn" hidden>編輯個人資料</button>
+    <form id="profileEditor" hidden>
+      <input id="profileDisplayName" maxlength="30" placeholder="顯示名稱">
+      <textarea id="profileBioInput" maxlength="120" rows="3" placeholder="自我介紹"></textarea>
+      <input id="profileWebsiteInput" maxlength="120" inputmode="url" placeholder="https://你的網站">
+      <div class="profile-editor-actions">
+        <button type="button" id="profileEditCancel">取消</button>
+        <button type="submit">儲存</button>
+      </div>
+    </form>
+  </div>
   <div class="ptabs">
     <button class="active" data-tab="created"><span class="tico" data-ico="create"></span>自創</button>
     <button data-tab="remixed"><span class="tico" data-ico="remix"></span>改造</button>
@@ -357,6 +409,10 @@
 <div id="remixView">
   <button id="remixViewBack">&#8249; 返回</button>
   <div id="remixViewStage"></div>
+  <div id="standalonePager" aria-label="切換這個分類的遊戲">
+    <button type="button" data-direction="-1" aria-label="上一個遊戲">↑</button>
+    <button type="button" data-direction="1" aria-label="下一個遊戲">↓</button>
+  </div>
 </div>
 
 <div id="remixSheet">
@@ -429,8 +485,11 @@ let pendingAction = null;   // 被登入擋下的動作，登入成功後自動�
 const officialOwner = { id: 'playfeed-owner', name: '我' };
 const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
+const PROFILE_PREFIX = '__profile__:';
 const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
 const followState = {}; // author_id -> { count, mine }
+const followingCounts = {}; // user_id -> following count
+const profileDetails = {}; // user_id -> { display_name, bio, website }
 const saveState = {};   // game_id -> mine
 const bests = {};
 
@@ -582,8 +641,44 @@ function updateProfileAction() {
     return;
   }
   const state = followState[profileOwner.id] || { count: 0, mine: false };
-  button.textContent = `${state.mine ? '已追蹤' : '追蹤'} · ${state.count}`;
+  button.textContent = state.mine ? '已追蹤' : '追蹤';
   button.classList.toggle('following', state.mine);
+}
+function renderProfileSummary() {
+  if (!profileOwner) return;
+  const detail = profileDetails[profileOwner.id] || {};
+  const name = detail.display_name || profileOwner.name || '玩家';
+  document.getElementById('profileWho').textContent = name;
+  document.getElementById('profileAvatar').textContent = [...name][0]?.toUpperCase() || 'P';
+  document.getElementById('profilePostCount').textContent =
+    profileData('created').length + profileData('remixed').length;
+  document.getElementById('profileFollowerCount').textContent =
+    (followState[profileOwner.id] || { count: 0 }).count;
+  document.getElementById('profileFollowingCount').textContent = followingCounts[profileOwner.id] || 0;
+  document.getElementById('profileBio').textContent = detail.bio || '';
+  const website = document.getElementById('profileWebsite');
+  website.hidden = !detail.website;
+  website.href = detail.website || '#';
+  website.textContent = detail.website ? detail.website.replace(/^https?:\/\//, '') : '';
+  const edit = document.getElementById('profileEditBtn');
+  edit.hidden = !ownProfileView();
+  document.getElementById('profileEditor').hidden = true;
+}
+async function loadProfileDetail(ownerId) {
+  if (!online || !ownerId) return;
+  const { data, error } = await db.from('comments').select('body,name,created_at')
+    .eq('game_id', PROFILE_PREFIX + ownerId).order('created_at', { ascending: false }).limit(1);
+  if (!error && data?.[0]) {
+    try {
+      const stored = JSON.parse(data[0].body);
+      profileDetails[ownerId] = {
+        display_name: stored.display_name || stored.d || data[0].name || '玩家',
+        bio: stored.bio || stored.b || '',
+        website: stored.website || stored.w || '',
+      };
+      if (profileOwner?.id === ownerId) renderProfileSummary();
+    } catch (_) {}
+  }
 }
 function configureProfileTabs() {
   const own = ownProfileView();
@@ -605,10 +700,11 @@ function openProfile(owner = null) {
     return;
   }
   closeStandalone();
-  document.getElementById('profileWho').textContent = profileOwner.name;
   configureProfileTabs();
   updateProfileAction();
   renderProfileGrid(profileTab);
+  renderProfileSummary();
+  loadProfileDetail(profileOwner.id);
   profileBox.classList.add('open');
   setMainNavActive(ownProfileView() ? 'me' : 'home');
 }
@@ -631,6 +727,34 @@ document.getElementById('profileActionBtn').addEventListener('click', async () =
     return;
   }
   if (profileOwner) toggleFollow(profileOwner.id);
+});
+document.getElementById('profileEditBtn').addEventListener('click', () => {
+  if (!ownProfileView()) return;
+  const detail = profileDetails[profileOwner.id] || {};
+  document.getElementById('profileDisplayName').value = detail.display_name || profileOwner.name || '';
+  document.getElementById('profileBioInput').value = detail.bio || '';
+  document.getElementById('profileWebsiteInput').value = detail.website || '';
+  document.getElementById('profileEditor').hidden = false;
+});
+document.getElementById('profileEditCancel').addEventListener('click', () => {
+  document.getElementById('profileEditor').hidden = true;
+});
+document.getElementById('profileEditor').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!ownProfileView() || !requireLogin()) return;
+  const displayNameValue = document.getElementById('profileDisplayName').value.trim();
+  const bio = document.getElementById('profileBioInput').value.trim();
+  let website = document.getElementById('profileWebsiteInput').value.trim();
+  if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
+  try {
+    const result = await secureWrite('profile', { displayName: displayNameValue, bio, website });
+    profileDetails[user.id] = result.profile;
+    profileOwner.name = result.profile.display_name || profileOwner.name;
+    renderProfileSummary();
+    toast('個人資料已儲存');
+  } catch (error) {
+    toast('儲存失敗：' + error.message);
+  }
 });
 function profileData(tab) {
   const ownerId = profileOwner && profileOwner.id;
@@ -739,22 +863,15 @@ function renderProfileGrid(tab) {
       profileThumbnailFor(e).then(showPreview);
     }
     cell.appendChild(hero);
-    if (e.remixOf || e.userScript) {
+    if (e.remixOf) {
       const badge = document.createElement('span'); badge.className = 'badge';
-      badge.textContent = e.userScript ? 'Script' : '改造'; cell.appendChild(badge);
+      badge.textContent = '改造'; cell.appendChild(badge);
     }
     const cap = document.createElement('span'); cap.className = 'cap';
     cap.textContent = e.title.split('：')[0]; cell.appendChild(cap);
     cell.addEventListener('click', () => {
       closeProfile();
-      if (e.userScript) {
-        const target = document.querySelector('.sandbox-post[data-game-id="' + CSS.escape(e.id) + '"]');
-        if (target) setTimeout(() => target.scrollIntoView(), 60);
-        return;
-      }
-      if (e.remixOf) { openStandalone(e.id); return; }
-      const t = posts.find(x => x.id === e.id);
-      if (t) setTimeout(() => t.el.scrollIntoView(), 60);
+      openStandalone(e.id, items);
     });
     grid.appendChild(cell);
   }
@@ -777,11 +894,13 @@ async function loadLikes() {
   for (const key of Object.keys(likeState)) delete likeState[key];
   for (const p of posts) likeState[p.id] = emptyReaction();
   for (const key of Object.keys(followState)) delete followState[key];
+  for (const key of Object.keys(followingCounts)) delete followingCounts[key];
   for (const row of data) {
     if (row.game_id.startsWith(FOLLOW_PREFIX)) {
       const authorId = row.game_id.slice(FOLLOW_PREFIX.length);
       const state = followState[authorId] || (followState[authorId] = { count: 0, mine: false });
       state.count++;
+      followingCounts[row.user_id] = (followingCounts[row.user_id] || 0) + 1;
       if (user && row.user_id === user.id) state.mine = true;
       continue;
     }
@@ -797,7 +916,7 @@ async function loadLikes() {
     }
   }
   for (const p of posts) p.refreshLike();
-  if (profileBox.classList.contains('open')) updateProfileAction();
+  if (profileBox.classList.contains('open')) { updateProfileAction(); renderProfileSummary(); }
 }
 function refreshPost(gameId) {
   const p = posts.find(p => p.id === gameId) || (standalonePost && standalonePost.id === gameId ? standalonePost : null);
@@ -1023,12 +1142,16 @@ async function toggleFollow(authorId) {
   const previous = { ...state };
   state.mine = !state.mine;
   state.count = Math.max(0, state.count + (state.mine ? 1 : -1));
+  followingCounts[user.id] = Math.max(0, (followingCounts[user.id] || 0) + (state.mine ? 1 : -1));
   updateProfileAction();
+  renderProfileSummary();
   try {
     await secureWrite('follow', { authorId, active: state.mine });
   } catch (error) {
     Object.assign(state, previous);
+    followingCounts[user.id] = Math.max(0, (followingCounts[user.id] || 0) + (state.mine ? 1 : -1));
     updateProfileAction();
+    renderProfileSummary();
     toast('操作失敗：' + error.message);
   }
 }
@@ -1154,9 +1277,16 @@ function openRemix(entry) {
   if (p) p.activate();   /* 讓上面的畫面在跑，才看得到即時預覽 */
 }
 function closeRemix() {
+  const resumeId = activeRemix?.entry?.id || null;
   remixSheet.classList.remove('open', 'choosing'); backdrop.classList.remove('open');
   restoreNavVisibility();
   activeRemix = null;
+  if (resumeId) {
+    const localPost = posts.find(post => post.id === resumeId) ||
+      (standalonePost && standalonePost.id === resumeId ? standalonePost : null);
+    if (localPost) setTimeout(() => localPost.activate(), 40);
+    if (window.PlayFeedCreator) window.PlayFeedCreator.resumePreview(resumeId);
+  }
 }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
 document.getElementById('chooseImageRemix').addEventListener('click', () => {
@@ -1300,6 +1430,10 @@ document.getElementById('desktopPager').addEventListener('click', event => {
   }, { index: 0, distance: Infinity }).index;
   const next = Math.max(0, Math.min(items.length - 1, current + Number(button.dataset.direction)));
   items[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+document.getElementById('standalonePager').addEventListener('click', event => {
+  const button = event.target.closest('button[data-direction]');
+  if (button) navigateStandalone(Number(button.dataset.direction));
 });
 const posts = [];
 const bootStartedAt = performance.now();
@@ -1529,7 +1663,11 @@ function makePost(entry, opts) {
       } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gest.swiped = true;
         if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
-        if (opts.standalone) { closeStandalone(); return; }   /* 單一遊戲視圖：上下滑＝退出，不接首頁的輪播 */
+        if (opts.standalone) {
+          if (opts.onStandaloneSwipe) opts.onStandaloneSwipe(dy < 0 ? 1 : -1);
+          else closeStandalone();
+          return;
+        }
         const allPosts = [...feed.querySelectorAll(':scope > .post')];
         const myIdx = allPosts.indexOf(post);
         let ni = myIdx + (dy < 0 ? 1 : -1);                    /* 往上滑=下一款 */
@@ -1641,25 +1779,53 @@ async function loadRemixGames() {
 const remixView = document.getElementById('remixView');
 const remixViewStage = document.getElementById('remixViewStage');
 let standalonePost = null;
-function openStandalone(id) {
+let standaloneSequence = [];
+let standaloneIndex = 0;
+function renderStandaloneEntry() {
+  const entry = standaloneSequence[standaloneIndex];
+  if (!entry) return;
+  if (standalonePost) standalonePost.deactivate();
+  remixViewStage.innerHTML = '';
+  const change = direction => navigateStandalone(direction);
+  if (entry.userScript && window.PlayFeedCreator) {
+    standalonePost = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, change);
+  } else {
+    standalonePost = makePost(entry, { standalone: true, onStandaloneSwipe: change });
+    remixViewStage.appendChild(standalonePost.el);
+    standalonePost.activate();
+  }
+  standalonePost?.refreshLike?.();
+  standalonePost?.refreshSave?.();
+}
+function navigateStandalone(direction) {
+  if (standaloneSequence.length <= 1) { closeStandalone(); return; }
+  standaloneIndex = (standaloneIndex + direction + standaloneSequence.length) % standaloneSequence.length;
+  renderStandaloneEntry();
+}
+function openStandalone(id, sequence = null) {
   const entry = entryFor(id);
   if (!entry) { toast('找不到這個遊戲'); return; }
   closeProfile(); closeRemix(); closeSheet();
-  if (standalonePost) standalonePost.deactivate();
-  remixViewStage.innerHTML = '';
-  standalonePost = makePost(entry, { standalone: true });
-  remixViewStage.appendChild(standalonePost.el);
+  standaloneSequence = (sequence || [entry]).map(item =>
+    typeof item === 'string' ? entryFor(item) : item
+  ).filter(Boolean);
+  standaloneIndex = Math.max(0, standaloneSequence.findIndex(item => item.id === entry.id));
   remixView.classList.add('open');
   setNavVisible(false);
-  standalonePost.refreshLike(); standalonePost.refreshSave();
-  standalonePost.activate();
+  renderStandaloneEntry();
 }
 function closeStandalone() {
   if (!remixView.classList.contains('open')) return;
   if (standalonePost) standalonePost.deactivate();
   remixView.classList.remove('open');
   setNavVisible(true);
-  setTimeout(() => { remixViewStage.innerHTML = ''; standalonePost = null; }, 300);
+  standaloneSequence = [];
+  setTimeout(() => {
+    if (!remixView.classList.contains('open')) {
+      remixViewStage.innerHTML = '';
+      standalonePost = null;
+    }
+  }, 300);
 }
 document.getElementById('remixViewBack').addEventListener('click', closeStandalone);
 
@@ -1729,7 +1895,12 @@ window.PlayFeedHost = {
   openRemix,
   registerOfficialOwner,
   finishBoot,
-  refreshProfile() { if (profileBox.classList.contains('open')) renderProfileGrid(profileTab); },
+  refreshProfile() {
+    if (profileBox.classList.contains('open')) {
+      renderProfileGrid(profileTab);
+      renderProfileSummary();
+    }
+  },
   toggleReaction,
   toggleSave,
   openComments,

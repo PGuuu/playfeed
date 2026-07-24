@@ -12,6 +12,7 @@ const { validatePublishedScript } = require('./_validate');
 
 const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
+const PROFILE_PREFIX = '__profile__:';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
@@ -144,6 +145,49 @@ async function replaceFollow(user, body) {
     if (!inserted.ok) throw Object.assign(new Error(inserted.error), { status: inserted.status });
   }
   return { active };
+}
+
+async function updateProfile(user, body) {
+  const displayName = safeText(body.displayName || publicName(user), {
+    name: 'display name',
+    max: 30,
+  });
+  const bio = safeText(body.bio || '', { name: 'bio', min: 0, max: 120 });
+  let website = String(body.website || '').trim();
+  if (website) {
+    if (website.length > 120) throw Object.assign(new Error('Website address is too long.'), { status: 400 });
+    try {
+      const parsed = new URL(website);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+      website = parsed.toString();
+      if (website.length > 120) throw new Error();
+    } catch {
+      throw Object.assign(new Error('Website address is invalid.'), { status: 400 });
+    }
+  }
+  const profile = { display_name: displayName, bio, website };
+  const storedProfile = JSON.stringify({ d: displayName, b: bio, w: website });
+  if (storedProfile.length > 300) {
+    throw Object.assign(new Error('Profile text contains too many special characters.'), { status: 400 });
+  }
+  const gameId = `${PROFILE_PREFIX}${user.id}`;
+  const removed = await supabaseRest('comments', {
+    method: 'DELETE',
+    query: `game_id=${encodeEq(gameId)}&user_id=${encodeEq(user.id)}`,
+  });
+  if (!removed.ok) throw Object.assign(new Error(removed.error), { status: removed.status });
+  const result = await supabaseRest('comments', {
+    method: 'POST',
+    body: {
+      game_id: gameId,
+      user_id: user.id,
+      name: displayName,
+      body: storedProfile,
+    },
+    prefer: 'return=representation',
+  });
+  if (!result.ok) throw Object.assign(new Error(result.error), { status: result.status });
+  return { profile };
 }
 
 async function createComment(user, body) {
@@ -386,6 +430,7 @@ async function submitUserGameScore(user, body) {
 const actions = {
   reaction: replaceReaction,
   follow: replaceFollow,
+  profile: updateProfile,
   save: replaceSave,
   comment: createComment,
   score: submitScore,
