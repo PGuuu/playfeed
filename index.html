@@ -78,16 +78,6 @@
   .overlay .share-score { border: none; cursor: pointer; background: rgba(255,255,255,0.18);
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .camplay { border: none; cursor: pointer; background: #6a5ad0;
-    color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px;
-    display: inline-flex; align-items: center; gap: 6px; }
-  .overlay .camplay .ico { width: 18px; height: 18px; }
-  /* 遊玩中視訊指示器 */
-  #camChip { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
-    z-index: 68; display: none; align-items: center; gap: 6px; border: none; cursor: pointer; color: #fff;
-    font-family: inherit; background: #e0355f; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
-  #camChip.show { display: inline-flex; }
-  #camChip .ico { width: 16px; height: 16px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
 
@@ -145,10 +135,6 @@
   .slot .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
   .slot .up { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-size: 13px;
     font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
-  .slot .cam { border: 1px solid rgba(255,255,255,0.22); background: none; color: #cfcfe0;
-    font-family: inherit; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 12px;
-    cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
-  .slot .cam .ico { width: 14px; height: 14px; }
   .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
     cursor: pointer; }
   .slot .rst[disabled] { opacity: 0.35; cursor: default; }
@@ -159,9 +145,6 @@
   #remixSave { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-weight: 600;
     font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
   #remixSave:disabled { opacity: 0.6; cursor: default; }
-  #remixTry { display: block; width: calc(100% - 36px); margin: 8px 18px 0; border: 1px solid rgba(224,53,95,0.6);
-    background: rgba(224,53,95,0.14); color: #ff9ab4; font-family: inherit; font-size: 13px; font-weight: 600;
-    border-radius: 999px; padding: 10px; cursor: pointer; }
   /* 這個遊戲已有的改造版（橫向捲動的縮圖） */
   #remixVersions { display: flex; gap: 8px; overflow-x: auto; padding: 10px 18px 2px; scrollbar-width: none; }
   #remixVersions::-webkit-scrollbar { display: none; }
@@ -244,7 +227,6 @@
 <body>
 
 <button id="authChip">登入</button>
-<button id="camChip"><span data-ico="video"></span><span>視訊中 · 點此關閉</span></button>
 <div id="feed"></div>
 <div class="toast" id="toast"></div>
 
@@ -284,9 +266,8 @@
 <div id="remixSheet">
   <div class="head"><b id="remixTitle">改造這個遊戲</b><button id="remixClose">&#10005;</button></div>
   <div id="remixVersions"></div>
-  <div class="note">上傳圖片替換遊戲元素（支援透明圖檔），或用 📷 視訊讓你的臉當角色。圖會置中縮放<br>對齊虛線輪廓，即時顯示在上面的畫面。儲存後變成大家都能玩的新遊戲（需登入）。</div>
+  <div class="note">上傳圖片替換遊戲元素（支援透明圖檔）。圖片會置中縮放、對齊虛線輪廓，並即時顯示在上面的畫面。儲存後會變成大家都能玩的新遊戲（需登入）。</div>
   <div id="remixSlots"></div>
-  <button id="remixTry">▶ 用視訊直接玩（免儲存，適合直播即時效果）</button>
   <div id="remixFoot">
     <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
     <button id="remixSave">儲存成新遊戲</button>
@@ -359,11 +340,10 @@ const ICONS = {
   share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
   home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
   user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
-  create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>',
-  video:   '<svg class="ico" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 9.5 21.5 6v12l-6-3.5"/></svg>'
+  create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>'
 };
 function injectIcons(root) { (root || document).querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = ICONS[el.dataset.ico] || ''; }); }
-injectIcons();   /* 填入靜態元素（底部導覽、個人頁分頁、視訊指示器） */
+injectIcons();   /* 填入靜態元素（底部導覽、個人頁分頁） */
 
 const authChip = document.getElementById('authChip');
 function displayName(u) {
@@ -801,12 +781,10 @@ function entryFor(id) {
   }
   return baseEntryById(id);
 }
-function isVideo(im) { return im && im.videoWidth !== undefined; }
-function mediaW(im) { return isVideo(im) ? im.videoWidth : (im.naturalWidth || im.width); }
-function mediaH(im) { return isVideo(im) ? im.videoHeight : (im.naturalHeight || im.height); }
+function mediaW(im) { return im.naturalWidth || im.width; }
+function mediaH(im) { return im.naturalHeight || im.height; }
 function spriteReady(im) {
   if (!im) return null;
-  if (isVideo(im)) return (im.readyState >= 2 && im.videoWidth) ? im : null;   /* 視訊：有畫面才用 */
   return (im.complete && im.naturalWidth) ? im : null;
 }
 function processUpload(file, cb) {
@@ -828,50 +806,13 @@ function processUpload(file, cb) {
 }
 const remixSheet = document.getElementById('remixSheet');
 const remixFile = document.getElementById('remixFile');
-let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} | {live:true} } }
+let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} } }
 let remixSlotKey = null;
-/* 視訊當角色：一個共用的攝影機畫面，改造預覽與「視訊玩」遊玩中都即時繪製 */
-let remixCamVideo = null, remixCamStream = null;
-let liveCam = { postId: null, keys: [] };   // 遊玩中把哪個 post 的哪些元素換成即時視訊
-async function startCam() {
-  if (remixCamStream) return true;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('這個瀏覽器不支援視訊'); return false; }
-  try {
-    remixCamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-  } catch (e) { toast('沒拿到相機權限，無法用視訊'); return false; }
-  remixCamVideo = document.createElement('video');
-  remixCamVideo.autoplay = true; remixCamVideo.muted = true; remixCamVideo.playsInline = true;
-  remixCamVideo.srcObject = remixCamStream;
-  await remixCamVideo.play().catch(() => {});
-  return true;
-}
-function killCam() {
-  if (remixCamStream) { remixCamStream.getTracks().forEach(t => t.stop()); remixCamStream = null; }
-  remixCamVideo = null;
-}
-function updateCamChip() { document.getElementById('camChip').classList.toggle('show', !!liveCam.postId); }
-function stopLiveCam() { liveCam = { postId: null, keys: [] }; killCam(); updateCamChip(); }
-/* 關改造面板：清掉 live 草稿；若不是正在「視訊玩」才真的關相機 */
-function stopCam() {
-  if (activeRemix) for (const k in activeRemix.draft) if (activeRemix.draft[k].live) delete activeRemix.draft[k];
-  if (!liveCam.postId) killCam();
-}
-document.getElementById('camChip').addEventListener('click', stopLiveCam);
-/* 用改造面板裡已指定的視訊元素，直接開始「視訊玩」（不用儲存，適合直播即時效果） */
-function playRemixLive() {
-  if (!activeRemix) return;
-  const liveKeys = Object.keys(activeRemix.draft).filter(k => activeRemix.draft[k].live);
-  if (!liveKeys.length) { toast('先對某個元素按 📷 視訊，再用視訊試玩'); return; }
-  const entryId = activeRemix.entry.id;
-  remixSheet.classList.remove('open'); backdrop.classList.remove('open'); activeRemix = null;   /* 保留相機 */
-  const p = posts.find(pp => pp.id === entryId) || (standalonePost && standalonePost.id === entryId ? standalonePost : null);
-  if (p) p.startLive(liveKeys);
-}
 /* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
 function draftSpriteFor(entryId, key) {
   if (activeRemix && activeRemix.entry.id === entryId) {
     const d = activeRemix.draft[key];
-    if (d) return spriteReady(d.live ? remixCamVideo : d.img);   /* live=用視訊 */
+    if (d) return spriteReady(d.img);
   }
   return null;
 }
@@ -889,17 +830,9 @@ function openRemix(entry) {
   if (p) p.activate();   /* 讓上面的畫面在跑，才看得到即時預覽 */
 }
 function closeRemix() {
-  stopCam(); remixSheet.classList.remove('open'); backdrop.classList.remove('open');
+  remixSheet.classList.remove('open'); backdrop.classList.remove('open');
   restoreNavVisibility();
   activeRemix = null;
-}
-function snapshotVideo(video) {
-  const vw = video && video.videoWidth, vh = video && video.videoHeight;
-  if (!vw) return null;
-  const S = 240, side = Math.min(vw, vh), sx = (vw - side) / 2, sy = (vh - side) / 2;
-  const c = document.createElement('canvas'); c.width = S; c.height = S;
-  c.getContext('2d').drawImage(video, sx, sy, side, side, 0, 0, S, S);
-  return c.toDataURL('image/png');
 }
 document.getElementById('remixClose').addEventListener('click', closeRemix);
 /* 這個遊戲已有的改造版：可直接跳過去玩（來源是 remixRows，跟這些版本目前有沒有在畫面上無關） */
@@ -946,14 +879,8 @@ function drawSlotPreview(cvs, slot, cur) {
     if (shape === 'circle') ctx.arc(S / 2, S / 2, Math.min(bw, bh) / 2, 0, 6.283);
     else ctx.roundRect(bx, by, bw, bh, 6);
   };
-  const live = cur && cur.live && spriteReady(remixCamVideo);
   const im = cur && cur.img;
-  if (live) {
-    const vw = mediaW(remixCamVideo), vh = mediaH(remixCamVideo);   /* cover-fit 進輪廓 */
-    const sc = Math.max(bw / vw, bh / vh), w = vw * sc, h = vh * sc;
-    ctx.save(); shapePath(); ctx.clip();
-    ctx.drawImage(remixCamVideo, (S - w) / 2, (S - h) / 2, w, h); ctx.restore();
-  } else if (im && im.complete && im.naturalWidth) {
+  if (im && im.complete && im.naturalWidth) {
     const sc = Math.min(bw / im.width, bh / im.height), w = im.width * sc, h = im.height * sc;
     ctx.drawImage(im, (S - w) / 2, (S - h) / 2, w, h);
   } else {
@@ -964,20 +891,9 @@ function drawSlotPreview(cvs, slot, cur) {
   ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
   shapePath(); ctx.stroke(); ctx.setLineDash([]);
 }
-let remixSlotCanvases = [];
-function remixTick() {
-  if (!remixSheet.classList.contains('open') || !activeRemix) return;
-  let anyLive = false;
-  for (const s of remixSlotCanvases) {
-    const d = activeRemix.draft[s.slot.key];
-    if (d && d.live) { anyLive = true; drawSlotPreview(s.cvs, s.slot, d); }
-  }
-  if (anyLive) requestAnimationFrame(remixTick);
-}
 function renderRemixSlots() {
   const host = document.getElementById('remixSlots');
   host.innerHTML = '';
-  remixSlotCanvases = [];
   for (const slot of activeRemix.entry.remixSlots) {
     const cur = activeRemix.draft[slot.key];
     const changed = !!cur;
@@ -987,20 +903,10 @@ function renderRemixSlots() {
       '<canvas class="preview" width="58" height="58"></canvas>' +
       '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
       '<div class="acts"><button class="up">' + (cur && cur.img ? '換一張' : '上傳圖片') + '</button>' +
-      '<button class="cam">' + (cur && cur.live ? '關視訊' : ICONS.video + ' 視訊') + '</button>' +
       '<button class="rst"' + (changed ? '' : ' disabled') + '>還原</button></div>';
     const cvs = row.querySelector('canvas');
     drawSlotPreview(cvs, slot, cur);
-    remixSlotCanvases.push({ slot, cvs });
     row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
-    row.querySelector('.cam').addEventListener('click', async () => {
-      if (cur && cur.live) { delete activeRemix.draft[slot.key]; renderRemixSlots(); return; }
-      if (await startCam()) {
-        activeRemix.draft[slot.key] = { live: true };
-        renderRemixSlots(); requestAnimationFrame(remixTick);
-        toast('把臉對準鏡頭！視訊只在你本機，儲存時會拍一張定格');
-      }
-    });
     row.querySelector('.rst').addEventListener('click', () => { delete activeRemix.draft[slot.key]; renderRemixSlots(); });
     host.appendChild(row);
   }
@@ -1024,9 +930,9 @@ async function saveRemixAsGame() {
   const base = activeRemix.entry.base;
   const name = (document.getElementById('remixName').value.trim() || (base.title.split('：')[0] + ' Remix')).slice(0, 40);
   const sprites = {};
-  for (const k of keys) {                       /* live 視訊 → 存檔時拍一張定格 */
+  for (const k of keys) {
     const d = activeRemix.draft[k];
-    const dataURL = d.live ? snapshotVideo(remixCamVideo) : d.dataURL;
+    const dataURL = d.dataURL;
     if (dataURL) sprites[k] = dataURL;
   }
   if (!Object.keys(sprites).length) { toast('沒有可儲存的內容'); return; }
@@ -1048,7 +954,6 @@ async function saveRemixAsGame() {
   if (entry) openStandalone(entry.id);
 }
 document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
-document.getElementById('remixTry').addEventListener('click', playRemixLive);
 
 /* ---------- Feed 引擎 ---------- */
 const feed = document.getElementById('feed');
@@ -1086,7 +991,6 @@ function makePost(entry, opts) {
         <p>${entry.tip}</p>
         <div class="ov-btns">
           <button class="go">開始</button>
-          ${entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : ''}
         </div>
       </div>
       ${opts.first ? '<div class="swipe-hint">玩膩了？往上滑換下一款 ↑</div>' : ''}
@@ -1103,11 +1007,8 @@ function makePost(entry, opts) {
   const dislikeBtn = post.querySelector('.dislike');
   const state = { game: null, running: false };
   const gid = entry.id;
-  /* 換皮優先序：遊玩中的即時視訊 → 改造草稿 → 這個 entry 自己的圖（remix 才有） */
+  /* 換皮優先序：改造草稿 → 這個 entry 自己的圖（remix 才有） */
   const getSprite = key => {
-    if (liveCam.postId === gid && liveCam.keys.indexOf(key) >= 0) {
-      const v = spriteReady(remixCamVideo); if (v) return v;
-    }
     return draftSpriteFor(gid, key) || spriteReady(entry.sprites[key]);
   };
   /* 便利函式：有換圖就置中等比畫出並回傳 true，沒有就回傳 false（讓遊戲畫預設外觀） */
@@ -1186,7 +1087,6 @@ function makePost(entry, opts) {
         <p>再挑戰一次，或往上滑玩下一款</p>
         <div class="ov-btns">
           <button class="go">再玩一次</button>
-          ${entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : ''}
           <button class="share-score">分享成績</button>
         </div>`;
       overlay.classList.remove('hidden');
@@ -1211,21 +1111,9 @@ function makePost(entry, opts) {
     state.running = true;
     state.game.start();
   }
-  async function startWithCam() {
-    ensureAudio();
-    if (await startCam()) {
-      const s = entry.remixSlots.find(s => (s.shape || 'free') === 'free') || entry.remixSlots[0];
-      liveCam = { postId: gid, keys: [s.key] };   /* 把主角換成即時視訊 */
-      updateCamChip();
-      begin();
-    }
-  }
-  /* 開始鈕：普通「開始」＋（可換圖的遊戲才有的）「📷 視訊玩」 */
   function wireStart(root) {
     const go = root.querySelector('.go');
-    if (go) go.addEventListener('click', e => { e.stopPropagation(); if (liveCam.postId === gid) stopLiveCam(); begin(); });
-    const cp = root.querySelector('.camplay');
-    if (cp) cp.addEventListener('click', e => { e.stopPropagation(); startWithCam(); });
+    if (go) go.addEventListener('click', e => { e.stopPropagation(); begin(); });
   }
   wireStart(overlay);
 
@@ -1254,13 +1142,14 @@ function makePost(entry, opts) {
         gest.swiped = true;
         if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
         if (opts.standalone) { closeStandalone(); return; }   /* 單一遊戲視圖：上下滑＝退出，不接首頁的輪播 */
-        const myIdx = posts.findIndex(pp => pp.el === post);   /* 即時算位置 */
+        const allPosts = [...feed.querySelectorAll(':scope > .post')];
+        const myIdx = allPosts.indexOf(post);
         let ni = myIdx + (dy < 0 ? 1 : -1);                    /* 往上滑=下一款 */
         let wrap = false;
-        if (ni >= posts.length) { ni = 0; wrap = true; }        /* 最後一款再往上滑 → 回到第一款 */
-        else if (ni < 0) { ni = posts.length - 1; wrap = true; } /* 第一款往下滑 → 到最後一款 */
-        const target = posts[ni];
-        if (target) target.el.scrollIntoView({ behavior: wrap ? 'auto' : 'smooth' });
+        if (ni >= allPosts.length) { ni = 0; wrap = true; }        /* 最後一款再往上滑 → 回到第一款 */
+        else if (ni < 0) { ni = allPosts.length - 1; wrap = true; } /* 第一款往下滑 → 到最後一款 */
+        const target = allPosts[ni];
+        if (target) target.scrollIntoView({ behavior: wrap ? 'auto' : 'smooth' });
         return;
       }
     }
@@ -1305,16 +1194,13 @@ function makePost(entry, opts) {
     deactivate() {
       stopPreview();
       stage.classList.remove('playing');
-      if (liveCam.postId === gid) stopLiveCam();   /* 滑走就關相機 */
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
       overlay.innerHTML = `<div class="pv-tag">遊戲實況預覽</div><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
-        `<div class="ov-btns"><button class="go">開始</button>` +
-        (entry.remixSlots ? '<button class="camplay">' + ICONS.video + ' 視訊玩</button>' : '') + `</div>`;
+        `<div class="ov-btns"><button class="go">開始</button></div>`;
       wireStart(overlay);
-    },
-    startLive(keys) { ensureAudio(); liveCam = { postId: gid, keys }; updateCamChip(); begin(); }
+    }
   };
 }
 
@@ -1343,14 +1229,14 @@ function toRemixEntry(r) {
 }
 function addPost(po) { feed.appendChild(po.el); posts.push(po); io.observe(po.el); }
 
-/* 首頁只放原始遊戲，永遠不會有 remix（立即顯示，不等網路） */
-(window.GAMES || []).forEach((g, i) => addPost(makePost(toBaseEntry(g), { first: i === 0 })));
+/* 首頁只放原始遊戲，最新註冊的遊戲排最前面（立即顯示，不等網路）。 */
+[...(window.GAMES || [])].reverse().forEach((g, i) => addPost(makePost(toBaseEntry(g), { first: i === 0 })));
 
 /* 已發佈的 remix：只快取資料，不放進首頁 feed。要看到某個 remix 一律透過
    「個人頁的我做的」／「改造面板的版本列表」／分享連結，用 openStandalone() 開單一遊戲視圖。 */
 async function loadRemixGames() {
   if (!online) return;
-  const { data, error } = await db.from('remixes').select('*').order('created_at', { ascending: true });
+  const { data, error } = await db.from('remixes').select('*').order('created_at', { ascending: false });
   if (error || !data) return;
   remixRows = data;
   for (const r of data) cacheRemixEntry(r);

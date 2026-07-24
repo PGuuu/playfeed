@@ -1003,7 +1003,7 @@ function addSandboxPost(row) {
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
   stage.append(frameHost, inputLayer, hud, rail, meta, overlay, errorBox);
-  post.appendChild(stage); host.feed.appendChild(post);
+  post.appendChild(stage); host.feed.prepend(post);
 
   let runtime = null;
   let playing = false;
@@ -1134,9 +1134,9 @@ async function loadPublishedGames() {
   if (!host.db) return;
   const [nativeResult, legacyResult] = await Promise.all([
     host.db.from('user_games')
-      .select('*').eq('status', 'published').order('created_at', { ascending: true }),
+      .select('*').eq('status', 'published').order('created_at', { ascending: false }),
     host.db.from('remixes')
-      .select('*').eq('base_id', LEGACY_BASE_ID).order('created_at', { ascending: true })
+      .select('*').eq('base_id', LEGACY_BASE_ID).order('created_at', { ascending: false })
   ]);
   if (nativeResult.error) console.warn('PlayFeed 新版投稿載入失敗', nativeResult.error);
   if (legacyResult.error) console.warn('PlayFeed 舊版投稿載入失敗', legacyResult.error);
@@ -1145,13 +1145,18 @@ async function loadPublishedGames() {
   const legacyRows = (legacyResult.data || []).map(legacyRowToPublished).filter(Boolean);
   const rows = [];
   const seenSlugs = new Set();
-  for (const row of [...nativeRows, ...legacyRows]) {
+  const newestFirst = [...nativeRows, ...legacyRows].sort((a, b) =>
+    new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  );
+  for (const row of newestFirst) {
     if (!row.slug || seenSlugs.has(row.slug)) continue;
     seenSlugs.add(row.slug);
     rows.push(row);
   }
   for (const row of rows) {
     publishedRows.push(row);
+  }
+  for (const row of [...rows].reverse()) {
     addSandboxPost(row);
   }
   refreshPublishedInteractions();
