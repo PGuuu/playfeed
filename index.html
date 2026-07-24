@@ -16,21 +16,40 @@
     -webkit-user-select: none; user-select: none; }
   html.booting, html.booting body { background: #fff; }
   #bootSplash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
-    background: #fff; color: #262626; opacity: 1; visibility: visible; }
-  #bootSplash.done { pointer-events: none; animation: bootSplashExit .72s ease forwards; }
-  #bootSplash.done .boot-brand { animation: bootBrandSwipe .62s cubic-bezier(.55,.02,.36,1) forwards; }
-  @keyframes bootBrandSwipe {
-    0% { transform: translateY(-2vh); opacity: 1; }
-    100% { transform: translateY(-115vh); opacity: .35; }
+    overflow: hidden; isolation: isolate; background: #fff; color: #fff; opacity: 1; visibility: visible; }
+  #bootSplash.done { pointer-events: none; animation: bootSplashExit .9s ease forwards; }
+  .boot-color-fade { position: absolute; inset: 0; z-index: 0; background: #fff; }
+  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 1200vh; display: grid;
+    grid-auto-rows: 100vh; animation: bootColorSwipe 4.8s linear infinite; will-change: transform; }
+  .boot-color-panel:nth-child(6n+1) { background: #ff2d6f; }
+  .boot-color-panel:nth-child(6n+2) { background: #ff8a00; }
+  .boot-color-panel:nth-child(6n+3) { background: #ffd60a; }
+  .boot-color-panel:nth-child(6n+4) { background: #00d7c8; }
+  .boot-color-panel:nth-child(6n+5) { background: #2878ff; }
+  .boot-color-panel:nth-child(6n+6) { background: #8d36ff; }
+  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .68s ease forwards; }
+  #bootSplash.done .boot-brand { animation: bootBrandFade .72s ease forwards; }
+  @keyframes bootColorSwipe {
+    from { transform: translateY(0); }
+    to { transform: translateY(-600vh); }
+  }
+  @keyframes bootColorsToWhite {
+    0%, 22% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes bootBrandFade {
+    0%, 48% { transform: translateY(-2vh); opacity: 1; }
+    100% { transform: translateY(-7vh); opacity: 0; }
   }
   @keyframes bootSplashExit {
-    0%, 68% { opacity: 1; visibility: visible; }
+    0%, 76% { opacity: 1; visibility: visible; }
     100% { opacity: 0; visibility: hidden; }
   }
-  .boot-brand { text-align: center; transform: translateY(-2vh); }
+  .boot-brand { position: relative; z-index: 1; text-align: center; transform: translateY(-2vh);
+    text-shadow: 0 3px 20px rgba(0,0,0,.28); }
   .boot-logo { font-size: clamp(38px, 11vw, 64px); line-height: 1; font-weight: 900;
-    letter-spacing: -.055em; color: #262626; }
-  .boot-tagline { margin-top: 12px; color: #737373; font-size: 14px; font-weight: 650;
+    letter-spacing: -.055em; color: #fff; }
+  .boot-tagline { margin-top: 12px; color: rgba(255,255,255,.9); font-size: 14px; font-weight: 700;
     letter-spacing: .12em; text-transform: lowercase; }
   /* 只有輸入框可以選字（留言、Email） */
   input, textarea { -webkit-user-select: text; user-select: text; }
@@ -38,16 +57,6 @@
   #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none;
     overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
   #feed::-webkit-scrollbar { display: none; }
-  #feed.swipe-demo { animation: firstSwipeDemo 1.35s cubic-bezier(.36,.02,.2,1);
-    will-change: transform; }
-  @keyframes firstSwipeDemo {
-    0%, 12% { transform: translateY(0); }
-    43%, 61% { transform: translateY(-64px); }
-    100% { transform: translateY(0); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    #feed.swipe-demo { animation: none; }
-  }
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
     display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: pan-y; }
@@ -127,6 +136,21 @@
   @keyframes pvblink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
   .overlay .go { border: none; cursor: pointer; background: #262626; color: #fff;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
+  .overlay-main.start-only .go { background: linear-gradient(135deg, #ff2d78, #ff8a00);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.65), 0 0 18px rgba(255,45,120,.8),
+      0 0 42px rgba(255,138,0,.5); animation: startGlow 1.8s ease-in-out infinite; }
+  .overlay-main.start-only.attention { animation: startAttention .48s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes startGlow {
+    0%, 100% { transform: scale(1); filter: saturate(1); }
+    50% { transform: scale(1.055); filter: saturate(1.2) brightness(1.08); }
+  }
+  @keyframes startAttention {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    18% { transform: translateX(-9px) rotate(-2deg); }
+    36% { transform: translateX(8px) rotate(2deg); }
+    54% { transform: translateX(-6px) rotate(-1.5deg); }
+    72% { transform: translateX(4px) rotate(1deg); }
+  }
   .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
   .overlay .share-score { border: none; cursor: pointer; background: #efefef;
     color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
@@ -410,6 +434,16 @@
 <body>
 
 <div id="bootSplash" role="status" aria-label="PlayFeed 載入中">
+  <div class="boot-color-fade" aria-hidden="true">
+    <div class="boot-color-stream">
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
+    </div>
+  </div>
   <div class="boot-brand">
     <div class="boot-logo">PlayFeed</div>
     <div class="boot-tagline">play and swipe</div>
@@ -1946,37 +1980,14 @@ document.getElementById('standalonePager').addEventListener('click', event => {
 const posts = [];
 const bootStartedAt = performance.now();
 let bootFinished = false;
-const FIRST_SWIPE_DEMO_KEY = 'playfeed:first-swipe-demo:v1';
-let firstSwipeDemoTimer = null;
-let firstSwipeDemoCancelled = false;
-function cancelFirstSwipeDemo() {
-  firstSwipeDemoCancelled = true;
-  clearTimeout(firstSwipeDemoTimer);
-  firstSwipeDemoTimer = null;
-  feed.classList.remove('swipe-demo');
-}
-function scheduleFirstSwipeDemo() {
-  if (firstSwipeDemoCancelled || location.hash || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  try {
-    if (localStorage.getItem(FIRST_SWIPE_DEMO_KEY)) return;
-  } catch (_) {}
-  firstSwipeDemoTimer = setTimeout(() => {
-    if (document.hidden || feed.scrollTop > 2 || document.querySelector('.stage.playing')) return;
-    try { localStorage.setItem(FIRST_SWIPE_DEMO_KEY, '1'); } catch (_) {}
-    feed.classList.add('swipe-demo');
-    setTimeout(() => feed.classList.remove('swipe-demo'), 1450);
-  }, 720);
-}
-document.addEventListener('pointerdown', cancelFirstSwipeDemo, { capture: true, once: true });
 function finishBoot() {
   if (bootFinished) return;
   bootFinished = true;
   if (!location.hash) feed.scrollTop = 0;
-  const delay = Math.max(0, 520 - (performance.now() - bootStartedAt));
+  const delay = Math.max(0, 1650 - (performance.now() - bootStartedAt));
   setTimeout(() => {
     document.documentElement.classList.remove('booting');
     document.getElementById('bootSplash').classList.add('done');
-    scheduleFirstSwipeDemo();
   }, delay);
 }
 setTimeout(finishBoot, 8000);
@@ -2156,6 +2167,13 @@ function makePost(entry, opts) {
     });
   }
   wireStart(overlay);
+  function nudgeStartButton() {
+    const startOnly = overlay.querySelector('.start-only');
+    if (!startOnly || overlay.classList.contains('hidden')) return;
+    startOnly.classList.remove('attention');
+    void startOnly.offsetWidth;
+    startOnly.classList.add('attention');
+  }
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
@@ -2164,12 +2182,13 @@ function makePost(entry, opts) {
   /* 首頁交給瀏覽器原生 scroll-snap；單一遊戲視圖才使用互動式拖曳。 */
   let gest = null;
   stage.addEventListener('pointerdown', e => {
+    const interactive = e.target instanceof Element && e.target.closest('.rail, .go');
     if (opts.standalone) {
       try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     }
     gest = {
       id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
-      claimed: false, gaveDown: false, startedAt: e.timeStamp
+      claimed: false, gaveDown: false, ignoreStartNudge: !!interactive, startedAt: e.timeStamp
     };
     if (e.target === canvas && state.running && state.game) {
       const [x, y] = toLogical(e);
@@ -2205,7 +2224,10 @@ function makePost(entry, opts) {
   function endGesture(e, cancelled) {
     if (!gest || e.pointerId !== gest.id) return;
     const finished = gest;
+    const dx = e.clientX - finished.x0;
     const dy = e.clientY - finished.y0;
+    if (!state.running && !finished.ignoreStartNudge && Math.hypot(dx, dy) < 12 &&
+        e.timeStamp - finished.startedAt < 520) nudgeStartButton();
     if (!finished.swiped && finished.gaveDown && state.running && state.game) {
       const [x, y] = toLogical(e);
       state.game.input(cancelled ? 'cancel' : 'up', x, y);

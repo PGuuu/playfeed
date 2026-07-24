@@ -1192,12 +1192,20 @@ function addSandboxPost(row, options = {}) {
     gesture = null; playing = false; previewing = false; stage.classList.remove('playing');
     destroyRuntime(); overlay.classList.remove('hidden'); resetOverlay();
   };
+  const nudgeStartButton = () => {
+    const startOnly = overlay.querySelector('.start-only');
+    if (!startOnly || overlay.classList.contains('hidden')) return;
+    startOnly.classList.remove('attention');
+    void startOnly.offsetWidth;
+    startOnly.classList.add('attention');
+  };
 
   function logical(event) {
     const r = inputLayer.getBoundingClientRect();
     return [(event.clientX - r.left) / r.width * 400, (event.clientY - r.top) / r.height * 700];
   }
   stage.addEventListener('pointerdown', event => {
+    const interactive = event.target instanceof Element && event.target.closest('.rail, .go');
     if (options.standalone) {
       try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     }
@@ -1205,7 +1213,8 @@ function addSandboxPost(row, options = {}) {
     const gaveDown = !!(event.target === inputLayer && playing && runtime);
     gesture = {
       id: event.pointerId, x0: event.clientX, y0: event.clientY,
-      x, y, claimed: false, swiped: false, gaveDown, startedAt: event.timeStamp
+      x, y, claimed: false, swiped: false, gaveDown, ignoreStartNudge: !!interactive,
+      startedAt: event.timeStamp
     };
     if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
   }, true);
@@ -1231,7 +1240,10 @@ function addSandboxPost(row, options = {}) {
     if (!gesture || gesture.id !== event.pointerId) return;
     const [x, y] = logical(event);
     const finished = gesture;
+    const dx = event.clientX - finished.x0;
     const dy = event.clientY - finished.y0;
+    if (!playing && !finished.ignoreStartNudge && Math.hypot(dx, dy) < 12 &&
+        event.timeStamp - finished.startedAt < 520) nudgeStartButton();
     if (!finished.swiped && finished.gaveDown && runtime) {
       runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
     }
