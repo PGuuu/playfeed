@@ -35,22 +35,27 @@
   /* 只有輸入框可以選字（留言、Email） */
   input, textarea { -webkit-user-select: text; user-select: text; }
 
-  #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
+  #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none;
+    overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
   #feed::-webkit-scrollbar { display: none; }
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
-    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: none; }
+    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: pan-y; }
+  .standalone-post { touch-action: none; }
   .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
     margin-bottom: var(--main-nav-height); max-width: none; background: inherit; }
   .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
-  /* touch-action:none：點擊/水平動作全給遊戲，絕不誤觸發捲動；
-     上下滑改由 JS 偵測「明確的垂直滑動」才換遊戲（見 pointer 手勢處理） */
+  /* 首頁的垂直手勢交給原生 scroll-snap，水平手勢仍交給遊戲；
+     個人頁開啟的單一遊戲則用互動式拖曳，以便即時顯示前後遊戲。 */
   canvas.game { width: 100%; height: calc(100% - var(--game-top-height)); margin-top: var(--game-top-height);
-    display: block; touch-action: none; }
+    display: block; touch-action: pan-y; }
+  .standalone-post canvas.game { touch-action: none; }
   .sandbox-post .sandbox-frame-host,
   .sandbox-post .sandbox-input {
     position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
   }
+  .sandbox-post .sandbox-input { touch-action: pan-y; }
+  .sandbox-post.standalone-post .sandbox-input { touch-action: none; }
   @media (orientation: landscape) {
     .stage { width: min(100vw, calc((100dvh - var(--main-nav-height)) * 4 / 7));
       height: calc(100dvh - var(--main-nav-height)); }
@@ -293,10 +298,10 @@
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
-  .gcell { position: relative; width: 100%; min-width: 0; aspect-ratio: 4 / 7; overflow: hidden;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    contain: layout paint; }
-  .gcell .hero { width: 100%; height: 100%; font-size: 46px; line-height: 1;
+  .gcell { position: relative; width: 100%; min-width: 0; overflow: hidden;
+    cursor: pointer; display: block; contain: layout paint; }
+  .gcell::before { content: ""; display: block; width: 100%; padding-top: 175%; }
+  .gcell .hero { position: absolute; inset: 0; width: 100%; height: 100%; font-size: 46px; line-height: 1;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
   .gcell .cap { position: absolute; left: 50%; top: 50%; max-width: 88%; transform: translate(-50%,-50%);
@@ -998,17 +1003,27 @@ function profileData(tab) {
   if (tab === 'created') {
     const official = posts.map(post => post.entry).filter(entry => entry.authorId === ownerId);
     const submitted = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(ownerId) : [];
-    return [...submitted, ...official];
+    return uniqueProfileEntries([...submitted, ...official]);
   }
   if (tab === 'remixed') {
-    return remixRows.filter(r => r.user_id === ownerId).map(cacheRemixEntry).filter(Boolean);
+    return uniqueProfileEntries(
+      remixRows.filter(r => r.user_id === ownerId).map(cacheRemixEntry).filter(Boolean)
+    );
   }
   if (!ownProfileView()) return [];
   const st = tab === 'saved' ? saveState : likeState;
-  return Object.keys(st)
+  return uniqueProfileEntries(Object.keys(st)
     .filter(id => tab === 'saved' ? st[id] :
       (tab === 'disliked' ? st[id]?.disliked : st[id]?.mine))
-    .map(entryFor).filter(Boolean);
+    .map(entryFor).filter(Boolean));
+}
+function uniqueProfileEntries(entries) {
+  const seen = new Set();
+  return entries.filter(entry => {
+    if (!entry?.id || seen.has(entry.id)) return false;
+    seen.add(entry.id);
+    return true;
+  });
 }
 const profilePreviewJobs = new Map();
 function captureBuiltInThumbnail(entry) {
@@ -1893,27 +1908,15 @@ function makePost(entry, opts) {
     const r = canvas.getBoundingClientRect();
     return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
   }
-  /* 整張遊戲卡共用同一套手勢；只有放開手指後才真正換遊戲。 */
-  const SWIPE = 84;
+  /* 首頁交給瀏覽器原生 scroll-snap；單一遊戲視圖才使用互動式拖曳。 */
   let gest = null;
-  function commitSwipe(direction) {
-    if (opts.standalone) {
-      if (opts.onStandaloneSwipe) opts.onStandaloneSwipe(direction);
-      else closeStandalone();
-      return;
-    }
-    const allPosts = [...feed.querySelectorAll(':scope > .post')];
-    const myIdx = allPosts.indexOf(post);
-    const nextIndex = myIdx + direction;
-    if (nextIndex >= 0 && nextIndex < allPosts.length) {
-      allPosts[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
   stage.addEventListener('pointerdown', e => {
-    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    if (opts.standalone) {
+      try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    }
     gest = {
       id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
-      claimed: false, direction: 0, gaveDown: false
+      claimed: false, gaveDown: false, startedAt: e.timeStamp
     };
     if (e.target === canvas && state.running && state.game) {
       const [x, y] = toLogical(e);
@@ -1928,9 +1931,8 @@ function makePost(entry, opts) {
     if (!gest.swiped && !gest.claimed) {
       if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) {
         gest.claimed = true;
-      } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.25) {
+      } else if (opts.standalone && Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gest.swiped = true;
-        gest.direction = dy < 0 ? 1 : -1;
         if (gest.gaveDown && state.game) {
           const [x, y] = toLogical(e);
           state.game.input('cancel', x, y);
@@ -1939,6 +1941,7 @@ function makePost(entry, opts) {
     }
     if (gest.swiped) {
       e.preventDefault();
+      opts.onStandaloneDrag?.('move', dy, e.timeStamp, gest.startedAt);
       return;
     }
     if (gest.gaveDown && state.running && state.game && (e.buttons || e.pointerType === 'touch')) {
@@ -1955,10 +1958,10 @@ function makePost(entry, opts) {
       state.game.input(cancelled ? 'cancel' : 'up', x, y);
     }
     gest = null;
-    if (!cancelled && finished.swiped && Math.abs(dy) >= SWIPE) {
+    if (finished.swiped) {
       e.preventDefault();
       e.stopPropagation();
-      commitSwipe(finished.direction);
+      opts.onStandaloneDrag?.(cancelled ? 'cancel' : 'end', dy, e.timeStamp, finished.startedAt);
     }
   }
   stage.addEventListener('pointerup', e => endGesture(e, false), true);
@@ -2057,13 +2060,15 @@ let standaloneIndex = 0;
 let standaloneTransitioning = false;
 let standaloneIncomingPost = null;
 let standaloneReturnContext = null;
+let standaloneDrag = null;
 function mountStandaloneEntry(entry) {
-  const change = direction => navigateStandalone(direction);
+  const drag = (phase, dy, timeStamp, startedAt) =>
+    handleStandaloneDrag(phase, dy, timeStamp, startedAt);
   let record;
   if (entry.userScript && window.PlayFeedCreator) {
-    record = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, change);
+    record = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, drag);
   } else {
-    record = makePost(entry, { standalone: true, onStandaloneSwipe: change });
+    record = makePost(entry, { standalone: true, onStandaloneDrag: drag });
     remixViewStage.appendChild(record.el);
     record.activate();
   }
@@ -2071,59 +2076,131 @@ function mountStandaloneEntry(entry) {
   record?.refreshSave?.();
   return record;
 }
-function renderStandaloneEntry(direction = 0) {
-  const entry = standaloneSequence[standaloneIndex];
-  if (!entry) return;
-  const previous = standalonePost;
-  if (!previous || !direction) {
-    previous?.deactivate();
-    remixViewStage.innerHTML = '';
-    standalonePost = mountStandaloneEntry(entry);
+function resetStandaloneElement(element) {
+  if (!element) return;
+  element.getAnimations().forEach(animation => animation.cancel());
+  element.style.position = '';
+  element.style.inset = '';
+  element.style.width = '';
+  element.style.transform = '';
+  element.style.willChange = '';
+}
+function positionStandaloneElement(element) {
+  element.style.position = 'absolute';
+  element.style.inset = '0';
+  element.style.width = '100%';
+  element.style.willChange = 'transform';
+}
+function discardStandaloneIncoming() {
+  if (!standaloneIncomingPost) return;
+  standaloneIncomingPost.deactivate();
+  standaloneIncomingPost.el.remove();
+  standaloneIncomingPost = null;
+}
+function prepareStandaloneDrag(direction, dy) {
+  if (!standalonePost || standaloneTransitioning) return null;
+  if (standaloneDrag?.direction === direction) return standaloneDrag;
+  discardStandaloneIncoming();
+  resetStandaloneElement(standalonePost.el);
+  const nextIndex = standaloneIndex + direction;
+  positionStandaloneElement(standalonePost.el);
+  if (nextIndex < 0 || nextIndex >= standaloneSequence.length) {
+    standaloneDrag = { direction, nextIndex: -1, incoming: null, dy };
+    return standaloneDrag;
+  }
+  const next = mountStandaloneEntry(standaloneSequence[nextIndex]);
+  if (!next) return null;
+  standaloneIncomingPost = next;
+  positionStandaloneElement(next.el);
+  standaloneDrag = { direction, nextIndex, incoming: next, dy };
+  return standaloneDrag;
+}
+function drawStandaloneDrag(dy) {
+  const direction = dy < 0 ? 1 : -1;
+  const drag = prepareStandaloneDrag(direction, dy);
+  if (!drag) return;
+  drag.dy = dy;
+  const height = Math.max(1, remixViewStage.clientHeight);
+  if (!drag.incoming) {
+    standalonePost.el.style.transform = `translate3d(0,${dy * .28}px,0)`;
     return;
   }
+  standalonePost.el.style.transform = `translate3d(0,${dy}px,0)`;
+  drag.incoming.el.style.transform =
+    `translate3d(0,${direction * height + dy}px,0)`;
+}
+function settleStandaloneDrag(commit) {
+  const drag = standaloneDrag;
+  if (!drag || standaloneTransitioning) return;
   standaloneTransitioning = true;
-  const next = mountStandaloneEntry(entry);
-  if (!next) { standaloneTransitioning = false; return; }
-  standaloneIncomingPost = next;
-  const fromY = direction > 0 ? '100%' : '-100%';
-  const toY = direction > 0 ? '-100%' : '100%';
-  for (const element of [previous.el, next.el]) {
-    element.style.position = 'absolute';
-    element.style.inset = '0';
-    element.style.width = '100%';
+  const height = Math.max(1, remixViewStage.clientHeight);
+  const currentY = drag.incoming ? drag.dy : drag.dy * .28;
+  const targetCurrent = commit && drag.incoming ? -drag.direction * height : 0;
+  const animations = [
+    standalonePost.el.animate(
+      [{ transform: `translate3d(0,${currentY}px,0)` },
+       { transform: `translate3d(0,${targetCurrent}px,0)` }],
+      { duration: commit ? 230 : 210, easing: 'cubic-bezier(.2,.72,.25,1)', fill: 'forwards' }
+    )
+  ];
+  if (drag.incoming) {
+    const incomingStart = drag.direction * height + drag.dy;
+    const incomingEnd = commit ? 0 : drag.direction * height;
+    animations.push(drag.incoming.el.animate(
+      [{ transform: `translate3d(0,${incomingStart}px,0)` },
+       { transform: `translate3d(0,${incomingEnd}px,0)` }],
+      { duration: commit ? 230 : 210, easing: 'cubic-bezier(.2,.72,.25,1)', fill: 'forwards' }
+    ));
   }
-  const incoming = next.el.animate(
-    [{ transform: `translateY(${fromY})` }, { transform: 'translateY(0)' }],
-    { duration: 330, easing: 'cubic-bezier(.22,.72,.24,1)', fill: 'forwards' }
-  );
-  const outgoing = previous.el.animate(
-    [{ transform: 'translateY(0)' }, { transform: `translateY(${toY})` }],
-    { duration: 330, easing: 'cubic-bezier(.22,.72,.24,1)', fill: 'forwards' }
-  );
-  Promise.allSettled([incoming.finished, outgoing.finished]).then(() => {
-    if (!remixView.classList.contains('open')) {
-      next.deactivate();
-      next.el.remove();
+  Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+    if (commit && drag.incoming && remixView.classList.contains('open')) {
+      const previous = standalonePost;
+      standaloneIndex = drag.nextIndex;
+      standalonePost = drag.incoming;
       standaloneIncomingPost = null;
-      standaloneTransitioning = false;
-      return;
+      previous.deactivate();
+      previous.el.remove();
+      resetStandaloneElement(standalonePost.el);
+    } else {
+      resetStandaloneElement(standalonePost?.el);
+      discardStandaloneIncoming();
     }
-    previous.deactivate();
-    previous.el.remove();
-    next.el.getAnimations().forEach(animation => animation.cancel());
-    next.el.style.position = '';
-    next.el.style.inset = '';
-    next.el.style.width = '';
-    standalonePost = next;
-    standaloneIncomingPost = null;
+    standaloneDrag = null;
     standaloneTransitioning = false;
   });
 }
+function handleStandaloneDrag(phase, dy, timeStamp, startedAt) {
+  if (!remixView.classList.contains('open') || standaloneTransitioning) return;
+  if (phase === 'move') {
+    drawStandaloneDrag(dy);
+    return;
+  }
+  if (!standaloneDrag) return;
+  const elapsed = Math.max(1, timeStamp - startedAt);
+  const velocity = dy / elapsed;
+  const distance = Math.abs(dy);
+  const threshold = Math.max(72, remixViewStage.clientHeight * .2);
+  const commit = phase === 'end' && !!standaloneDrag.incoming &&
+    (distance >= threshold || (distance >= 32 && Math.abs(velocity) >= .55));
+  settleStandaloneDrag(commit);
+}
+function renderStandaloneEntry() {
+  const entry = standaloneSequence[standaloneIndex];
+  if (!entry) return;
+  standalonePost?.deactivate();
+  discardStandaloneIncoming();
+  remixViewStage.innerHTML = '';
+  standalonePost = mountStandaloneEntry(entry);
+}
 function navigateStandalone(direction) {
   if (standaloneTransitioning) return;
-  if (standaloneSequence.length <= 1) { returnFromStandalone(); return; }
-  standaloneIndex = (standaloneIndex + direction + standaloneSequence.length) % standaloneSequence.length;
-  renderStandaloneEntry(direction);
+  const drag = prepareStandaloneDrag(direction, 0);
+  if (!drag?.incoming) {
+    if (standaloneSequence.length <= 1) returnFromStandalone();
+    else settleStandaloneDrag(false);
+    return;
+  }
+  settleStandaloneDrag(true);
 }
 function openStandalone(id, sequence = null, returnContext = null) {
   const entry = entryFor(id);
@@ -2149,6 +2226,7 @@ function closeStandalone() {
   setNavVisible(true);
   standaloneSequence = [];
   standaloneTransitioning = false;
+  standaloneDrag = null;
   standaloneReturnContext = null;
 }
 function returnFromStandalone() {

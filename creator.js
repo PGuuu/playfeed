@@ -1163,26 +1163,15 @@ function addSandboxPost(row, options = {}) {
     const r = inputLayer.getBoundingClientRect();
     return [(event.clientX - r.left) / r.width * 400, (event.clientY - r.top) / r.height * 700];
   }
-  const SWIPE = 84;
-  const commitSwipe = direction => {
-    if (options.onSwipe) {
-      options.onSwipe(direction);
-      return;
-    }
-    const all = [...host.feed.querySelectorAll(':scope > .post')];
-    const index = all.indexOf(post);
-    const next = index + direction;
-    if (next >= 0 && next < all.length) {
-      all[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
   stage.addEventListener('pointerdown', event => {
-    try { stage.setPointerCapture(event.pointerId); } catch (_) {}
+    if (options.standalone) {
+      try { stage.setPointerCapture(event.pointerId); } catch (_) {}
+    }
     const [x, y] = logical(event);
     const gaveDown = !!(event.target === inputLayer && playing && runtime);
     gesture = {
       id: event.pointerId, x0: event.clientX, y0: event.clientY,
-      x, y, claimed: false, swiped: false, direction: 0, gaveDown
+      x, y, claimed: false, swiped: false, gaveDown, startedAt: event.timeStamp
     };
     if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
   }, true);
@@ -1192,14 +1181,14 @@ function addSandboxPost(row, options = {}) {
     const [x, y] = logical(event); gesture.x = x; gesture.y = y;
     if (!gesture.claimed && !gesture.swiped) {
       if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) gesture.claimed = true;
-      else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.25) {
+      else if (options.standalone && Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gesture.swiped = true;
-        gesture.direction = dy < 0 ? 1 : -1;
         if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'cancel', x, y });
       }
     }
     if (gesture.swiped) {
       event.preventDefault();
+      options.onDrag?.('move', dy, event.timeStamp, gesture.startedAt);
       return;
     }
     if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'move', x, y });
@@ -1213,10 +1202,10 @@ function addSandboxPost(row, options = {}) {
       runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
     }
     gesture = null;
-    if (!cancelled && finished.swiped && Math.abs(dy) >= SWIPE) {
+    if (finished.swiped) {
       event.preventDefault();
       event.stopPropagation();
-      commitSwipe(finished.direction);
+      options.onDrag?.(cancelled ? 'cancel' : 'end', dy, event.timeStamp, finished.startedAt);
     }
   };
   stage.addEventListener('pointerup', event => end(event, false), true);
@@ -1444,11 +1433,11 @@ window.PlayFeedCreator = {
     const post = publishedPosts.find(item => item.entry.id === id);
     if (post) setTimeout(() => post.activate(), 40);
   },
-  mountStandalone(id, container, onSwipe) {
+  mountStandalone(id, container, onDrag) {
     const slug = id.startsWith('game:') ? id.slice(5) : id;
     const row = publishedRows.find(item => item.slug === slug);
     if (!row) return null;
-    const record = addSandboxPost(row, { container, onSwipe, standalone: true });
+    const record = addSandboxPost(row, { container, onDrag, standalone: true });
     record.activate();
     return record;
   },
