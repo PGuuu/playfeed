@@ -1046,49 +1046,32 @@ function addSandboxPost(row) {
   const save = makeRailButton('sv', 'save', '儲存');
   const share = makeRailButton('shr', 'share', '分享');
   rail.append(like, dislike, comment, save, share);
+  const gameInfo = el('div', 'game-info');
+  const gameInfoCopy = el('div', 'game-info-copy');
+  const author = el('button', 'author-link', entry.author);
+  const tip = el('div', 'game-tip', `操作：${entry.tip}`);
+  const mechanic = el('button', 'mechanic-create', '二創');
+  gameInfoCopy.append(author, tip);
+  gameInfo.append(gameInfoCopy, mechanic);
   const overlay = el('div', 'overlay');
   const resetOverlay = (finalScore = null) => {
     overlay.replaceChildren();
-    const card = el('div', 'overlay-card');
-    const author = el('button', 'author-link', entry.author);
-    author.addEventListener('click', event => {
-      event.stopPropagation();
-      destroyRuntime();
-      playing = false;
-      previewing = false;
-      stage.classList.remove('playing');
-      host.openAuthorProfile(entry.authorId, entry.authorName);
-    });
+    const card = el('div', 'overlay-main');
     if (finalScore === null) {
-      card.append(
-        el('div', 'pv-tag', '投稿遊戲預覽'),
-        author,
-        el('h2', '', entry.title.split('：')[0]),
-        el('p', '', entry.description || entry.tip),
-        el('p', '', `操作：${entry.tip}`)
-      );
+      card.append(el('h2', '', entry.title.split('：')[0]));
     } else {
-      card.append(author, el('div', 'final', String(finalScore)), el('p', '', '再挑戰一次，或往上滑玩下一款'));
+      card.append(el('div', 'final', String(finalScore)));
     }
     const buttons = el('div', 'ov-btns');
     const go = el('button', 'go', finalScore === null ? '開始' : '再玩一次');
     go.addEventListener('click', event => { event.stopPropagation(); begin(); });
-    const mechanic = el('button', 'mechanic-create', '用這個玩法創作');
-    mechanic.addEventListener('click', event => {
-      event.stopPropagation();
-      destroyRuntime();
-      playing = false;
-      previewing = false;
-      stage.classList.remove('playing');
-      openMechanicCreator(publishedMechanicContext(entry));
-    });
-    buttons.append(go, mechanic);
+    buttons.append(go);
     card.appendChild(buttons);
     overlay.appendChild(card);
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, overlay, errorBox);
+  stage.append(frameHost, inputLayer, hud, rail, gameInfo, overlay, errorBox);
   post.appendChild(stage); host.feed.prepend(post);
 
   let runtime = null;
@@ -1096,6 +1079,22 @@ function addSandboxPost(row) {
   let previewing = false;
   let gesture = null;
   const destroyRuntime = () => { if (runtime) runtime.destroy(); runtime = null; frameHost.replaceChildren(); };
+  author.addEventListener('click', event => {
+    event.stopPropagation();
+    destroyRuntime();
+    playing = false;
+    previewing = false;
+    stage.classList.remove('playing');
+    host.openAuthorProfile(entry.authorId, entry.authorName);
+  });
+  mechanic.addEventListener('click', event => {
+    event.stopPropagation();
+    destroyRuntime();
+    playing = false;
+    previewing = false;
+    stage.classList.remove('playing');
+    openMechanicCreator(publishedMechanicContext(entry));
+  });
   const spawn = mode => {
     destroyRuntime();
     errorBox.style.display = 'none';

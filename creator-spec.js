@@ -72,6 +72,8 @@ GameInstance 必須包含：
 - stop()：停止 requestAnimationFrame、setTimeout、setInterval 與其他循環。
 - input(type, x, y)：處理 down / move / up / cancel。
 
+每次 start() 開局時，遊戲必須直接在 canvas 畫面中短暫顯示操作方法。提示應簡短、清楚，可在第一次操作後或數秒後淡出；不可使用 DOM 製作提示。
+
 create(env) 內可以自由建立輔助函式，也可以讓輔助函式回傳物件。平台只把 create(env) 自己直接回傳的物件視為 GameInstance。
 
 cancel 代表平台接管手勢或遊戲被中止，只能解除按住或拖曳狀態，不可觸發原本屬於 up 的發射、計分或結算行為。
@@ -116,6 +118,7 @@ shape 可使用 free、circle、wide、tall。繪製該元素時可呼叫 env.sp
 - input 能安全處理 cancel。
 - 遊戲會呼叫 env.setScore() 與 env.over()。
 - stop() 能停止全部動畫與 timer。
+- 每次開局會先在遊戲畫面中顯示簡短操作提示。
 - 沒有外部資源、網路、儲存或 DOM API。
 - 沒有垂直必要操作。
 - 隨機收到合法輸入時不會卡死或報錯。
@@ -172,6 +175,7 @@ export function buildRepairPrompt(report, source) {
 - 只能使用 env.W、env.H、env.ctx、env.setScore、env.over、env.beep、env.sprite。
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
 - 垂直手勢保留給 Feed。
+- start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
 - 技術修復不應限制或重新設計玩法。
 - 最後只輸出一個完整 JavaScript 程式碼區塊，不要加入其他文字。
 

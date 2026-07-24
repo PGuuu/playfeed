@@ -36,8 +36,8 @@
 
   .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
     gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
-  /* 遊戲進行中：淡出側邊鈕與左下資訊，並停用側邊鈕點擊（防誤觸） */
-  .stage.playing .rail { opacity: 0; pointer-events: none; }
+  /* 遊戲進行中：淡出側邊鈕與下方資訊，並停用點擊（防誤觸） */
+  .stage.playing .rail, .stage.playing .game-info { opacity: 0; pointer-events: none; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
   .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
@@ -55,16 +55,29 @@
   .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
 
   .overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; background: rgba(8,8,12,0.12);
-    text-align: center; padding: 24px; }
+    align-items: center; justify-content: center; background: transparent;
+    text-align: center; padding: 24px; pointer-events: none; }
   .overlay.hidden { display: none; }
-  .overlay-card { width: min(100%, 430px); display: flex; flex-direction: column; align-items: center;
-    gap: 13px; padding: 22px 20px; border: 1px solid rgba(255,255,255,.13); border-radius: 24px;
-    background: rgba(12,12,18,.72); backdrop-filter: blur(14px); box-shadow: 0 16px 50px rgba(0,0,0,.28); }
+  .overlay-main { width: min(86%, 360px); display: flex; flex-direction: column; align-items: center;
+    gap: 13px; padding: 16px 18px; border-radius: 20px; pointer-events: auto;
+    background: rgba(8,8,12,.42); backdrop-filter: blur(7px); box-shadow: 0 10px 32px rgba(0,0,0,.18); }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
-  .overlay .author-link { border: 0; background: transparent; color: #9bdfaa; cursor: pointer;
-    font: 700 13px inherit; padding: 2px 8px; }
+  .game-info { position: absolute; left: 14px; right: 78px;
+    bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 12px; border-radius: 16px; transition: opacity .25s;
+    background: rgba(8,8,12,.52); backdrop-filter: blur(8px); }
+  .game-info-copy { min-width: 0; text-align: left; }
+  .game-info .author-link { display: block; max-width: 100%; border: 0; background: transparent;
+    color: #9bdfaa; cursor: pointer; font: 700 13px inherit; padding: 0 0 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .game-info .game-tip { color: rgba(255,255,255,.78); font-size: 12px; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .game-info .mechanic-create { flex: none; border: 1px solid rgba(255,255,255,.32); cursor: pointer;
+    background: rgba(255,255,255,.1); color: #fff; font: 700 13px inherit;
+    padding: 8px 13px; border-radius: 999px; }
+  .standalone-post .game-info { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
     display: flex; align-items: center; gap: 6px; }
   .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
@@ -76,13 +89,10 @@
   .overlay .share-score { border: none; cursor: pointer; background: rgba(255,255,255,0.18);
     color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .mechanic-create { border: 1px solid rgba(255,255,255,.4); cursor: pointer;
-    background: rgba(0,0,0,.2); color: #fff; font-family: inherit; font-size: 15px; font-weight: 600;
-    padding: 12px 22px; border-radius: 999px; backdrop-filter: blur(6px); }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
 
-  .swipe-hint { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+  .swipe-hint { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
     font-size: 13px; opacity: 0.55; z-index: 4; pointer-events: none; animation: bob 1.6s ease-in-out infinite; }
   @keyframes bob { 0%,100% { transform: translate(-50%,0);} 50% { transform: translate(-50%,-8px);} }
 
@@ -1112,6 +1122,7 @@ function makePost(entry, opts) {
   opts = opts || {};
   const post = document.createElement('section');
   post.className = 'post';
+  if (opts.standalone) post.classList.add('standalone-post');
   post.style.background = entry.bg;
   post.innerHTML = `
     <div class="stage">
@@ -1128,15 +1139,18 @@ function makePost(entry, opts) {
         ${entry.remixSlots ? '<button class="rmx"><span class="ic">' + ICONS.remix + '</span><span>改造</span></button>' : ''}
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
       </div>
-      <div class="overlay">
-        <div class="overlay-card">
-          <div class="pv-tag">遊戲實況預覽</div>
+      <div class="game-info">
+        <div class="game-info-copy">
           <button class="author-link">${entry.author}</button>
+          <div class="game-tip">操作：${entry.tip}</div>
+        </div>
+        ${mechanicTemplateFor(entry) ? '<button class="mechanic-create">二創</button>' : ''}
+      </div>
+      <div class="overlay">
+        <div class="overlay-main">
           <h2>${entry.title.split('：')[0]}</h2>
-          <p>${entry.tip}</p>
           <div class="ov-btns">
             <button class="go">開始</button>
-            ${mechanicTemplateFor(entry) ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}
           </div>
         </div>
       </div>
@@ -1230,14 +1244,11 @@ function makePost(entry, opts) {
       if (isBest) { bests[gid] = score; submitScore(gid, score); }
       bestChip.style.display = ''; bsEl.textContent = bests[gid] || 0;
       overlay.innerHTML = `
-        <div class="overlay-card">
-          <button class="author-link">${entry.author}</button>
+        <div class="overlay-main">
           <div class="final">${score}</div>
           ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
-          <p>再挑戰一次，或往上滑玩下一款</p>
           <div class="ov-btns">
             <button class="go">再玩一次</button>
-            ${mechanicTemplate ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}
             <button class="share-score">分享成績</button>
           </div>
         </div>`;
@@ -1266,24 +1277,26 @@ function makePost(entry, opts) {
   function wireStart(root) {
     const go = root.querySelector('.go');
     if (go) go.addEventListener('click', e => { e.stopPropagation(); begin(); });
-    const author = root.querySelector('.author-link');
-    if (author) author.addEventListener('click', e => {
-      e.stopPropagation();
-      stopPreview();
-      if (state.game && state.running) state.game.stop();
-      state.running = false;
-      stage.classList.remove('playing');
-      openAuthorProfile(entry.authorId, entry.authorName || entry.author);
-    });
-    const mechanic = root.querySelector('.mechanic-create');
-    if (mechanic) mechanic.addEventListener('click', e => {
-      e.stopPropagation();
-      if (state.game && state.running) state.game.stop();
-      state.running = false;
-      openMechanicCreator(entry);
-    });
   }
   wireStart(overlay);
+  const authorButton = post.querySelector('.game-info .author-link');
+  if (authorButton) authorButton.addEventListener('click', e => {
+    e.stopPropagation();
+    stopPreview();
+    if (state.game && state.running) state.game.stop();
+    state.running = false;
+    stage.classList.remove('playing');
+    openAuthorProfile(entry.authorId, entry.authorName || entry.author);
+  });
+  const mechanicButton = post.querySelector('.game-info .mechanic-create');
+  if (mechanicButton) mechanicButton.addEventListener('click', e => {
+    e.stopPropagation();
+    stopPreview();
+    if (state.game && state.running) state.game.stop();
+    state.running = false;
+    stage.classList.remove('playing');
+    openMechanicCreator(entry);
+  });
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
@@ -1365,10 +1378,8 @@ function makePost(entry, opts) {
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
       overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="overlay-card"><div class="pv-tag">遊戲實況預覽</div>` +
-        `<button class="author-link">${entry.author}</button><h2>${entry.title.split('：')[0]}</h2><p>${entry.tip}</p>` +
-        `<div class="ov-btns"><button class="go">開始</button>` +
-        `${mechanicTemplate ? '<button class="mechanic-create">用這個玩法創作</button>' : ''}</div></div>`;
+      overlay.innerHTML = `<div class="overlay-main"><h2>${entry.title.split('：')[0]}</h2>` +
+        `<div class="ov-btns"><button class="go">開始</button></div></div>`;
       wireStart(overlay);
     }
   };
