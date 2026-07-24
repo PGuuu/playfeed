@@ -275,11 +275,14 @@ function sandboxDocument(channel, source, duration) {
   const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'">
-<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#ece9ff}canvas{display:block;width:100%;height:100%;object-fit:contain}</style>
+<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}canvas{display:block;width:100%;height:100%}</style>
 </head><body><canvas width="400" height="700"></canvas><script>
 (()=>{'use strict';
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
-const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3);
+const ctx=canvas.getContext('2d');
+function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),pw=Math.round(w*DPR),ph=Math.round(h*DPR);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;ctx.setTransform(pw/400,0,0,ph/700,0,0)}}
+fitCanvas();
 let definition=null,game=null,ended=true,score=0,hardTimer=null,autoTimer=null;
 const timers=new Set(),intervals=new Set(),rafs=new Set();
 const real={
@@ -302,7 +305,7 @@ function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of
 function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();ended=true}
 function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+Math.min(2,Math.max(.01,finite(dur))))}catch(e){}}
 const env={W:400,H:700,ctx,beep,sprite:()=>false,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
-function start(auto){stop();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
+function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setInterval(()=>{if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)},380+Math.random()*240)}
 addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start(false);else if(m.type==='auto')start(true);else if(m.type==='stop')stop();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});

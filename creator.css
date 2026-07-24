@@ -1,5 +1,5 @@
 #creator {
-  position: fixed; inset: 0; z-index: 64; background: #352a82;
+  position: fixed; inset: 0; z-index: 64; background: #fff;
   display: flex; flex-direction: column; transform: translateY(100%);
   transition: transform .28s;
 }
@@ -51,7 +51,7 @@
 .creator-primary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 22px 0 14px; }
 .creator-primary button, .creator-action {
   border: 0; border-radius: 16px; min-height: 58px; padding: 12px 16px;
-  color: #fff; background: #4b46b8; font: 700 15px inherit; cursor: pointer;
+  color: #fff; background: #0095f6; font: 700 15px inherit; cursor: pointer;
 }
 .creator-primary button:last-child { background: #272735; }
 #creatorSource {
@@ -59,7 +59,7 @@
   border-radius: 16px; outline: none; background: rgba(23,17,69,.46); color: #f8f7ff;
   padding: 16px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
-#creatorSource:focus { border-color: #6f68df; box-shadow: 0 0 0 3px rgba(111,104,223,.15); }
+#creatorSource:focus { border-color: #0095f6; box-shadow: 0 0 0 3px rgba(0,149,246,.14); }
 .creator-source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .creator-paste, .creator-clear { margin-top: 0; }
 .creator-clear { color: #ff9ab4; background: rgba(224,53,95,.12); }
@@ -93,7 +93,7 @@
   display: block; border: 1px solid transparent; border-radius: 12px;
   background: #20202a; padding: 9px 12px;
 }
-.creator-direct-fields label:focus-within { border-color: #6f68df; }
+.creator-direct-fields label:focus-within { border-color: #0095f6; }
 .creator-direct-fields small { display: block; color: #808094; margin-bottom: 3px; }
 .creator-direct-fields input, .creator-direct-fields textarea {
   width: 100%; border: 0; outline: 0; resize: none; background: transparent; color: #fff;
@@ -115,7 +115,7 @@
   padding: 10px 16px; font: 600 13px inherit; cursor: pointer;
 }
 .creator-buttons .creator-play { flex: 1; background: #fff; color: #111; }
-.creator-buttons .publish { background: #4b46b8; }
+.creator-buttons .publish { background: #0095f6; }
 .creator-buttons button:disabled { opacity: .42; cursor: default; }
 .creator-play-state { color: #85859a; font-size: 12px; margin-top: 9px; }
 .creator-play-state.done { color: #70dc8c; }
@@ -182,4 +182,28 @@
   .creator-scroll { padding-left: 14px; padding-right: 14px; }
   .creator-step { grid-template-columns: 34px minmax(0,1fr); gap: 10px; padding: 15px 13px; }
   .creator-step-no { width: 30px; height: 30px; font-size: 13px; }
+}
+
+/* Instagram 式中性創作介面 */
+#creator { background: #fff; color: #262626; }
+.creator-head { border-bottom-color: #dbdbdb; }
+.creator-head button, .creator-ghost { background: #efefef; color: #262626; }
+.creator-intro p, .creator-step p, .creator-mechanic-context p { color: #737373; }
+.creator-step, .creator-card { background: #fff; border-color: #dbdbdb; }
+#creatorSource, .creator-edit input, .creator-edit textarea {
+  background: #fafafa; color: #262626; border-color: #dbdbdb;
+}
+.creator-meta div { background: #fafafa; border: 1px solid #efefef; }
+.creator-meta small, .creator-play-state, .creator-preview-note { color: #737373; }
+.creator-primary button:last-child, .creator-buttons button { background: #efefef; color: #262626; }
+.creator-primary button { background: #0095f6; color: #fff; }
+.creator-primary button:last-child { background: #efefef; color: #262626; }
+.creator-buttons .creator-play { background: #262626; color: #fff; }
+.creator-buttons .publish, .creator-submit { background: #0095f6; color: #fff; }
+.creator-preview, .creator-playtest, .creator-playtest-stage { background: #fff; }
+.creator-code { background: #fafafa; color: #262626; border: 1px solid #dbdbdb; }
+.creator-edit summary { color: #737373; }
+.creator-playtest-stage { width: 100vw; height: 100dvh; max-width: none; }
+@media (orientation: landscape) {
+  .creator-playtest-stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
 }

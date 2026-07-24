@@ -8,17 +8,25 @@
 <link rel="stylesheet" href="creator.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-  html, body { height: 100%; background: #5547c9; color: #f8f7ff; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
+  html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none; }
   html.booting, html.booting body { background: #fff; }
   #bootSplash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
-    background: #fff; color: #201a3d; opacity: 1; visibility: visible;
-    transition: opacity .32s ease, visibility .32s ease; }
-  #bootSplash.done { opacity: 0; visibility: hidden; pointer-events: none; }
+    background: #fff; color: #262626; opacity: 1; visibility: visible; }
+  #bootSplash.done { pointer-events: none; animation: bootSplashExit .72s ease forwards; }
+  #bootSplash.done .boot-brand { animation: bootBrandSwipe .62s cubic-bezier(.55,.02,.36,1) forwards; }
+  @keyframes bootBrandSwipe {
+    0% { transform: translateY(-2vh); opacity: 1; }
+    100% { transform: translateY(-115vh); opacity: .35; }
+  }
+  @keyframes bootSplashExit {
+    0%, 68% { opacity: 1; visibility: visible; }
+    100% { opacity: 0; visibility: hidden; }
+  }
   .boot-brand { text-align: center; transform: translateY(-2vh); }
   .boot-logo { font-size: clamp(38px, 11vw, 64px); line-height: 1; font-weight: 900;
-    letter-spacing: -.055em; color: #6757e8; }
-  .boot-tagline { margin-top: 12px; color: #8c86a8; font-size: 14px; font-weight: 650;
+    letter-spacing: -.055em; color: #262626; }
+  .boot-tagline { margin-top: 12px; color: #737373; font-size: 14px; font-weight: 650;
     letter-spacing: .12em; text-transform: lowercase; }
   /* 只有輸入框可以選字（留言、Email） */
   input, textarea { -webkit-user-select: text; user-select: text; }
@@ -28,10 +36,13 @@
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
     display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .stage { position: relative; width: 100%; height: 100%; max-width: 560px; }
+  .stage { position: relative; width: 100%; height: 100%; max-width: none; }
   /* touch-action:none：點擊/水平動作全給遊戲，絕不誤觸發捲動；
      上下滑改由 JS 偵測「明確的垂直滑動」才換遊戲（見 pointer 手勢處理） */
   canvas.game { width: 100%; height: 100%; display: block; touch-action: none; }
+  @media (orientation: landscape) {
+    .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
+  }
 
   .hud { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 120px;
     display: flex; align-items: center; gap: 10px; pointer-events: none; }
@@ -43,7 +54,7 @@
     border: none; cursor: pointer; color: #fff; font-family: inherit;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
     border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
-  #authChip.on { background: #4b46b8; }
+  #authChip.on { background: #0095f6; }
 
   .rail { position: absolute; right: 10px; bottom: 110px; display: flex; flex-direction: column;
     gap: 14px; align-items: center; z-index: 5; transition: opacity 0.28s; }
@@ -58,7 +69,7 @@
   .rail button.liked .ic { background: #43b968; }
   .rail button.disliked .ic { background: #d83e65; }
   .rail button.saved .ic { background: #d9a13b; }
-  .rail button.rmx .ic { background: rgba(120,90,220,0.55); }
+  .rail button.rmx .ic { background: rgba(0,149,246,.58); }
   /* 統一的線條圖示（取代原本的 emoji） */
   .ico { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -71,27 +82,27 @@
   .overlay.hidden { display: none; }
   .overlay-main { width: min(86%, 360px); display: flex; flex-direction: column; align-items: center;
     gap: 13px; padding: 16px 18px; border-radius: 20px; pointer-events: auto;
-    border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.18);
-    backdrop-filter: blur(5px); box-shadow: 0 10px 32px rgba(0,0,0,.12); }
+    border: 1px solid rgba(255,255,255,.82); background: rgba(255,255,255,.76);
+    backdrop-filter: blur(12px); box-shadow: 0 10px 32px rgba(0,0,0,.12); }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
-  .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
-    font: 700 13px inherit; padding: 1px 8px; opacity: .9; text-shadow: 0 1px 6px rgba(0,0,0,.55); }
+  .overlay-main .author-link { border: 0; background: transparent; color: #262626; cursor: pointer;
+    font: 700 13px inherit; padding: 1px 8px; opacity: .9; }
   .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
     display: flex; align-items: center; gap: 6px; }
   .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
     animation: pvblink 1.2s ease-in-out infinite; }
   @keyframes pvblink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .overlay .go { border: none; cursor: pointer; background: #fff; color: #111;
+  .overlay .go { border: none; cursor: pointer; background: #262626; color: #fff;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
   .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
   .overlay .ov-btns.initial-actions { flex-direction: column; width: min(100%, 190px); }
   .overlay .ov-btns.initial-actions button { width: 100%; }
-  .overlay .share-score { border: none; cursor: pointer; background: rgba(255,255,255,0.18);
-    color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
+  .overlay .share-score { border: none; cursor: pointer; background: #efefef;
+    color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .mechanic-create { border: 1px solid rgba(255,255,255,.5); cursor: pointer;
-    background: rgba(255,255,255,.14); color: #fff; font-family: inherit;
+  .overlay .mechanic-create { border: 1px solid #dbdbdb; cursor: pointer;
+    background: #fff; color: #262626; font-family: inherit;
     font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
@@ -122,7 +133,7 @@
   #cmtForm { display: flex; gap: 8px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
   #cmtInput { flex: 1; background: #23232d; border: none; border-radius: 999px; color: #fff;
     font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
-  #cmtSend { border: none; background: #4b46b8; color: #fff; font-family: inherit;
+  #cmtSend { border: none; background: #0095f6; color: #fff; font-family: inherit;
     font-weight: 600; font-size: 14px; border-radius: 999px; padding: 0 20px; cursor: pointer; }
 
   /* Remix 改造面板 */
@@ -170,7 +181,7 @@
   .slot .info .l { font-size: 14px; font-weight: 600; }
   .slot .info .h { font-size: 12px; color: #9a9ab0; margin-top: 2px; }
   .slot .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
-  .slot .up { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-size: 13px;
+  .slot .up { border: none; background: #0095f6; color: #fff; font-family: inherit; font-size: 13px;
     font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
   .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
     cursor: pointer; }
@@ -179,7 +190,7 @@
     border-top: 1px solid rgba(255,255,255,0.08); }
   #remixName { flex: 1; min-width: 0; background: #23232d; border: none; border-radius: 999px; color: #fff;
     font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
-  #remixSave { border: none; background: #6a5ad0; color: #fff; font-family: inherit; font-weight: 600;
+  #remixSave { border: none; background: #0095f6; color: #fff; font-family: inherit; font-weight: 600;
     font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
   #remixSave:disabled { opacity: 0.6; cursor: default; }
   /* 這個遊戲已有的改造版（橫向捲動的縮圖） */
@@ -191,7 +202,7 @@
   .verchip .sw { width: 54px; height: 54px; border-radius: 12px; flex: none; }
   .verchip .nm { font-size: 11px; color: #bcbcd0; max-width: 62px; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-  .verchip.cur .sw { outline: 2px solid #6a5ad0; outline-offset: 1px; }
+  .verchip.cur .sw { outline: 2px solid #0095f6; outline-offset: 1px; }
   .vhead { font-size: 12px; color: #9a9ab0; padding: 12px 18px 0; }
 
   /* 登入視窗（Phuze magic link） */
@@ -209,7 +220,7 @@
   .backdrop.open { display: block; }
 
   /* 個人頁（IG 風格全螢幕 + 分頁 + 縮圖網格 + 底部導覽） */
-  #profile { position: fixed; inset: 0; z-index: 65; background: linear-gradient(160deg, #5547c9, #342a80);
+  #profile { position: fixed; inset: 0; z-index: 65; background: #fff;
     display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #profile.open { transform: translateY(0); }
   .phead { display: flex; align-items: center; justify-content: space-between;
@@ -254,7 +265,7 @@
   #mainNav button.active { color: #fff; }
 
   /* 單一遊戲視圖：從個人頁／版本列表／分享連結進來的改造版，不混進首頁 */
-  #remixView { position: fixed; inset: 0; z-index: 67; background: linear-gradient(160deg, #5547c9, #342a80);
+  #remixView { position: fixed; inset: 0; z-index: 67; background: #fff;
     display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #remixView.open { transform: translateY(0); }
   #remixViewStage { flex: 1; position: relative; overflow: hidden; }
@@ -262,6 +273,41 @@
     border: none; cursor: pointer; color: #fff; font-family: inherit;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
     border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
+
+  /* Instagram 式中性介面：白底、黑字、淺灰分隔，顏色留給內容。 */
+  #profile, #remixView { background: #fff; color: #262626; }
+  .phead, .ptabs { background: #fff; border-color: #dbdbdb; }
+  .phead button { background: #efefef; color: #262626; }
+  .ptabs button { color: #737373; }
+  .ptabs button.active { color: #262626; border-bottom-color: #262626; }
+  #pgrid .gempty { color: #737373; }
+  #mainNav { background: rgba(255,255,255,.96); border-top-color: #dbdbdb; }
+  #mainNav button { color: #8e8e8e; }
+  #mainNav button.active { color: #262626; }
+  #authChip.on, #cmtSend, #remixSave, .slot .up { background: #0095f6; }
+  #login, #sheet { color: #262626; }
+  #login .box, #sheet, #remixSheet { background: #fff; color: #262626; }
+  #login p, #login .ghost { color: #737373; }
+  #cmtInput, #remixName { background: #fafafa; color: #262626; border: 1px solid #dbdbdb; }
+  #sheet .head, #remixSheet .head, #remixFoot { border-color: #dbdbdb; }
+  #sheet .head button, #remixSheet .head button { color: #262626; background: #efefef; }
+  .cmt, .slot { border-color: #efefef; }
+  .cmt .who, #remixSheet .note, .slot .info .h, .slot .rst, .verchip .nm { color: #737373; }
+  .remix-choice { background: #fff; color: #262626; border-color: #dbdbdb; }
+  .remix-choice span { color: #737373; }
+  .remix-choice.mechanic { border-color: #dbdbdb; background: #fafafa; }
+  .remix-choice.mechanic strong { color: #262626; }
+  .gcell .badge { background: #0095f6; }
+  .verchip.cur .sw { outline-color: #0095f6; }
+  #desktopPager { display: none; position: fixed; right: 24px; bottom: 92px; z-index: 54;
+    flex-direction: column; gap: 10px; }
+  #desktopPager button { width: 46px; height: 46px; border: 1px solid #dbdbdb; border-radius: 50%;
+    background: rgba(255,255,255,.94); color: #262626; box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    cursor: pointer; font: 700 23px/1 system-ui; }
+  #desktopPager button:hover { background: #f2f2f2; }
+  @media (orientation: landscape) and (pointer: fine) {
+    #desktopPager { display: flex; }
+  }
 </style>
 </head>
 <body>
@@ -302,6 +348,10 @@
   <button id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
   <button id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
   <button id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
+</div>
+<div id="desktopPager" aria-label="切換遊戲">
+  <button type="button" data-direction="-1" aria-label="上一個遊戲">↑</button>
+  <button type="button" data-direction="1" aria-label="下一個遊戲">↓</button>
 </div>
 
 <div id="remixView">
@@ -465,7 +515,7 @@ if (phuzeOn) {
       placeholder: 'name@example.com',
       sentTitle: '去收信！', sentSubtitle: '點信裡的連結，這個畫面會自動完成登入。'
     },
-    theme: { accentColor: '#4b46b8', accentHoverColor: '#5a54d6', accentTextColor: '#ffffff',
+    theme: { accentColor: '#0095f6', accentHoverColor: '#1877f2', accentTextColor: '#ffffff',
              borderRadius: '12px', borderColor: '#33334a' }
   });
   Phuze.mount('#phuze-widget');
@@ -1239,6 +1289,18 @@ document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
 /* ---------- Feed 引擎 ---------- */
 const feed = document.getElementById('feed');
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+document.getElementById('desktopPager').addEventListener('click', event => {
+  const button = event.target.closest('button[data-direction]');
+  if (!button) return;
+  const items = [...feed.querySelectorAll(':scope > .post')];
+  if (!items.length) return;
+  const current = items.reduce((best, item, index) => {
+    const distance = Math.abs(item.offsetTop - feed.scrollTop);
+    return distance < best.distance ? { index, distance } : best;
+  }, { index: 0, distance: Infinity }).index;
+  const next = Math.max(0, Math.min(items.length - 1, current + Number(button.dataset.direction)));
+  items[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 const posts = [];
 const bootStartedAt = performance.now();
 let bootFinished = false;
@@ -1289,6 +1351,7 @@ function makePost(entry, opts) {
     </div>`;
 
   const canvas = post.querySelector('canvas');
+  const renderDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
   const ctx = canvas.getContext('2d');
   const stage = post.querySelector('.stage');
   const overlay = post.querySelector('.overlay');
@@ -1317,6 +1380,16 @@ function makePost(entry, opts) {
 
   /* 實況預覽（attract mode）：滑到這格時，遊戲自己在標題後面隨機試玩 */
   const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
+  function fitCanvas() {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const pixelWidth = Math.round(rect.width * renderDpr);
+    const pixelHeight = Math.round(rect.height * renderDpr);
+    if (canvas.width === pixelWidth && canvas.height === pixelHeight) return;
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    ctx.setTransform(pixelWidth / W, 0, 0, pixelHeight / H, 0, 0);
+  }
   const pvEnv = {
     W, H, ctx, beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
@@ -1327,6 +1400,7 @@ function makePost(entry, opts) {
   };
   function startPreview() {
     if (pv.on || state.running) return;
+    fitCanvas();
     pv.on = true;
     if (!pv.game) pv.game = entry.base.create(pvEnv);
     pv.game.start();
@@ -1398,6 +1472,7 @@ function makePost(entry, opts) {
 
   function begin() {
     stopPreview();
+    fitCanvas();
     ensureAudio();
     if (!state.game) state.game = entry.base.create(env);
     scEl.textContent = '0';
