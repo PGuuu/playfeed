@@ -19,26 +19,19 @@
     overflow: hidden; isolation: isolate; background: #fff; color: #fff; opacity: 1; visibility: visible; }
   #bootSplash.done { pointer-events: none; animation: bootSplashExit .9s ease forwards; }
   .boot-color-fade { position: absolute; inset: 0; z-index: 0; background: #fff; }
-  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 2400vh; display: grid;
-    grid-auto-rows: 100vh; animation: bootColorSwipe 2.65s both; will-change: transform, filter;
-    transform-origin: center; }
+  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 1200vh; display: grid;
+    grid-auto-rows: 100vh; animation: bootColorSwipe 4.8s linear infinite; will-change: transform; }
   .boot-color-panel:nth-child(6n+1) { background: #ff2d6f; }
   .boot-color-panel:nth-child(6n+2) { background: #ff8a00; }
   .boot-color-panel:nth-child(6n+3) { background: #ffd60a; }
   .boot-color-panel:nth-child(6n+4) { background: #00d7c8; }
   .boot-color-panel:nth-child(6n+5) { background: #2878ff; }
   .boot-color-panel:nth-child(6n+6) { background: #8d36ff; }
-  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .58s ease-out forwards; }
-  #bootSplash.done .boot-brand { animation: bootBrandFade .58s ease-out forwards; }
+  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .68s ease forwards; }
+  #bootSplash.done .boot-brand { animation: bootBrandFade .72s ease forwards; }
   @keyframes bootColorSwipe {
-    0% { transform: translateY(0) scaleY(1); filter: blur(0); }
-    18% { transform: translateY(-22vh) scaleY(1); filter: blur(0); }
-    38% { transform: translateY(-105vh) scaleY(1); filter: blur(0); }
-    57% { transform: translateY(-330vh) scaleY(1.005); filter: blur(.4px); }
-    72% { transform: translateY(-720vh) scaleY(1.015); filter: blur(1.5px); }
-    84% { transform: translateY(-1210vh) scaleY(1.035); filter: blur(4px); }
-    93% { transform: translateY(-1740vh) scaleY(1.07); filter: blur(8px) brightness(1.08); }
-    100% { transform: translateY(-2200vh) scaleY(1.12); filter: blur(14px) brightness(1.18); }
+    from { transform: translateY(0); }
+    to { transform: translateY(-600vh); }
   }
   @keyframes bootColorsToWhite {
     0%, 22% { opacity: 1; }
@@ -447,12 +440,6 @@
 <div id="bootSplash" role="status" aria-label="PlayFeed 載入中">
   <div class="boot-color-fade" aria-hidden="true">
     <div class="boot-color-stream">
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
       <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
@@ -2008,7 +1995,7 @@ function finishBoot() {
   if (bootFinished) return;
   bootFinished = true;
   if (!location.hash) feed.scrollTop = 0;
-  const delay = Math.max(0, 2720 - (performance.now() - bootStartedAt));
+  const delay = Math.max(0, 1650 - (performance.now() - bootStartedAt));
   setTimeout(() => {
     document.documentElement.classList.remove('booting');
     document.getElementById('bootSplash').classList.add('done');
