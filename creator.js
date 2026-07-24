@@ -369,7 +369,7 @@ function buildCreatorUI() {
   const root = el('section');
   root.id = 'creator';
   root.innerHTML = `
-    <header class="creator-head"><b>創作 PlayFeed</b><button id="creatorClose">完成</button></header>
+    <header class="creator-head"><b>創作 PlayFeed</b><button id="creatorClose">取消</button></header>
     <div class="creator-scroll"><main class="creator-wrap">
       <section class="creator-intro">
         <h1 id="creatorIntroTitle">五個步驟，<br>發布一款遊戲。</h1>
@@ -940,6 +940,10 @@ async function publishDraft() {
   }
 }
 
+function publishedAuthorText(authorId, name) {
+  return host.user && authorId === host.user.id ? '@我' : `@${name || '玩家'}`;
+}
+
 function normalisePublished(row) {
   const entry = {
     id: `game:${row.slug}`,
@@ -952,7 +956,7 @@ function normalisePublished(row) {
     description: row.description,
     tip: row.tip,
     bg: row.bg,
-    author: `@${row.author_name || '玩家'}`,
+    author: publishedAuthorText(row.author_id, row.author_name),
     authorId: row.author_id,
     authorName: row.author_name || '玩家',
     duration: row.duration,
@@ -963,6 +967,15 @@ function normalisePublished(row) {
   };
   entry.mechanicContext = publishedMechanicContext(entry);
   return entry;
+}
+
+function refreshPublishedAuthors() {
+  for (const post of publishedPosts) {
+    post.entry.author = publishedAuthorText(post.entry.authorId, post.entry.authorName);
+    post.el.querySelectorAll('.author-link').forEach(button => {
+      button.textContent = post.entry.author;
+    });
+  }
 }
 
 function publishedMechanicContext(entry) {
@@ -1138,21 +1151,24 @@ function addSandboxPost(row) {
     return [(event.clientX - r.left) / r.width * 400, (event.clientY - r.top) / r.height * 700];
   }
   inputLayer.addEventListener('pointerdown', event => {
-    if (!playing || !runtime) return;
     try { inputLayer.setPointerCapture(event.pointerId); } catch (_) {}
     const [x, y] = logical(event);
-    gesture = { id: event.pointerId, x0: event.clientX, y0: event.clientY, x, y, claimed: false, swiped: false };
-    runtime.send('input', { inputType: 'down', x, y });
+    const gaveDown = !!(playing && runtime);
+    gesture = {
+      id: event.pointerId, x0: event.clientX, y0: event.clientY,
+      x, y, claimed: false, swiped: false, gaveDown
+    };
+    if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
   });
   inputLayer.addEventListener('pointermove', event => {
-    if (!gesture || gesture.id !== event.pointerId || !runtime) return;
+    if (!gesture || gesture.id !== event.pointerId) return;
     const dx = event.clientX - gesture.x0, dy = event.clientY - gesture.y0;
     const [x, y] = logical(event); gesture.x = x; gesture.y = y;
     if (!gesture.claimed && !gesture.swiped) {
       if (Math.abs(dx) > 12 && Math.abs(dx) >= Math.abs(dy)) gesture.claimed = true;
       else if (Math.abs(dy) > 46 && Math.abs(dy) > Math.abs(dx) * 1.15) {
         gesture.swiped = true;
-        runtime.send('input', { inputType: 'cancel', x, y });
+        if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'cancel', x, y });
         const all = [...host.feed.querySelectorAll(':scope > .post')];
         const index = all.indexOf(post);
         const next = (index + (dy < 0 ? 1 : -1) + all.length) % all.length;
@@ -1160,12 +1176,14 @@ function addSandboxPost(row) {
         return;
       }
     }
-    if (!gesture.swiped) runtime.send('input', { inputType: 'move', x, y });
+    if (!gesture.swiped && gesture.gaveDown && runtime) runtime.send('input', { inputType: 'move', x, y });
   });
   const end = (event, cancelled) => {
-    if (!gesture || gesture.id !== event.pointerId || !runtime) return;
+    if (!gesture || gesture.id !== event.pointerId) return;
     const [x, y] = logical(event);
-    if (!gesture.swiped) runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
+    if (!gesture.swiped && gesture.gaveDown && runtime) {
+      runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
+    }
     gesture = null;
   };
   inputLayer.addEventListener('pointerup', event => end(event, false));
@@ -1246,6 +1264,10 @@ async function loadPublishedGames() {
     seenSlugs.add(row.slug);
     rows.push(row);
   }
+  const ownerRow = rows
+    .filter(row => row.author_id)
+    .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))[0];
+  if (ownerRow) host.registerOfficialOwner(ownerRow.author_id, ownerRow.author_name || '我');
   for (const row of rows) {
     publishedRows.push(row);
   }
@@ -1307,6 +1329,7 @@ window.PlayFeedCreator = {
   close: closeCreator,
   validateScript,
   captureThumbnail: capturePublishedThumbnail,
+  refreshAuthors: refreshPublishedAuthors,
   refreshInteractions: refreshPublishedInteractions,
   entryFor(id) {
     const slug = id.startsWith('game:') ? id.slice(5) : id;
