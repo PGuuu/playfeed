@@ -1379,11 +1379,11 @@ function goToPublishedHash() {
 }
 
 const publishedThumbnailJobs = new Map();
-function capturePublishedThumbnail(id) {
+function capturePublishedThumbnail(id, force = false) {
   const slug = id.startsWith('game:') ? id.slice(5) : id;
   const row = publishedRows.find(item => item.slug === slug);
   if (!row) return Promise.resolve(null);
-  if (row.screenshot) return Promise.resolve(row.screenshot);
+  if (row.screenshot && !force) return Promise.resolve(row.screenshot);
   if (publishedThumbnailJobs.has(slug)) return publishedThumbnailJobs.get(slug);
   const job = new Promise(resolve => {
     const holder = document.createElement('div');
@@ -1402,14 +1402,14 @@ function capturePublishedThumbnail(id) {
     runtime = createRuntime(holder, row.script, row.duration, msg => {
       if (msg.type === 'ready') {
         runtime.send('auto');
-        setTimeout(() => runtime?.send('capture'), 900);
+        setTimeout(() => runtime?.send('capture'), 1500);
       } else if (msg.type === 'capture') {
         finish(msg.image);
       } else if (msg.type === 'runtime-error') {
         finish(null);
       }
     });
-    setTimeout(() => finish(null), 2800);
+    setTimeout(() => finish(null), 3800);
   });
   publishedThumbnailJobs.set(slug, job);
   return job;

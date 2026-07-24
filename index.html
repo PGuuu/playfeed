@@ -87,11 +87,12 @@
   .overlay.hidden { display: none; }
   .overlay-main { width: min(86%, 360px); display: flex; flex-direction: column; align-items: center;
     gap: 13px; padding: 16px 18px; border-radius: 20px; pointer-events: auto;
-    border: 1px solid rgba(255,255,255,.82); background: rgba(255,255,255,.76);
-    backdrop-filter: blur(12px); box-shadow: 0 10px 32px rgba(0,0,0,.12); }
+    color: #fff; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.16);
+    backdrop-filter: blur(3px); box-shadow: 0 10px 32px rgba(0,0,0,.12);
+    text-shadow: 0 1px 7px rgba(0,0,0,.48); }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
-  .overlay-main .author-link { border: 0; background: transparent; color: #262626; cursor: pointer;
+  .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
     font: 700 13px inherit; padding: 1px 8px; opacity: .9; }
   .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
     display: flex; align-items: center; gap: 6px; }
@@ -106,8 +107,8 @@
   .overlay .share-score { border: none; cursor: pointer; background: #efefef;
     color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
     border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .mechanic-create { border: 1px solid #dbdbdb; cursor: pointer;
-    background: #fff; color: #262626; font-family: inherit;
+  .overlay .mechanic-create { border: 1px solid rgba(255,255,255,.55); cursor: pointer;
+    background: rgba(255,255,255,.16); color: #fff; font-family: inherit;
     font-size: 15px; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
   .overlay .final { font-size: 44px; font-weight: 700; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
@@ -228,6 +229,23 @@
   #profile { position: fixed; inset: 0; z-index: 65; background: #fff;
     display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
   #profile.open { transform: translateY(0); }
+  #notifications { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
+    display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s; }
+  #notifications.open { transform: translateY(0); }
+  #notificationList { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
+  .notification-empty { padding: 64px 24px; color: #737373; text-align: center; font-size: 14px; }
+  .notification-item { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
+    align-items: center; padding: 13px 18px; border-bottom: 1px solid #efefef; cursor: pointer; }
+  .notification-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%;
+    background: #f2f2f2; color: #262626; font-size: 19px; }
+  .notification-text { min-width: 0; font-size: 13px; line-height: 1.45; }
+  .notification-text b { font-weight: 750; }
+  .notification-time { display: block; margin-top: 3px; color: #8e8e8e; font-size: 11px; }
+  #navNotificationsMain { position: relative; }
+  #notificationBadge { position: absolute; top: 4px; left: 50%; margin-left: 7px; min-width: 16px; height: 16px;
+    padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: #ed4956;
+    color: #fff; font: 700 10px/1 system-ui; }
+  #notificationBadge[hidden] { display: none; }
   .phead { display: flex; align-items: center; justify-content: space-between;
     padding: max(14px, env(safe-area-inset-top)) 18px 12px; }
   .phead b { font-size: 17px; font-weight: 700; }
@@ -263,14 +281,15 @@
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
-  .gcell { position: relative; aspect-ratio: 3 / 4; overflow: hidden; cursor: pointer;
+  .gcell { position: relative; aspect-ratio: 4 / 7; overflow: hidden; cursor: pointer;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero { width: 100%; height: 100%; font-size: 46px; line-height: 1;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
-  .gcell .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 7px 5px;
-    background: linear-gradient(0deg, rgba(0,0,0,0.75), transparent);
-    font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gcell .cap { position: absolute; left: 50%; top: 50%; max-width: 88%; transform: translate(-50%,-50%);
+    padding: 6px 9px; border-radius: 9px; background: rgba(0,0,0,.38); backdrop-filter: blur(3px);
+    font-size: 11px; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; text-shadow: 0 1px 5px rgba(0,0,0,.55); }
   .gcell .badge { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700;
     background: rgba(106,90,208,0.9); color: #fff; padding: 2px 7px; border-radius: 999px; }
   @media (max-width: 520px) {
@@ -396,9 +415,15 @@
   <div id="pgrid"></div>
 </div>
 
+<div id="notifications">
+  <div class="phead"><b>通知</b><button id="notificationReadAll">全部已讀</button></div>
+  <div id="notificationList"></div>
+</div>
+
 <div id="mainNav">
   <button id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
   <button id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
+  <button id="navNotificationsMain"><span class="ni" data-ico="bell"></span><span id="notificationBadge" hidden></span>通知</button>
   <button id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
 </div>
 <div id="desktopPager" aria-label="切換遊戲">
@@ -501,6 +526,7 @@ const ICONS = {
   save:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
   remix:   '<svg class="ico" viewBox="0 0 24 24"><path d="M4.5 19.5 14.5 9.5"/><path d="M18 2.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor" stroke="none"/></svg>',
   share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
+  bell:    '<svg class="ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
   home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
   user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
   create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>'
@@ -523,6 +549,7 @@ function setUser(u) {
       window.PlayFeedCreator.refreshAuthors();
       window.PlayFeedCreator.syncOfficialGames();
     }
+    if (u) setTimeout(() => loadNotifications(false), 900);
   }, 0);
 }
 function currentPhuzeToken(session) {
@@ -605,23 +632,32 @@ function restoreNavVisibility() { setNavVisible(!document.getElementById('remixV
 function setMainNavActive(tab) {
   document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
   document.getElementById('navCreateMain').classList.toggle('active', tab === 'create');
+  document.getElementById('navNotificationsMain').classList.toggle('active', tab === 'notifications');
   document.getElementById('navMeMain').classList.toggle('active', tab === 'me');
 }
 document.getElementById('navHomeMain').addEventListener('click', () => {
   if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeProfile(); closeStandalone();
+  closeProfile(); closeNotifications(); closeStandalone();
 });
 document.getElementById('navCreateMain').addEventListener('click', () => {
-  closeProfile(); closeStandalone();
+  closeProfile(); closeNotifications(); closeStandalone();
   if (window.PlayFeedCreator) window.PlayFeedCreator.open();
   else toast('創作工具載入中，請再按一次');
 });
 document.getElementById('navMeMain').addEventListener('click', () => {
   if (window.PlayFeedCreator) window.PlayFeedCreator.close();
+  closeNotifications();
   if (user) return openProfile();
   if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
   pendingAction = () => openProfile();
   openLogin();
+});
+document.getElementById('navNotificationsMain').addEventListener('click', () => {
+  if (!user) {
+    pendingAction = openNotifications;
+    return openLogin();
+  }
+  openNotifications();
 });
 
 /* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
@@ -756,6 +792,125 @@ document.getElementById('profileEditor').addEventListener('submit', async event 
     toast('儲存失敗：' + error.message);
   }
 });
+
+/* ---------- 通知：追蹤、按讚、儲存 ---------- */
+const notificationsBox = document.getElementById('notifications');
+let notificationEvents = [];
+function ownedNotificationGames() {
+  if (!user) return new Map();
+  const created = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
+  const remixed = remixRows.filter(row => row.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
+  return new Map([...created, ...remixed].map(entry => [entry.id, entry]));
+}
+function notificationTime(value) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return '剛剛';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分鐘前`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小時前`;
+  if (seconds < 86400 * 7) return `${Math.floor(seconds / 86400)} 天前`;
+  return new Date(value).toLocaleDateString('zh-TW');
+}
+function renderNotifications(markRead = false) {
+  const list = document.getElementById('notificationList');
+  list.innerHTML = '';
+  if (!notificationEvents.length) {
+    const empty = document.createElement('div');
+    empty.className = 'notification-empty';
+    empty.textContent = '還沒有新通知。';
+    list.appendChild(empty);
+  }
+  for (const event of notificationEvents) {
+    const item = document.createElement('div');
+    item.className = 'notification-item';
+    const icon = document.createElement('div');
+    icon.className = 'notification-icon';
+    icon.textContent = event.type === 'follow' ? '＋' : (event.type === 'like' ? '♡' : '▱');
+    const text = document.createElement('div');
+    text.className = 'notification-text';
+    const actor = document.createElement('b');
+    actor.textContent = event.actorName;
+    const message = document.createTextNode(event.type === 'follow'
+      ? ' 開始追蹤你'
+      : ` ${event.type === 'like' ? '按讚了' : '儲存了'}《${event.gameTitle}》`);
+    const time = document.createElement('span');
+    time.className = 'notification-time';
+    time.textContent = notificationTime(event.createdAt);
+    text.append(actor, message, time);
+    item.append(icon, text);
+    item.addEventListener('click', () => {
+      if (event.gameId) {
+        closeNotifications();
+        openStandalone(event.gameId);
+      } else if (event.actorId) {
+        closeNotifications();
+        openAuthorProfile(event.actorId, event.actorName);
+      }
+    });
+    list.appendChild(item);
+  }
+  const readKey = user ? `playfeed-notifications-read:${user.id}` : '';
+  const previousRead = Number(localStorage.getItem(readKey) || 0);
+  const unread = notificationEvents.filter(event => new Date(event.createdAt).getTime() > previousRead).length;
+  const badge = document.getElementById('notificationBadge');
+  badge.hidden = markRead || unread === 0;
+  badge.textContent = unread > 99 ? '99+' : String(unread);
+  if (markRead && readKey) localStorage.setItem(readKey, String(Date.now()));
+}
+async function loadNotifications(markRead = false) {
+  if (!online || !user) return;
+  const owned = ownedNotificationGames();
+  const [likesResult, savesResult, profilesResult] = await Promise.all([
+    db.from('likes').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
+    db.from('saves').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
+    db.from('comments').select('game_id,user_id,name,body,created_at').order('created_at', { ascending: false }).limit(500),
+  ]);
+  const actorNames = {};
+  for (const row of profilesResult.data || []) {
+    if (!row.game_id.startsWith(PROFILE_PREFIX)) continue;
+    try {
+      const stored = JSON.parse(row.body);
+      actorNames[row.user_id] = stored.display_name || stored.d || row.name || '玩家';
+    } catch (_) {
+      actorNames[row.user_id] = row.name || '玩家';
+    }
+  }
+  const events = [];
+  for (const row of likesResult.data || []) {
+    if (row.user_id === user.id) continue;
+    if (row.game_id === FOLLOW_PREFIX + user.id) {
+      events.push({ type: 'follow', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
+        createdAt: row.created_at });
+      continue;
+    }
+    if (row.game_id.startsWith(DISLIKE_PREFIX) || row.game_id.startsWith(FOLLOW_PREFIX)) continue;
+    const game = owned.get(row.game_id);
+    if (game) events.push({ type: 'like', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
+      gameId: row.game_id, gameTitle: game.title.split('：')[0], createdAt: row.created_at });
+  }
+  for (const row of savesResult.data || []) {
+    if (row.user_id === user.id) continue;
+    const game = owned.get(row.game_id);
+    if (game) events.push({ type: 'save', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
+      gameId: row.game_id, gameTitle: game.title.split('：')[0], createdAt: row.created_at });
+  }
+  notificationEvents = events.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 150);
+  renderNotifications(markRead);
+}
+function openNotifications() {
+  if (!user) return openLogin();
+  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
+  closeProfile();
+  closeStandalone();
+  notificationsBox.classList.add('open');
+  setMainNavActive('notifications');
+  loadNotifications(true);
+}
+function closeNotifications() {
+  notificationsBox.classList.remove('open');
+  if (!profileBox.classList.contains('open')) setMainNavActive('home');
+}
+document.getElementById('notificationReadAll').addEventListener('click', () => renderNotifications(true));
+
 function profileData(tab) {
   const ownerId = profileOwner && profileOwner.id;
   if (tab === 'created') {
@@ -819,7 +974,7 @@ function captureBuiltInThumbnail(entry) {
         if (Math.random() < .45) game.input('move', Math.max(20, Math.min(380, x + (Math.random() - .5) * 180)), y);
         setTimeout(() => { if (!finished) game.input('up', x, y); }, 80);
       }, 180);
-      captureTimer = setTimeout(finish, 900);
+      captureTimer = setTimeout(finish, 1500);
     } catch (_) {
       finish();
     }
@@ -828,8 +983,8 @@ function captureBuiltInThumbnail(entry) {
   return job;
 }
 function profileThumbnailFor(entry) {
+  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id, true);
   if (entry.screenshot) return Promise.resolve(entry.screenshot);
-  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id);
   return captureBuiltInThumbnail(entry);
 }
 function renderProfileGrid(tab) {
@@ -857,21 +1012,26 @@ function renderProfileGrid(tab) {
       image.src = source;
       hero.replaceChildren(image);
     };
-    if (e.screenshot) showPreview(e.screenshot);
-    else {
+    if (e.userScript) {
+      hero.textContent = '🎮';
+      profileThumbnailFor(e).then(showPreview);
+    } else if (e.screenshot) {
+      showPreview(e.screenshot);
+    } else {
       hero.textContent = '🎮';
       profileThumbnailFor(e).then(showPreview);
     }
     cell.appendChild(hero);
-    if (e.remixOf) {
-      const badge = document.createElement('span'); badge.className = 'badge';
-      badge.textContent = '改造'; cell.appendChild(badge);
-    }
     const cap = document.createElement('span'); cap.className = 'cap';
     cap.textContent = e.title.split('：')[0]; cell.appendChild(cap);
     cell.addEventListener('click', () => {
+      const returnContext = {
+        owner: profileOwner ? { ...profileOwner } : null,
+        tab,
+        scrollTop: grid.scrollTop,
+      };
       closeProfile();
-      openStandalone(e.id, items);
+      openStandalone(e.id, items, returnContext);
     });
     grid.appendChild(cell);
   }
@@ -1781,28 +1941,78 @@ const remixViewStage = document.getElementById('remixViewStage');
 let standalonePost = null;
 let standaloneSequence = [];
 let standaloneIndex = 0;
-function renderStandaloneEntry() {
+let standaloneTransitioning = false;
+let standaloneIncomingPost = null;
+let standaloneReturnContext = null;
+function mountStandaloneEntry(entry) {
+  const change = direction => navigateStandalone(direction);
+  let record;
+  if (entry.userScript && window.PlayFeedCreator) {
+    record = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, change);
+  } else {
+    record = makePost(entry, { standalone: true, onStandaloneSwipe: change });
+    remixViewStage.appendChild(record.el);
+    record.activate();
+  }
+  record?.refreshLike?.();
+  record?.refreshSave?.();
+  return record;
+}
+function renderStandaloneEntry(direction = 0) {
   const entry = standaloneSequence[standaloneIndex];
   if (!entry) return;
-  if (standalonePost) standalonePost.deactivate();
-  remixViewStage.innerHTML = '';
-  const change = direction => navigateStandalone(direction);
-  if (entry.userScript && window.PlayFeedCreator) {
-    standalonePost = window.PlayFeedCreator.mountStandalone(entry.id, remixViewStage, change);
-  } else {
-    standalonePost = makePost(entry, { standalone: true, onStandaloneSwipe: change });
-    remixViewStage.appendChild(standalonePost.el);
-    standalonePost.activate();
+  const previous = standalonePost;
+  if (!previous || !direction) {
+    previous?.deactivate();
+    remixViewStage.innerHTML = '';
+    standalonePost = mountStandaloneEntry(entry);
+    return;
   }
-  standalonePost?.refreshLike?.();
-  standalonePost?.refreshSave?.();
+  standaloneTransitioning = true;
+  const next = mountStandaloneEntry(entry);
+  if (!next) { standaloneTransitioning = false; return; }
+  standaloneIncomingPost = next;
+  const fromY = direction > 0 ? '100%' : '-100%';
+  const toY = direction > 0 ? '-100%' : '100%';
+  for (const element of [previous.el, next.el]) {
+    element.style.position = 'absolute';
+    element.style.inset = '0';
+    element.style.width = '100%';
+  }
+  const incoming = next.el.animate(
+    [{ transform: `translateY(${fromY})` }, { transform: 'translateY(0)' }],
+    { duration: 330, easing: 'cubic-bezier(.22,.72,.24,1)', fill: 'forwards' }
+  );
+  const outgoing = previous.el.animate(
+    [{ transform: 'translateY(0)' }, { transform: `translateY(${toY})` }],
+    { duration: 330, easing: 'cubic-bezier(.22,.72,.24,1)', fill: 'forwards' }
+  );
+  Promise.allSettled([incoming.finished, outgoing.finished]).then(() => {
+    if (!remixView.classList.contains('open')) {
+      next.deactivate();
+      next.el.remove();
+      standaloneIncomingPost = null;
+      standaloneTransitioning = false;
+      return;
+    }
+    previous.deactivate();
+    previous.el.remove();
+    next.el.getAnimations().forEach(animation => animation.cancel());
+    next.el.style.position = '';
+    next.el.style.inset = '';
+    next.el.style.width = '';
+    standalonePost = next;
+    standaloneIncomingPost = null;
+    standaloneTransitioning = false;
+  });
 }
 function navigateStandalone(direction) {
-  if (standaloneSequence.length <= 1) { closeStandalone(); return; }
+  if (standaloneTransitioning) return;
+  if (standaloneSequence.length <= 1) { returnFromStandalone(); return; }
   standaloneIndex = (standaloneIndex + direction + standaloneSequence.length) % standaloneSequence.length;
-  renderStandaloneEntry();
+  renderStandaloneEntry(direction);
 }
-function openStandalone(id, sequence = null) {
+function openStandalone(id, sequence = null, returnContext = null) {
   const entry = entryFor(id);
   if (!entry) { toast('找不到這個遊戲'); return; }
   closeProfile(); closeRemix(); closeSheet();
@@ -1810,6 +2020,7 @@ function openStandalone(id, sequence = null) {
     typeof item === 'string' ? entryFor(item) : item
   ).filter(Boolean);
   standaloneIndex = Math.max(0, standaloneSequence.findIndex(item => item.id === entry.id));
+  standaloneReturnContext = returnContext;
   remixView.classList.add('open');
   setNavVisible(false);
   renderStandaloneEntry();
@@ -1817,9 +2028,12 @@ function openStandalone(id, sequence = null) {
 function closeStandalone() {
   if (!remixView.classList.contains('open')) return;
   if (standalonePost) standalonePost.deactivate();
+  if (standaloneIncomingPost) standaloneIncomingPost.deactivate();
   remixView.classList.remove('open');
   setNavVisible(true);
   standaloneSequence = [];
+  standaloneTransitioning = false;
+  standaloneReturnContext = null;
   setTimeout(() => {
     if (!remixView.classList.contains('open')) {
       remixViewStage.innerHTML = '';
@@ -1827,7 +2041,18 @@ function closeStandalone() {
     }
   }, 300);
 }
-document.getElementById('remixViewBack').addEventListener('click', closeStandalone);
+function returnFromStandalone() {
+  const context = standaloneReturnContext;
+  closeStandalone();
+  if (context?.owner) {
+    setTimeout(() => {
+      profileTab = context.tab || 'created';
+      openProfile(context.owner);
+      requestAnimationFrame(() => { document.getElementById('pgrid').scrollTop = context.scrollTop || 0; });
+    }, 300);
+  }
+}
+document.getElementById('remixViewBack').addEventListener('click', returnFromStandalone);
 
 /* 分享連結直達指定遊戲：base 遊戲在首頁 feed 裡找；remix 用單一遊戲視圖打開
    （remix 資料是非同步載入，找不到就重試等它進來） */
