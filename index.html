@@ -8,7 +8,10 @@
 <link rel="stylesheet" href="creator.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-  :root { --main-nav-height: calc(58px + env(safe-area-inset-bottom)); }
+  :root {
+    --main-nav-height: calc(58px + env(safe-area-inset-bottom));
+    --game-top-height: calc(56px + env(safe-area-inset-top));
+  }
   html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none; }
   html.booting, html.booting body { background: #fff; }
@@ -36,13 +39,18 @@
   #feed::-webkit-scrollbar { display: none; }
 
   .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
-    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: none; }
   .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
-    margin-bottom: var(--main-nav-height); max-width: none; }
+    margin-bottom: var(--main-nav-height); max-width: none; background: inherit; }
   .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
   /* touch-action:none：點擊/水平動作全給遊戲，絕不誤觸發捲動；
      上下滑改由 JS 偵測「明確的垂直滑動」才換遊戲（見 pointer 手勢處理） */
-  canvas.game { width: 100%; height: 100%; display: block; touch-action: none; }
+  canvas.game { width: 100%; height: calc(100% - var(--game-top-height)); margin-top: var(--game-top-height);
+    display: block; touch-action: none; }
+  .sandbox-post .sandbox-frame-host,
+  .sandbox-post .sandbox-input {
+    position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
+  }
   @media (orientation: landscape) {
     .stage { width: min(100vw, calc((100dvh - var(--main-nav-height)) * 4 / 7));
       height: calc(100dvh - var(--main-nav-height)); }
@@ -81,7 +89,8 @@
   .rail button.liked .ico, .rail button.disliked .ico, .rail button.saved .ico { fill: currentColor; }
   .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
 
-  .overlay { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column;
+  .overlay { position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
+    z-index: 4; display: flex; flex-direction: column;
     align-items: center; justify-content: center; background: transparent;
     text-align: center; padding: 24px; pointer-events: none; }
   .overlay.hidden { display: none; }
@@ -145,8 +154,8 @@
   /* Remix 改造面板 */
   #remixSheet { position: fixed; inset: 0; z-index: 68;
     background: #101016; max-height: none;
-    display: flex; flex-direction: column; transform: translateX(105%); transition: transform 0.25s; }
-  #remixSheet.open { transform: translateX(0); }
+    display: none; flex-direction: column; }
+  #remixSheet.open { display: flex; }
   #remixSheet .head { display: flex; align-items: center; justify-content: space-between;
     padding: max(14px, env(safe-area-inset-top)) 18px 12px;
     border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -227,11 +236,11 @@
 
   /* 個人頁（IG 風格全螢幕 + 分頁 + 縮圖網格 + 底部導覽） */
   #profile { position: fixed; inset: 0; z-index: 65; background: #fff;
-    display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
-  #profile.open { transform: translateY(0); }
+    display: none; flex-direction: column; }
+  #profile.open { display: flex; }
   #notifications { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
-    display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s; }
-  #notifications.open { transform: translateY(0); }
+    display: none; flex-direction: column; }
+  #notifications.open { display: flex; }
   #notificationList { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
   .notification-empty { padding: 64px 24px; color: #737373; text-align: center; font-size: 14px; }
   .notification-item { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
@@ -260,7 +269,9 @@
   .profile-summary { padding: 12px 18px 14px; border-bottom: 1px solid #efefef; }
   .profile-summary-row { display: flex; align-items: center; gap: 22px; }
   #profileAvatar { width: 76px; height: 76px; flex: none; border-radius: 50%; display: grid;
-    place-items: center; background: #efefef; color: #262626; font-size: 28px; font-weight: 750; }
+    place-items: center; overflow: hidden; background: #efefef center/cover no-repeat; color: #262626;
+    font-size: 28px; font-weight: 750; }
+  #profileAvatar.editable { cursor: pointer; box-shadow: inset 0 0 0 2px #fff, 0 0 0 1px #dbdbdb; }
   .profile-stats { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); text-align: center; gap: 8px; }
   .profile-stat b { display: block; font-size: 17px; }
   .profile-stat span { display: block; margin-top: 2px; color: #737373; font-size: 12px; }
@@ -277,12 +288,14 @@
   .profile-editor-actions button { border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer;
     background: #efefef; color: #262626; font: 650 13px inherit; }
   .profile-editor-actions button[type="submit"] { background: #0095f6; color: #fff; }
-  #pgrid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr);
+  #pgrid { flex: 1; min-height: 0; overflow-y: auto; display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row;
     gap: 3px; padding: 3px; align-content: start; }
   #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
     font-size: 13px; padding: 48px 24px; line-height: 1.8; }
-  .gcell { position: relative; aspect-ratio: 4 / 7; overflow: hidden; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; }
+  .gcell { position: relative; width: 100%; min-width: 0; aspect-ratio: 4 / 7; overflow: hidden;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    contain: layout paint; }
   .gcell .hero { width: 100%; height: 100%; font-size: 46px; line-height: 1;
     display: flex; align-items: center; justify-content: center; }
   .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
@@ -300,8 +313,7 @@
   /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
   #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
     background: rgba(55,42,130,0.78); backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: env(safe-area-inset-bottom);
-    transition: transform 0.22s, opacity 0.22s; }
+    border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: env(safe-area-inset-bottom); }
   #mainNav.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
   #mainNav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
     font-size: 11px; cursor: pointer; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -310,8 +322,8 @@
 
   /* 單一遊戲視圖：從個人頁／版本列表／分享連結進來的改造版，不混進首頁 */
   #remixView { position: fixed; inset: 0; z-index: 67; background: #fff;
-    display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s; }
-  #remixView.open { transform: translateY(0); }
+    display: none; flex-direction: column; }
+  #remixView.open { display: flex; }
   #remixViewStage { flex: 1; position: relative; overflow: hidden; }
   #remixViewBack { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 10;
     border: none; cursor: pointer; color: #fff; font-family: inherit;
@@ -386,6 +398,7 @@
   <div class="profile-summary">
     <div class="profile-summary-row">
       <div id="profileAvatar">P</div>
+      <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
       <div class="profile-stats">
         <div class="profile-stat"><b id="profilePostCount">0</b><span>遊戲</span></div>
         <div class="profile-stat"><b id="profileFollowerCount">0</b><span>被追蹤</span></div>
@@ -511,6 +524,7 @@ const officialOwner = { id: 'playfeed-owner', name: '我' };
 const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
 const PROFILE_PREFIX = '__profile__:';
+const AVATAR_PREFIX = '__avatar__:';
 const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
 const followState = {}; // author_id -> { count, mine }
 const followingCounts = {}; // user_id -> following count
@@ -684,8 +698,12 @@ function renderProfileSummary() {
   if (!profileOwner) return;
   const detail = profileDetails[profileOwner.id] || {};
   const name = detail.display_name || profileOwner.name || '玩家';
+  const avatar = document.getElementById('profileAvatar');
   document.getElementById('profileWho').textContent = name;
-  document.getElementById('profileAvatar').textContent = [...name][0]?.toUpperCase() || 'P';
+  avatar.textContent = detail.avatar ? '' : ([...name][0]?.toUpperCase() || 'P');
+  avatar.style.backgroundImage = detail.avatar ? `url("${detail.avatar}")` : '';
+  avatar.classList.toggle('editable', ownProfileView());
+  avatar.title = ownProfileView() ? '更換頭貼' : '';
   document.getElementById('profilePostCount').textContent =
     profileData('created').length + profileData('remixed').length;
   document.getElementById('profileFollowerCount').textContent =
@@ -702,19 +720,32 @@ function renderProfileSummary() {
 }
 async function loadProfileDetail(ownerId) {
   if (!online || !ownerId) return;
-  const { data, error } = await db.from('comments').select('body,name,created_at')
-    .eq('game_id', PROFILE_PREFIX + ownerId).order('created_at', { ascending: false }).limit(1);
+  const [profileResult, avatarResult] = await Promise.all([
+    db.from('comments').select('body,name,created_at')
+      .eq('game_id', PROFILE_PREFIX + ownerId).order('created_at', { ascending: false }).limit(1),
+    db.from('comments').select('game_id,body')
+      .like('game_id', AVATAR_PREFIX + ownerId + ':%').order('game_id', { ascending: true }).limit(400),
+  ]);
+  const { data, error } = profileResult;
+  const existing = profileDetails[ownerId] || {};
   if (!error && data?.[0]) {
     try {
       const stored = JSON.parse(data[0].body);
       profileDetails[ownerId] = {
+        ...existing,
         display_name: stored.display_name || stored.d || data[0].name || '玩家',
         bio: stored.bio || stored.b || '',
         website: stored.website || stored.w || '',
       };
-      if (profileOwner?.id === ownerId) renderProfileSummary();
     } catch (_) {}
   }
+  if (!avatarResult.error && avatarResult.data?.length) {
+    const image = avatarResult.data.map(row => row.body || '').join('');
+    if (/^data:image\/(?:png|jpeg|webp);base64,/i.test(image)) {
+      profileDetails[ownerId] = { ...(profileDetails[ownerId] || existing), avatar: image };
+    }
+  }
+  if (profileOwner?.id === ownerId) renderProfileSummary();
 }
 function configureProfileTabs() {
   const own = ownProfileView();
@@ -784,12 +815,62 @@ document.getElementById('profileEditor').addEventListener('submit', async event 
   if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
   try {
     const result = await secureWrite('profile', { displayName: displayNameValue, bio, website });
-    profileDetails[user.id] = result.profile;
+    profileDetails[user.id] = { ...(profileDetails[user.id] || {}), ...result.profile };
     profileOwner.name = result.profile.display_name || profileOwner.name;
     renderProfileSummary();
     toast('個人資料已儲存');
   } catch (error) {
     toast('儲存失敗：' + error.message);
+  }
+});
+document.getElementById('profileAvatar').addEventListener('click', () => {
+  if (ownProfileView()) document.getElementById('profileAvatarInput').click();
+});
+document.getElementById('profileAvatarInput').addEventListener('change', async event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file || !ownProfileView() || !requireLogin()) return;
+  if (!/^image\/(?:png|jpeg|webp)$/i.test(file.type) || file.size > 8_000_000) {
+    toast('請選擇 8MB 以下的 PNG、JPG 或 WebP 圖片');
+    return;
+  }
+  try {
+    const source = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = reject;
+        image.onload = () => resolve(image);
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    const side = Math.min(source.naturalWidth, source.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = 160;
+    canvas.height = 160;
+    const context = canvas.getContext('2d');
+    context.drawImage(
+      source,
+      (source.naturalWidth - side) / 2,
+      (source.naturalHeight - side) / 2,
+      side,
+      side,
+      0,
+      0,
+      160,
+      160
+    );
+    let image = canvas.toDataURL('image/webp', .78);
+    if (image.length > 75_000) image = canvas.toDataURL('image/jpeg', .62);
+    if (image.length > 75_000) throw new Error('圖片壓縮後仍然太大');
+    const result = await secureWrite('avatar', { image });
+    profileDetails[user.id] = { ...(profileDetails[user.id] || {}), avatar: result.avatar };
+    renderProfileSummary();
+    toast('頭貼已更新');
+  } catch (error) {
+    toast('頭貼上傳失敗：' + (error.message || '請換一張圖片'));
   }
 });
 
@@ -862,7 +943,8 @@ async function loadNotifications(markRead = false) {
   const [likesResult, savesResult, profilesResult] = await Promise.all([
     db.from('likes').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
     db.from('saves').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
-    db.from('comments').select('game_id,user_id,name,body,created_at').order('created_at', { ascending: false }).limit(500),
+    db.from('comments').select('game_id,user_id,name,body,created_at')
+      .like('game_id', PROFILE_PREFIX + '%').order('created_at', { ascending: false }).limit(500),
   ]);
   const actorNames = {};
   for (const row of profilesResult.data || []) {
@@ -983,13 +1065,23 @@ function captureBuiltInThumbnail(entry) {
   return job;
 }
 function profileThumbnailFor(entry) {
-  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id, true);
+  if (entry.userScript && window.PlayFeedCreator) return window.PlayFeedCreator.captureThumbnail(entry.id, false);
   if (entry.screenshot) return Promise.resolve(entry.screenshot);
   return captureBuiltInThumbnail(entry);
 }
+let profileGridObserver = null;
 function renderProfileGrid(tab) {
   const grid = document.getElementById('pgrid');
   const items = profileData(tab);
+  profileGridObserver?.disconnect();
+  const observer = new IntersectionObserver(entries => {
+    for (const observed of entries) {
+      if (!observed.isIntersecting) continue;
+      observer.unobserve(observed.target);
+      observed.target.loadPreview?.();
+    }
+  }, { root: grid, rootMargin: '220px 0px' });
+  profileGridObserver = observer;
   grid.innerHTML = '';
   if (!items.length) {
     const msg = { created: '還沒有自創遊戲。到「創作」貼上 Script，就能發布第一款。',
@@ -1012,14 +1104,12 @@ function renderProfileGrid(tab) {
       image.src = source;
       hero.replaceChildren(image);
     };
-    if (e.userScript) {
-      hero.textContent = '🎮';
-      profileThumbnailFor(e).then(showPreview);
-    } else if (e.screenshot) {
+    if (e.screenshot) {
       showPreview(e.screenshot);
     } else {
       hero.textContent = '🎮';
-      profileThumbnailFor(e).then(showPreview);
+      cell.loadPreview = () => profileThumbnailFor(e).then(showPreview);
+      profileGridObserver.observe(cell);
     }
     cell.appendChild(hero);
     const cap = document.createElement('span'); cap.className = 'cap';
@@ -1675,7 +1765,7 @@ function makePost(entry, opts) {
   /* 實況預覽（attract mode）：滑到這格時，遊戲自己在標題後面隨機試玩 */
   const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
   function fitCanvas() {
-    const rect = stage.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const pixelWidth = Math.round(rect.width * renderDpr);
     const pixelHeight = Math.round(rect.height * renderDpr);
@@ -1803,53 +1893,76 @@ function makePost(entry, opts) {
     const r = canvas.getBoundingClientRect();
     return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
   }
-  /* 手勢處理：分辨「點按/水平動作 → 給遊戲」與「明確上下滑 → 換遊戲」。
-     門檻夠大，激動快點時的微小抖動不會誤觸換遊戲。 */
-  const SWIPE = 46;   /* 垂直位移超過這個像素才判定為換遊戲 */
+  /* 整張遊戲卡共用同一套手勢；只有放開手指後才真正換遊戲。 */
+  const SWIPE = 84;
   let gest = null;
-  canvas.addEventListener('pointerdown', e => {
-    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    gest = { id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false, claimed: false, gaveDown: false };
-    if (state.running && state.game) { const [x, y] = toLogical(e); state.game.input('down', x, y); gest.gaveDown = true; }
-  });
-  canvas.addEventListener('pointermove', e => {
+  function commitSwipe(direction) {
+    if (opts.standalone) {
+      if (opts.onStandaloneSwipe) opts.onStandaloneSwipe(direction);
+      else closeStandalone();
+      return;
+    }
+    const allPosts = [...feed.querySelectorAll(':scope > .post')];
+    const myIdx = allPosts.indexOf(post);
+    const nextIndex = myIdx + direction;
+    if (nextIndex >= 0 && nextIndex < allPosts.length) {
+      allPosts[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  stage.addEventListener('pointerdown', e => {
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    gest = {
+      id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
+      claimed: false, direction: 0, gaveDown: false
+    };
+    if (e.target === canvas && state.running && state.game) {
+      const [x, y] = toLogical(e);
+      state.game.input('down', x, y);
+      gest.gaveDown = true;
+    }
+  }, true);
+  stage.addEventListener('pointermove', e => {
     if (!gest || e.pointerId !== gest.id) return;
-    const dx = e.clientX - gest.x0, dy = e.clientY - gest.y0;
-    /* 軸向鎖定：第一次明顯移動就定調。水平主導 → 鎖給遊戲（之後垂直漂移不再換遊戲）；
-       垂直主導且幅度夠大 → 換遊戲。都還沒到 → 維持未定（激動快點的小抖動不會誤判）。 */
+    const dx = e.clientX - gest.x0;
+    const dy = e.clientY - gest.y0;
     if (!gest.swiped && !gest.claimed) {
-      if (Math.abs(dx) > 12 && Math.abs(dx) >= Math.abs(dy)) {
-        gest.claimed = true;   /* 橫向操作，交給遊戲 */
-      } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) {
+        gest.claimed = true;
+      } else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.25) {
         gest.swiped = true;
-        if (gest.gaveDown && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
-        if (opts.standalone) {
-          if (opts.onStandaloneSwipe) opts.onStandaloneSwipe(dy < 0 ? 1 : -1);
-          else closeStandalone();
-          return;
+        gest.direction = dy < 0 ? 1 : -1;
+        if (gest.gaveDown && state.game) {
+          const [x, y] = toLogical(e);
+          state.game.input('cancel', x, y);
         }
-        const allPosts = [...feed.querySelectorAll(':scope > .post')];
-        const myIdx = allPosts.indexOf(post);
-        let ni = myIdx + (dy < 0 ? 1 : -1);                    /* 往上滑=下一款 */
-        let wrap = false;
-        if (ni >= allPosts.length) { ni = 0; wrap = true; }        /* 最後一款再往上滑 → 回到第一款 */
-        else if (ni < 0) { ni = allPosts.length - 1; wrap = true; } /* 第一款往下滑 → 到最後一款 */
-        const target = allPosts[ni];
-        if (target) target.scrollIntoView({ behavior: wrap ? 'auto' : 'smooth' });
-        return;
       }
     }
-    if (!gest.swiped && state.running && state.game && (e.buttons || e.pointerType === 'touch')) {
-      const [x, y] = toLogical(e); state.game.input('move', x, y);
+    if (gest.swiped) {
+      e.preventDefault();
+      return;
     }
-  });
-  function endGesture(e) {
+    if (gest.gaveDown && state.running && state.game && (e.buttons || e.pointerType === 'touch')) {
+      const [x, y] = toLogical(e);
+      state.game.input('move', x, y);
+    }
+  }, true);
+  function endGesture(e, cancelled) {
     if (!gest || e.pointerId !== gest.id) return;
-    if (!gest.swiped && state.running && state.game) { const [x, y] = toLogical(e); state.game.input('up', x, y); }
+    const finished = gest;
+    const dy = e.clientY - finished.y0;
+    if (!finished.swiped && finished.gaveDown && state.running && state.game) {
+      const [x, y] = toLogical(e);
+      state.game.input(cancelled ? 'cancel' : 'up', x, y);
+    }
     gest = null;
+    if (!cancelled && finished.swiped && Math.abs(dy) >= SWIPE) {
+      e.preventDefault();
+      e.stopPropagation();
+      commitSwipe(finished.direction);
+    }
   }
-  canvas.addEventListener('pointerup', endGesture);
-  canvas.addEventListener('pointercancel', endGesture);
+  stage.addEventListener('pointerup', e => endGesture(e, false), true);
+  stage.addEventListener('pointercancel', e => endGesture(e, true), true);
 
   const saveBtn = post.querySelector('.sv');
   likeBtn.addEventListener('click', () => toggleReaction(gid, 'like'));
@@ -2030,26 +2143,21 @@ function closeStandalone() {
   if (standalonePost) standalonePost.deactivate();
   if (standaloneIncomingPost) standaloneIncomingPost.deactivate();
   remixView.classList.remove('open');
+  remixViewStage.innerHTML = '';
+  standalonePost = null;
+  standaloneIncomingPost = null;
   setNavVisible(true);
   standaloneSequence = [];
   standaloneTransitioning = false;
   standaloneReturnContext = null;
-  setTimeout(() => {
-    if (!remixView.classList.contains('open')) {
-      remixViewStage.innerHTML = '';
-      standalonePost = null;
-    }
-  }, 300);
 }
 function returnFromStandalone() {
   const context = standaloneReturnContext;
   closeStandalone();
   if (context?.owner) {
-    setTimeout(() => {
-      profileTab = context.tab || 'created';
-      openProfile(context.owner);
-      requestAnimationFrame(() => { document.getElementById('pgrid').scrollTop = context.scrollTop || 0; });
-    }, 300);
+    profileTab = context.tab || 'created';
+    openProfile(context.owner);
+    requestAnimationFrame(() => { document.getElementById('pgrid').scrollTop = context.scrollTop || 0; });
   }
 }
 document.getElementById('remixViewBack').addEventListener('click', returnFromStandalone);

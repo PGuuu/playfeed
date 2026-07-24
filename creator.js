@@ -275,7 +275,7 @@ function sandboxDocument(channel, source, duration) {
   const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'">
-<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}canvas{display:block;width:100%;height:100%}</style>
+<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}canvas{display:block;width:100%;height:100%}</style>
 </head><body><canvas width="400" height="700"></canvas><script>
 (()=>{'use strict';
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
@@ -1049,7 +1049,7 @@ function addSandboxPost(row, options = {}) {
   post.style.background = entry.bg;
   const stage = el('div', 'stage');
   const frameHost = el('div', 'sandbox-frame-host');
-  frameHost.style.cssText = 'position:absolute;inset:0;';
+  frameHost.style.setProperty('--sandbox-bg', entry.bg || '#fff');
   const inputLayer = el('div', 'sandbox-input');
   const hud = el('div', 'hud');
   const scoreChip = el('span', 'chip score-chip');
@@ -1163,48 +1163,64 @@ function addSandboxPost(row, options = {}) {
     const r = inputLayer.getBoundingClientRect();
     return [(event.clientX - r.left) / r.width * 400, (event.clientY - r.top) / r.height * 700];
   }
-  inputLayer.addEventListener('pointerdown', event => {
-    try { inputLayer.setPointerCapture(event.pointerId); } catch (_) {}
+  const SWIPE = 84;
+  const commitSwipe = direction => {
+    if (options.onSwipe) {
+      options.onSwipe(direction);
+      return;
+    }
+    const all = [...host.feed.querySelectorAll(':scope > .post')];
+    const index = all.indexOf(post);
+    const next = index + direction;
+    if (next >= 0 && next < all.length) {
+      all[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  stage.addEventListener('pointerdown', event => {
+    try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     const [x, y] = logical(event);
-    const gaveDown = !!(playing && runtime);
+    const gaveDown = !!(event.target === inputLayer && playing && runtime);
     gesture = {
       id: event.pointerId, x0: event.clientX, y0: event.clientY,
-      x, y, claimed: false, swiped: false, gaveDown
+      x, y, claimed: false, swiped: false, direction: 0, gaveDown
     };
     if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
-  });
-  inputLayer.addEventListener('pointermove', event => {
+  }, true);
+  stage.addEventListener('pointermove', event => {
     if (!gesture || gesture.id !== event.pointerId) return;
     const dx = event.clientX - gesture.x0, dy = event.clientY - gesture.y0;
     const [x, y] = logical(event); gesture.x = x; gesture.y = y;
     if (!gesture.claimed && !gesture.swiped) {
-      if (Math.abs(dx) > 12 && Math.abs(dx) >= Math.abs(dy)) gesture.claimed = true;
-      else if (Math.abs(dy) > 46 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) gesture.claimed = true;
+      else if (Math.abs(dy) > SWIPE && Math.abs(dy) > Math.abs(dx) * 1.25) {
         gesture.swiped = true;
+        gesture.direction = dy < 0 ? 1 : -1;
         if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'cancel', x, y });
-        if (options.onSwipe) {
-          options.onSwipe(dy < 0 ? 1 : -1);
-          return;
-        }
-        const all = [...host.feed.querySelectorAll(':scope > .post')];
-        const index = all.indexOf(post);
-        const next = (index + (dy < 0 ? 1 : -1) + all.length) % all.length;
-        all[next]?.scrollIntoView({ behavior: next === 0 ? 'auto' : 'smooth' });
-        return;
       }
     }
-    if (!gesture.swiped && gesture.gaveDown && runtime) runtime.send('input', { inputType: 'move', x, y });
-  });
+    if (gesture.swiped) {
+      event.preventDefault();
+      return;
+    }
+    if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'move', x, y });
+  }, true);
   const end = (event, cancelled) => {
     if (!gesture || gesture.id !== event.pointerId) return;
     const [x, y] = logical(event);
-    if (!gesture.swiped && gesture.gaveDown && runtime) {
+    const finished = gesture;
+    const dy = event.clientY - finished.y0;
+    if (!finished.swiped && finished.gaveDown && runtime) {
       runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
     }
     gesture = null;
+    if (!cancelled && finished.swiped && Math.abs(dy) >= SWIPE) {
+      event.preventDefault();
+      event.stopPropagation();
+      commitSwipe(finished.direction);
+    }
   };
-  inputLayer.addEventListener('pointerup', event => end(event, false));
-  inputLayer.addEventListener('pointercancel', event => end(event, true));
+  stage.addEventListener('pointerup', event => end(event, false), true);
+  stage.addEventListener('pointercancel', event => end(event, true), true);
 
   like.addEventListener('click', () => host.toggleReaction(entry.id, 'like'));
   dislike.addEventListener('click', () => host.toggleReaction(entry.id, 'dislike'));

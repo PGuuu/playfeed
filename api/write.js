@@ -13,6 +13,7 @@ const { validatePublishedScript } = require('./_validate');
 const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
 const PROFILE_PREFIX = '__profile__:';
+const AVATAR_PREFIX = '__avatar__:';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
@@ -188,6 +189,35 @@ async function updateProfile(user, body) {
   });
   if (!result.ok) throw Object.assign(new Error(result.error), { status: result.status });
   return { profile };
+}
+
+async function updateAvatar(user, body) {
+  const avatar = cleanDataImage(body.image, 80_000);
+  if (!avatar) throw Object.assign(new Error('Avatar image is required.'), { status: 400 });
+  const prefix = `${AVATAR_PREFIX}${user.id}:`;
+  const removed = await supabaseRest('comments', {
+    method: 'DELETE',
+    query: `game_id=like.${encodeURIComponent(prefix)}*&user_id=${encodeEq(user.id)}`,
+  });
+  if (!removed.ok) throw Object.assign(new Error(removed.error), { status: removed.status });
+  const size = 240;
+  const chunks = [];
+  for (let offset = 0, index = 0; offset < avatar.length; offset += size, index += 1) {
+    chunks.push({
+      game_id: `${prefix}${String(index).padStart(4, '0')}`,
+      user_id: user.id,
+      name: 'avatar',
+      body: avatar.slice(offset, offset + size),
+    });
+  }
+  if (chunks.length > 350) throw Object.assign(new Error('Avatar image is too large.'), { status: 413 });
+  const result = await supabaseRest('comments', {
+    method: 'POST',
+    body: chunks,
+    prefer: 'return=minimal',
+  });
+  if (!result.ok) throw Object.assign(new Error(result.error), { status: result.status });
+  return { avatar };
 }
 
 async function createComment(user, body) {
@@ -431,6 +461,7 @@ const actions = {
   reaction: replaceReaction,
   follow: replaceFollow,
   profile: updateProfile,
+  avatar: updateAvatar,
   save: replaceSave,
   comment: createComment,
   score: submitScore,
