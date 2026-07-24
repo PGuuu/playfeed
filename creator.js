@@ -1,5 +1,5 @@
 import { parse } from './vendor/acorn.mjs';
-import { FULL_SPEC, buildRepairPrompt } from './creator-spec.js';
+import { FULL_SPEC, buildMechanicPrompt, buildRepairPrompt } from './creator-spec.js';
 import { findReturnedGameInstance, hasGameInstanceMethod } from './validator-ast.mjs';
 
 const host = window.PlayFeedHost;
@@ -27,6 +27,7 @@ let playtestRoot = null;
 let playtestGesture = null;
 let playtestDone = null;
 let validationFeedbackTimer = null;
+let mechanicContext = null;
 
 function walk(node, visit, parent = null, parentKey = '') {
   if (!node || typeof node !== 'object') return;
@@ -368,20 +369,25 @@ function buildCreatorUI() {
     <header class="creator-head"><b>創作 PlayFeed</b><button id="creatorClose">完成</button></header>
     <div class="creator-scroll"><main class="creator-wrap">
       <section class="creator-intro">
-        <h1>五個步驟，<br>發布一款遊戲。</h1>
-        <p>你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。</p>
+        <h1 id="creatorIntroTitle">五個步驟，<br>發布一款遊戲。</h1>
+        <p id="creatorIntroText">你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。</p>
+      </section>
+      <section class="creator-mechanic-context" id="creatorMechanicContext" hidden>
+        <small>玩法來源</small>
+        <h2 id="creatorMechanicTitle"></h2>
+        <p id="creatorMechanicSummary"></p>
       </section>
       <section class="creator-step" data-step="1">
         <span class="creator-step-no">1</span><div class="creator-step-content">
-          <h2>複製創作規格</h2>
-          <p>複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
+          <h2 id="creatorCopyTitle">複製創作規格</h2>
+          <p id="creatorCopyText">複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
           <button class="creator-action" id="copyCreatorSpec">複製遊戲創作規格</button>
         </div>
       </section>
       <section class="creator-step" data-step="2">
         <span class="creator-step-no">2</span><div class="creator-step-content">
-          <h2>交給自己的 AI 創作</h2>
-          <p>把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。</p>
+          <h2 id="creatorAiTitle">交給自己的 AI 創作</h2>
+          <p id="creatorAiText">把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。</p>
         </div>
       </section>
       <section class="creator-step" data-step="3">
@@ -414,8 +420,9 @@ function buildCreatorUI() {
   document.body.appendChild(root);
   root.querySelector('#creatorClose').addEventListener('click', closeCreator);
   root.querySelector('#copyCreatorSpec').addEventListener('click', event => {
-    copyText(FULL_SPEC, '完整創作規格已複製');
-    event.currentTarget.textContent = '✓ 已複製創作規格';
+    const text = mechanicContext ? buildMechanicPrompt(mechanicContext) : FULL_SPEC;
+    copyText(text, mechanicContext ? '玩法模板與創作規格已複製' : '完整創作規格已複製');
+    event.currentTarget.textContent = mechanicContext ? '✓ 已複製玩法模板' : '✓ 已複製創作規格';
     root.querySelector('[data-step="1"]').classList.add('done');
     root.querySelector('[data-step="2"]').classList.add('next');
   });
@@ -490,12 +497,50 @@ function buildCreatorUI() {
 
 const creatorRoot = buildCreatorUI();
 
-function openCreator() {
+function setCreatorMode(context) {
+  mechanicContext = context || null;
+  const special = !!mechanicContext;
+  creatorRoot.querySelector('#creatorMechanicContext').hidden = !special;
+  creatorRoot.querySelector('#creatorIntroTitle').innerHTML = special
+    ? '用熟悉的玩法，<br>做一款新遊戲。'
+    : '五個步驟，<br>發布一款遊戲。';
+  creatorRoot.querySelector('#creatorIntroText').textContent = special
+    ? '保留核心互動，主題、角色與風格由你決定。PlayFeed 不會替你生成內容。'
+    : '你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。';
+  creatorRoot.querySelector('#creatorCopyTitle').textContent = special ? '複製玩法模板' : '複製創作規格';
+  creatorRoot.querySelector('#creatorCopyText').textContent = special
+    ? '複製這款遊戲的玩法配方與 PlayFeed 執行規格。'
+    : '複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。';
+  creatorRoot.querySelector('#creatorAiTitle').textContent = special ? '告訴 AI 你的新主題' : '交給自己的 AI 創作';
+  creatorRoot.querySelector('#creatorAiText').textContent = special
+    ? '把玩法模板貼給自己的 AI，再告訴它想換成什麼主題。它最後應只輸出一個完整 JavaScript 程式碼區塊。'
+    : '把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。';
+  const copy = creatorRoot.querySelector('#copyCreatorSpec');
+  copy.textContent = special ? '複製玩法模板＋創作規格' : '複製遊戲創作規格';
+  if (special) {
+    creatorRoot.querySelector('#creatorMechanicTitle').textContent = mechanicContext.sourceTitle;
+    creatorRoot.querySelector('#creatorMechanicSummary').textContent = mechanicContext.summary;
+  }
+}
+
+function showCreator() {
   host.closeProfile();
   host.closeStandalone();
   creatorRoot.classList.add('open');
   host.setMainNavActive('create');
   host.setNavVisible(true);
+}
+
+function openCreator() {
+  if (mechanicContext) resetCreator();
+  else setCreatorMode(null);
+  showCreator();
+}
+
+function openMechanicCreator(context) {
+  resetCreator();
+  setCreatorMode(context);
+  showCreator();
 }
 
 function closeCreator() {
@@ -521,6 +566,7 @@ function resetCreator() {
   validate.textContent = '驗證遊戲 Script';
   creatorRoot.querySelectorAll('.creator-step').forEach(step => step.classList.remove('done', 'next'));
   creatorRoot.querySelector('.creator-scroll').scrollTop = 0;
+  setCreatorMode(null);
 }
 
 function setDraftMetadataFromEdits(card) {
@@ -1173,6 +1219,7 @@ function goToPublishedHash() {
 
 window.PlayFeedCreator = {
   open: openCreator,
+  openMechanic: openMechanicCreator,
   close: closeCreator,
   validateScript,
   refreshInteractions: refreshPublishedInteractions,

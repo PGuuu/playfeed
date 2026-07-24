@@ -20,6 +20,14 @@
 .creator-wrap { width: 100%; max-width: 820px; margin: 0 auto; }
 .creator-intro h1 { font-size: clamp(28px, 7vw, 48px); line-height: 1.08; max-width: 650px; }
 .creator-intro p { margin-top: 12px; color: #a7a7b7; line-height: 1.7; font-size: 14px; max-width: 650px; }
+.creator-mechanic-context {
+  margin-top: 20px; padding: 16px 18px; border: 1px solid rgba(112,220,140,.28);
+  border-radius: 18px; background: rgba(112,220,140,.07);
+}
+.creator-mechanic-context[hidden] { display: none; }
+.creator-mechanic-context small { color: #70dc8c; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.creator-mechanic-context h2 { margin-top: 6px; font-size: 19px; }
+.creator-mechanic-context p { margin-top: 6px; color: #aaaabb; font-size: 13px; line-height: 1.6; }
 .creator-step {
   position: relative; display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
   margin-top: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.09);

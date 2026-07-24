@@ -125,6 +125,32 @@ shape 可使用 free、circle、wide、tall。繪製該元素時可呼叫 env.sp
 
 最後只輸出一個完整 JavaScript 程式碼區塊，不要在程式碼前後加入解釋、教學、摘要或其他文字。`;
 
+export function buildMechanicPrompt(template) {
+  const preserve = (template.preserve || []).map(item => `- ${item}`).join('\n');
+  return `# 使用 PlayFeed 玩法模板創作
+
+請使用下面的玩法骨架製作一款新的 PlayFeed 遊戲。
+
+來源遊戲：${template.sourceTitle}
+
+玩法摘要：
+${template.summary}
+
+應保留的核心機制：
+${preserve}
+
+可以自由更換與發展：
+- 題材、情境、角色與物件
+- 名稱、文案、色彩、動畫、音效與視覺回饋
+- 數值、速度、難度與細節規則
+
+請保留玩法的核心互動，但不要複製來源遊戲的名稱、角色、情境或文案。使用者會在下一則訊息告訴你想製作的主題；請依照他的要求發展，不要自行限定題材。
+
+---
+
+${FULL_SPEC}`;
+}
+
 export function buildRepairPrompt(report, source) {
   return `# PlayFeed v1 修復規格
 
