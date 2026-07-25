@@ -911,6 +911,37 @@ function capturePreview() {
   });
 }
 
+function optimisePublishScreenshot(source, maxLength = 280_000) {
+  if (!source || typeof source !== 'string') return Promise.resolve(null);
+  if (source.length <= maxLength) return Promise.resolve(source);
+  return new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const attempts = [
+        [400, .66],
+        [360, .56],
+        [320, .46],
+        [280, .38]
+      ];
+      let smallest = null;
+      for (const [width, quality] of attempts) {
+        canvas.width = width;
+        canvas.height = Math.round(width * 7 / 4);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const candidate = canvas.toDataURL('image/webp', quality);
+        if (!smallest || candidate.length < smallest.length) smallest = candidate;
+        if (candidate.length <= maxLength) return resolve(candidate);
+      }
+      resolve(smallest && smallest.length <= maxLength ? smallest : null);
+    };
+    image.onerror = () => resolve(null);
+    image.src = source;
+  });
+}
+
 function captureDraftAutomatically() {
   if (previewRuntime) return capturePreview();
   const holder = document.createElement('div');
@@ -939,7 +970,7 @@ async function publishDraft() {
   const button = creatorRoot.querySelector('.creator-buttons .publish');
   if (button) { button.disabled = true; button.textContent = '發布中…'; }
   try {
-    const screenshot = await captureDraftAutomatically();
+    const screenshot = await optimisePublishScreenshot(await captureDraftAutomatically());
     const row = {
       suggested_id: draft.metadata.id,
       api_version: 1,
@@ -956,6 +987,14 @@ async function publishDraft() {
       script: draft.source,
       screenshot
     };
+    let requestBytes = new Blob([JSON.stringify({ action: 'publish-game', game: row })]).size;
+    if (requestBytes > 650_000 && row.screenshot) {
+      row.screenshot = null;
+      requestBytes = new Blob([JSON.stringify({ action: 'publish-game', game: row })]).size;
+    }
+    if (requestBytes > 650_000) {
+      throw new Error('這份 Script 的檔案過大，請精簡後再發布。');
+    }
     const result = await host.secureWrite('publish-game', { game: row });
     const data = result.game;
     if (!data) throw new Error('後端沒有回傳已發布的遊戲資料。');
