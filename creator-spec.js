@@ -148,8 +148,191 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 
 最後只輸出一個完整 JavaScript 程式碼區塊，不要在程式碼前後加入解釋、教學、摘要或其他文字。`;
 
-export function buildMechanicPrompt(template) {
+export const FULL_SPEC_EN = `# PlayFeed Game Creation Spec v1
+
+PlayFeed accepts one self-contained JavaScript Script and handles validation, previewing, and publishing.
+
+This spec only defines how a game runs inside PlayFeed. It does not restrict subject matter, gameplay, genre, language, or creative direction. Develop the user’s idea faithfully and choose an interaction that suits it. Classic and original mechanics are both welcome. Do not treat the fields, lifecycle skeleton, or API names below as a gameplay example, and do not add a design formula the user did not request.
+
+## 1. Script format
+
+The Script must register exactly one game:
+
+\`\`\`js
+window.GAMES = (window.GAMES || []).concat([
+  {
+    apiVersion: 1,
+    gameVersion: '1.0.0',
+    id: 'readable-id-suggestion',
+    title: 'Game title',
+    description: 'One-line description',
+    author: '@draft-only',
+    tip: 'One-line control tip',
+    bg: '#18354a',
+    tags: [],
+    controls: ['tap'],
+    score: { label: 'Score', order: 'higher', decimals: 0 },
+    remixSlots: [
+      {
+        key: 'main-character',
+        label: 'Main character',
+        hint: 'The character controlled or watched most often',
+        default: 'Original appearance',
+        shape: 'free'
+      }
+    ],
+
+    create(env) {
+      function start() {
+        // Reset state and start the game
+      }
+
+      function stop() {
+        // Stop every animation and timer
+      }
+
+      function input(type, x, y) {
+        // Handle down / move / up / cancel
+      }
+
+      return { start, stop, input };
+    }
+  }
+]);
+\`\`\`
+
+The code above is only a data and lifecycle skeleton. It does not imply any particular gameplay. The platform assigns the official creator, ID, publication time, review status, and statistics. author and id are draft suggestions only.
+
+Metadata rules:
+
+- apiVersion must be 1.
+- gameVersion is a version string such as 1.0.0.
+- title, description, tip, bg, and id must be directly readable strings. They may use any language.
+- bg must be a hexadecimal color.
+- tags is an array of strings and may be empty.
+- controls must contain at least one value. Use tap, hold, horizontal-drag, left-right, or a combination.
+- duration is an optional estimate, not a time limit. It may be omitted. A game may end through lives, goals, failure conditions, or its own rules.
+- score.order is higher or lower; decimals should normally be 0.
+- remixSlots must contain at least one visual element that players can replace.
+
+## 2. Runtime API
+
+- Use env.W / env.H as the logical canvas size (currently 400 × 700 design units). Do not read physical screen pixels.
+- PlayFeed scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
+- Derive positions and sizes from env.W / env.H. Do not use fixed CSS sizes or assume a physical phone aspect ratio.
+- env.ctx: Canvas 2D context. Draw the entire game here.
+- env.setScore(number): update the current score.
+- env.over(finalScore): end the run. Call it only once per run.
+- env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
+- env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
+- Public submissions do not receive env.getSprite.
+
+GameInstance must contain:
+
+- start(): reset all state and begin every run.
+- stop(): stop requestAnimationFrame, setTimeout, setInterval, and every other loop.
+- input(type, x, y): handle down / move / up / cancel.
+
+At the beginning of every start(), briefly show the controls directly inside the canvas. Keep the instruction short and clear; it may fade after the first input or after a few seconds. Do not use DOM elements for instructions.
+
+create(env) may contain helper functions, and helpers may return objects. PlayFeed treats only the object directly returned by create(env) as the GameInstance.
+
+cancel means the platform took over the gesture or interrupted the game. It may only release held or dragged state. It must not trigger firing, scoring, or results that belong to up.
+
+## 3. Input boundaries
+
+PlayFeed sends:
+
+- down: finger or mouse pressed.
+- move: pointer moved while held.
+- up: the player actually released.
+- cancel: PlayFeed interrupted the interaction.
+
+x and y use the env.W × env.H logical coordinate space. PlayFeed converts physical screen coordinates.
+
+Vertical swipes belong to the Feed, so vertical dragging, large diagonal dragging, and drawing circles cannot be required controls. Taps, holds, releases, left/right choices, and horizontal dragging are allowed. Do not call addEventListener; receive input only through input().
+
+## 4. Self-contained and safety rules
+
+- One self-contained Script. Do not load external images, fonts, audio, video, or code.
+- No fetch, XMLHttpRequest, WebSocket, EventSource, Worker, or dynamic import.
+- No document, navigator, location, parent, top, opener, or globalThis.
+- No localStorage, sessionStorage, indexedDB, or cookies.
+- No eval, Function, infinite loops, or platform DOM changes.
+- Use only env and standard pure JavaScript capabilities such as Math, Array, Date.now, requestAnimationFrame, and timers.
+- Scores must be finite numbers with an absolute value no greater than 1,000,000,000.
+- Do not update scores or continue the game after env.over().
+
+## 5. Reskin support (required)
+
+Every PlayFeed game must support reskinning. Identify visible characters, objects, obstacles, targets, items, or decorations. Put as many important replaceable elements as practical into separate remixSlots:
+
+\`{ key, label, hint, default, shape }\`
+
+Rules:
+
+- Provide at least one remix slot. If several visual elements can clearly be replaced, expose as many as practical.
+- key must be unique and contain only lowercase letters, digits, and dashes.
+- label is the player-facing element name. hint briefly explains its position or role.
+- shape is free, circle, wide, or tall.
+- At every place a slotted element is drawn, call env.sprite(key, centerX, centerY, size, flip?) first.
+- When env.sprite() returns true, do not draw the original appearance. Draw the fallback only when it returns false.
+- Reskinning changes appearance only. It must not change collision, speed, score, or gameplay.
+- Do not declare remixSlots without actually calling env.sprite() in the game.
+
+## 6. Runtime checklist
+
+- Exactly one game object is registered.
+- Metadata is complete and directly readable.
+- create(env) directly returns start, stop, and input.
+- input safely handles cancel.
+- The game calls env.setScore() and env.over().
+- stop() stops all animations and timers.
+- Every run begins with a short in-canvas control instruction.
+- At least one remix slot is present and every slotted element is drawn through env.sprite().
+- No external resources, network, storage, or DOM APIs.
+- No required vertical interaction.
+- Random valid input cannot freeze or crash the game.
+
+Design the gameplay freely. This is a runtime contract, not a game design guide.
+
+Finally, output exactly one complete JavaScript code block. Do not add explanations, tutorials, summaries, or any other text before or after the code block.`;
+
+export function buildMechanicPrompt(template, locale = 'zh-Hant') {
   const preserve = (template.preserve || []).map(item => `- ${item}`).join('\n');
+  if (locale === 'en') {
+    const reference = template.sourceScript ? `
+
+The source Script below is only for understanding the core mechanic. Do not copy its title, writing, characters, or theme. Rebuild a complete game for the new theme:
+
+\`\`\`js
+${template.sourceScript}
+\`\`\`
+` : '';
+    return `# Create with a PlayFeed gameplay template
+
+Use the gameplay structure below to make a new PlayFeed game.
+
+Source game: ${template.sourceTitle}
+
+Gameplay summary:
+${template.summary}
+
+Core mechanics to preserve:
+${preserve}
+
+You may freely change and develop:
+- Subject, setting, characters, and objects
+- Title, writing, colors, animation, sound, and visual feedback
+- Values, speed, difficulty, and detailed rules
+
+Keep the core interaction, but do not copy the source game’s title, characters, setting, or writing. The user will describe the desired theme in the next message. Follow that request without restricting the subject yourself.
+${reference}
+
+---
+
+${FULL_SPEC_EN}`;
+  }
   const reference = template.sourceScript ? `
 
 以下來源 Script 只供理解核心機制。不要直接複製名稱、文字、角色或主題；請重新製作符合新主題的完整遊戲：
@@ -183,7 +366,33 @@ ${reference}
 ${FULL_SPEC}`;
 }
 
-export function buildRepairPrompt(report, source) {
+export function buildRepairPrompt(report, source, locale = 'zh-Hant') {
+  if (locale === 'en') {
+    return `# PlayFeed v1 repair spec
+
+Repair the PlayFeed Script below. Preserve its gameplay, art direction, and creative choices. Do not turn it into a different game under the guise of a technical fix.
+
+Core requirements:
+- Register exactly one window.GAMES game object.
+- apiVersion must be 1.
+- create(env) must directly return start(), stop(), and input(type,x,y).
+- input must handle up and cancel separately.
+- Use only env.W, env.H, env.ctx, env.setScore, env.over, env.beep, and env.sprite.
+- No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
+- Vertical gestures remain available to the Feed.
+- At the beginning of start(), briefly draw the controls inside the canvas.
+- Provide at least one remix slot. Every replaceable element must actually call env.sprite(), drawing its original appearance only when no replacement is available.
+- Technical repairs must not restrict or redesign the gameplay.
+- Output exactly one complete JavaScript code block with no other text.
+
+Validation report:
+${report}
+
+Original Script:
+\`\`\`js
+${source}
+\`\`\``;
+  }
   return `# PlayFeed v1 修復規格
 
 請修復下面的 PlayFeed Script，保留原本玩法、美術方向與創作選擇，不要藉修復之名改成另一種遊戲。

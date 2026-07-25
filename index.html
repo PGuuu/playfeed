@@ -324,10 +324,15 @@
   #notificationBadge[hidden] { display: none; }
   .phead { display: flex; align-items: center; justify-content: space-between;
     padding: max(14px, env(safe-area-inset-top)) 18px 12px; }
+  .phead-actions { display: flex; align-items: center; gap: 7px; }
   .phead b { font-size: 17px; font-weight: 700; }
   .phead button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
     font-family: inherit; font-size: 12px; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
   .phead button.following { background: rgba(67,185,104,.2); color: #8be2a0; }
+  .language-toggle { border: 1px solid #dbdbdb !important; background: #fff !important;
+    color: #262626 !important; font-weight: 750 !important; }
+  #login .language-toggle { align-self: center; margin-top: 4px; padding: 7px 16px; border-radius: 999px;
+    font: 750 12px inherit; cursor: pointer; }
   .ptabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .ptabs button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
     font-size: 13px; font-weight: 600; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
@@ -474,7 +479,10 @@
 </div>
 
 <div id="profile">
-  <div class="phead"><b id="profileWho">個人頁</b><button id="profileActionBtn">登出</button></div>
+  <div class="phead"><b id="profileWho">個人頁</b><div class="phead-actions">
+    <button type="button" class="language-toggle">EN</button>
+    <button id="profileActionBtn">登出</button>
+  </div></div>
   <div class="profile-summary">
     <div class="profile-summary-row">
       <div id="profileAvatar">P</div>
@@ -564,10 +572,12 @@
     <h3>登入 PlayFeed</h3>
     <p>輸入 Email，點信裡的連結就完成登入。<br>登入後就能按讚、留言、把遊戲收進「我的頁面」。</p>
     <div id="phuze-widget"></div>
+    <button type="button" class="language-toggle">EN</button>
     <button class="ghost" id="skipLogin">先不用，我玩玩就好</button>
   </div>
 </div>
 
+<script src="i18n.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://phuze.edato.me/phuze.js"></script>
@@ -604,6 +614,8 @@ function beep(f1, f2, dur, vol, type) {
 <script>
 /* ---------- 後台連線（沒設定 config.js 也能跑，會進入體驗模式） ---------- */
 const cfg = window.PLAYFEED_CONFIG || {};
+const i18n = window.PlayFeedI18n;
+const tr = (value, vars) => i18n ? i18n.t(value, vars) : String(value ?? '');
 const online = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
 const db = online ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
 const phuzeOn = !!(cfg.PHUZE_PUBLISHABLE_KEY && window.Phuze);
@@ -651,9 +663,9 @@ function setUser(u) {
   const initials = /^[\x00-\x7F]+$/.test(clean)
     ? clean.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
     : Array.from(clean).slice(0, 1).join('');
-  authChip.textContent = initials || '登入';
-  authChip.title = name;
-  authChip.setAttribute('aria-label', u ? `帳號：${name}` : '登入');
+  authChip.textContent = u ? (initials || 'P') : (i18n?.locale === 'en' ? 'IN' : '登入');
+  authChip.title = u ? name : tr('登入');
+  authChip.setAttribute('aria-label', u ? `${tr('帳號')}：${name}` : tr('登入'));
   authChip.classList.toggle('on', !!u);
   setTimeout(() => {
     refreshOfficialAuthors();
@@ -707,11 +719,11 @@ authChip.addEventListener('click', () => {
 if (phuzeOn) {
   Phuze.init({
     publishableKey: cfg.PHUZE_PUBLISHABLE_KEY,
-    locale: 'zh-TW',
+    locale: i18n?.locale === 'en' ? 'en' : 'zh-TW',
     text: {
-      button: '寄登入連結給我', buttonLoading: '寄送中…', buttonSignOut: '登出',
+      button: tr('寄登入連結給我'), buttonLoading: tr('寄送中…'), buttonSignOut: tr('登出'),
       placeholder: 'name@example.com',
-      sentTitle: '去收信！', sentSubtitle: '點信裡的連結，這個畫面會自動完成登入。'
+      sentTitle: tr('去收信！'), sentSubtitle: tr('點信裡的連結，這個畫面會自動完成登入。')
     },
     theme: { accentColor: '#0095f6', accentHoverColor: '#1877f2', accentTextColor: '#ffffff',
              borderRadius: '12px', borderColor: '#33334a' }
@@ -1130,11 +1142,11 @@ function ownedNotificationGames() {
 }
 function notificationTime(value) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (seconds < 60) return '剛剛';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分鐘前`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小時前`;
-  if (seconds < 86400 * 7) return `${Math.floor(seconds / 86400)} 天前`;
-  return new Date(value).toLocaleDateString('zh-TW');
+  if (seconds < 60) return tr('剛剛');
+  if (seconds < 3600) return tr(`${Math.floor(seconds / 60)} 分鐘前`);
+  if (seconds < 86400) return tr(`${Math.floor(seconds / 3600)} 小時前`);
+  if (seconds < 86400 * 7) return tr(`${Math.floor(seconds / 86400)} 天前`);
+  return new Date(value).toLocaleDateString(i18n?.locale === 'en' ? 'en-US' : 'zh-TW');
 }
 function renderNotifications(markRead = false) {
   const list = document.getElementById('notificationList');
@@ -1156,8 +1168,8 @@ function renderNotifications(markRead = false) {
     const actor = document.createElement('b');
     actor.textContent = event.actorName;
     const message = document.createTextNode(event.type === 'follow'
-      ? ' 開始追蹤你'
-      : ` ${event.type === 'like' ? '按讚了' : '儲存了'}《${event.gameTitle}》`);
+      ? ` ${tr('開始追蹤你')}`
+      : ` ${tr(event.type === 'like' ? '按讚了' : '儲存了')} ${i18n?.locale === 'en' ? `“${event.gameTitle}”` : `《${event.gameTitle}》`}`);
     const time = document.createElement('span');
     time.className = 'notification-time';
     time.textContent = notificationTime(event.createdAt);
@@ -1519,7 +1531,9 @@ document.getElementById('sheetClose').addEventListener('click', closeSheet);
 backdrop.addEventListener('click', () => { closeSheet(); closeProfile(); closeRemix(); });
 async function openComments(g) {
   sheetGame = g;
-  document.getElementById('sheetTitle').textContent = g.title.split('：')[0] + ' 的留言';
+  document.getElementById('sheetTitle').textContent = i18n?.locale === 'en'
+    ? `Comments on ${g.title.split('：')[0]}`
+    : g.title.split('：')[0] + ' 的留言';
   cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">載入中…</div></div>';
   sheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
   if (!online) {
@@ -1564,7 +1578,8 @@ document.getElementById('cmtSend').addEventListener('click', sendComment);
 async function shareGame(g) {
   const url = location.origin + location.pathname + '#' + g.id;
   if (navigator.share) {
-    try { await navigator.share({ title: 'PlayFeed', text: '來挑戰「' + g.title + '」！', url }); } catch (e) {}
+    const text = i18n?.locale === 'en' ? `Come play “${g.title}” on PlayFeed!` : '來挑戰「' + g.title + '」！';
+    try { await navigator.share({ title: 'PlayFeed', text, url }); } catch (e) {}
   } else {
     try { await navigator.clipboard.writeText(url); toast('連結已複製，貼給朋友挑戰吧'); }
     catch (e) { toast(url); }
@@ -1600,7 +1615,7 @@ function buildShareCard(snapURL, title, score, cb) {
     cx.fillStyle = '#ffd75e'; cx.font = '900 60px system-ui';
     cx.fillText(score + '', W / 2, H - 50);
     cx.fillStyle = 'rgba(255,255,255,0.85)'; cx.font = '600 15px system-ui';
-    cx.fillText('分 · 換你來破紀錄', W / 2, H - 24);
+    cx.fillText(tr('分 · 換你來破紀錄'), W / 2, H - 24);
     cb(c.toDataURL('image/png'));
   };
   img.onerror = () => cb(null);
@@ -1608,7 +1623,9 @@ function buildShareCard(snapURL, title, score, cb) {
 }
 async function shareScoreCard(cardURL, g, score) {
   const url = location.origin + location.pathname + '#' + g.id;
-  const text = '我在 PlayFeed 玩《' + g.title.split('：')[0] + '》拿了 ' + score + ' 分！來挑戰 👉';
+  const text = i18n?.locale === 'en'
+    ? `I scored ${score} in “${g.title.split('：')[0]}” on PlayFeed. Can you beat it? 👉`
+    : '我在 PlayFeed 玩《' + g.title.split('：')[0] + '》拿了 ' + score + ' 分！來挑戰 👉';
   let file = null;
   try {
     const blob = await (await fetch(cardURL)).blob();
@@ -1678,7 +1695,9 @@ async function toggleFollow(authorId) {
 }
 async function shareResult(g, score) {
   const url = location.origin + location.pathname + '#' + g.id;
-  const text = `我在 PlayFeed 玩《${g.title.split('：')[0]}》拿了 ${score} 分！來挑戰`;
+  const text = i18n?.locale === 'en'
+    ? `I scored ${score} in “${g.title.split('：')[0]}” on PlayFeed. Can you beat it?`
+    : `我在 PlayFeed 玩《${g.title.split('：')[0]}》拿了 ${score} 分！來挑戰`;
   if (navigator.share) {
     try { await navigator.share({ title: 'PlayFeed', text, url }); return; } catch (e) {}
   }
@@ -2593,7 +2612,7 @@ document.addEventListener('keydown', e => {
 let toastT = null;
 function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
+  t.textContent = tr(msg); t.classList.add('show');
   clearTimeout(toastT);
   toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
@@ -2608,6 +2627,9 @@ window.PlayFeedHost = {
   get user() { return user; },
   feed,
   icons: ICONS,
+  get locale() { return i18n?.locale || 'zh-Hant'; },
+  t: tr,
+  applyI18n(root) { i18n?.apply(root); },
   displayName,
   requireLogin,
   secureWrite,

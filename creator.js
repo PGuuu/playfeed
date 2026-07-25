@@ -1,5 +1,5 @@
 import { parse } from './vendor/acorn.mjs';
-import { FULL_SPEC, buildMechanicPrompt, buildRepairPrompt } from './creator-spec.js';
+import { FULL_SPEC, FULL_SPEC_EN, buildMechanicPrompt, buildRepairPrompt } from './creator-spec.js';
 import { findReturnedGameInstance, hasGameInstanceMethod } from './validator-ast.mjs';
 
 const host = window.PlayFeedHost;
@@ -392,9 +392,9 @@ function copyText(text, message) {
 }
 
 function reportText(result) {
-  return `這個 PlayFeed Script 沒有通過 v1 驗證。\n\n錯誤：\n` +
-    result.errors.map((x, i) => `${i + 1}. ${x}`).join('\n') +
-    `\n\n請依照 PlayFeed v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。`;
+  return `${host.t('這個 PlayFeed Script 沒有通過 v1 驗證。')}\n\n${host.t('錯誤：')}\n` +
+    result.errors.map((x, i) => `${i + 1}. ${host.t(x)}`).join('\n') +
+    `\n\n${host.t('請依照 PlayFeed v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。')}`;
 }
 
 function buildCreatorUI() {
@@ -455,7 +455,9 @@ function buildCreatorUI() {
   document.body.appendChild(root);
   root.querySelector('#creatorClose').addEventListener('click', closeCreator);
   root.querySelector('#copyCreatorSpec').addEventListener('click', event => {
-    const text = mechanicContext ? buildMechanicPrompt(mechanicContext) : FULL_SPEC;
+    const text = mechanicContext
+      ? buildMechanicPrompt(mechanicContext, host.locale)
+      : (host.locale === 'en' ? FULL_SPEC_EN : FULL_SPEC);
     copyText(text, mechanicContext ? '玩法模板與創作規格已複製' : '完整創作規格已複製');
     event.currentTarget.textContent = mechanicContext ? '✓ 已複製玩法模板' : '✓ 已複製創作規格';
     root.querySelector('[data-step="1"]').classList.add('done');
@@ -743,7 +745,8 @@ function renderValidation(result) {
     const copyReport = el('button', '', '複製錯誤報告');
     copyReport.addEventListener('click', () => copyText(reportText(result), '錯誤報告已複製'));
     const copyRepair = el('button', '', '複製修復規格＋原始 Script');
-    copyRepair.addEventListener('click', () => copyText(buildRepairPrompt(reportText(result), result.source), '修復規格已複製'));
+    copyRepair.addEventListener('click', () =>
+      copyText(buildRepairPrompt(reportText(result), result.source, host.locale), '修復規格已複製'));
     buttons.append(copyReport, copyRepair);
     body.appendChild(buttons);
     if (result.source) {
@@ -804,7 +807,9 @@ function renderValidation(result) {
     meta.appendChild(item);
   }
   body.appendChild(meta);
-  if (result.warnings.length) body.appendChild(el('p', 'creator-warnings', result.warnings.join(' ')));
+  if (result.warnings.length) {
+    body.appendChild(el('p', 'creator-warnings', result.warnings.map(item => host.t(item)).join(' ')));
+  }
 
   const buttons = el('div', 'creator-buttons');
   const play = el('button', 'creator-play', '開始試玩');
@@ -1059,8 +1064,12 @@ function publishedMechanicContext(entry) {
   return {
     sourceGameId: entry.id,
     sourceTitle: entry.title,
-    summary: `${entry.description || ''} 操作方式：${entry.tip || '依畫面提示操作'}`.trim(),
-    preserve: ['保留來源遊戲的核心操作、勝負條件、計分方式與主要節奏'],
+    summary: host.locale === 'en'
+      ? `${entry.description || ''} Controls: ${entry.tip || 'Follow the in-game instructions.'}`.trim()
+      : `${entry.description || ''} 操作方式：${entry.tip || '依畫面提示操作'}`.trim(),
+    preserve: [host.locale === 'en'
+      ? 'Preserve the source game’s core controls, win/loss conditions, scoring, and main rhythm.'
+      : '保留來源遊戲的核心操作、勝負條件、計分方式與主要節奏'],
     sourceScript: entry.script
   };
 }
