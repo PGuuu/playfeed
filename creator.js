@@ -1406,7 +1406,7 @@ function officialSubmission(game) {
     tags: ['official'],
     controls: ['tap'],
     preview: game.preview || 'demo',
-    score: { label: '分數', order: 'higher' },
+    score: game.score || { label: '分數', order: 'higher' },
     remixSlots: game.remixSlots || [],
   };
   const fields = Object.entries(metadata)
@@ -1427,7 +1427,7 @@ function officialSubmission(game) {
     tip: game.tip,
     tags: ['official'],
     controls: ['tap'],
-    score: { label: '分數', order: 'higher' },
+    score: game.score || { label: '分數', order: 'higher' },
     remix_slots: game.remixSlots || [],
     script,
   };
