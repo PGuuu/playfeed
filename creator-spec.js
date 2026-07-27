@@ -85,6 +85,8 @@ GameInstance 必須包含：
 
 每次 start() 開局時，遊戲必須直接在 canvas 畫面中短暫顯示操作方法。提示應簡短、清楚，可在第一次操作後或數秒後淡出；不可使用 DOM 製作提示。
 
+玩家滑到這款遊戲時，PlayFeed 會先呼叫 start() 並以自動輸入展示玩法；玩家輕點遊戲畫面後，平台會重新呼叫 start() 正式開局。因此預覽一開始就應看得懂操作，Script 不要自行製作「開始」按鈕或等待開始狀態。
+
 create(env) 內可以自由建立輔助函式，也可以讓輔助函式回傳物件。平台只把 create(env) 自己直接回傳的物件視為 GameInstance。
 
 cancel 代表平台接管手勢或遊戲被中止，只能解除按住或拖曳狀態，不可觸發原本屬於 up 的發射、計分或結算行為。
@@ -139,6 +141,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 - 遊戲會呼叫 env.setScore() 與 env.over()。
 - stop() 能停止全部動畫與 timer。
 - 每次開局會先在遊戲畫面中顯示簡短操作提示。
+- 不會自行顯示開始按鈕或停在等待開始狀態。
 - remixSlots 至少一項，而且每個可換元素都實際透過 env.sprite() 繪製。
 - 沒有外部資源、網路、儲存或 DOM API。
 - 沒有垂直必要操作。
@@ -235,6 +238,8 @@ GameInstance must contain:
 
 At the beginning of every start(), briefly show the controls directly inside the canvas. Keep the instruction short and clear; it may fade after the first input or after a few seconds. Do not use DOM elements for instructions.
 
+When a player scrolls to the game, PlayFeed calls start() and demonstrates the gameplay with automatic input. When the player taps the game, PlayFeed calls start() again for the real run. Make the controls understandable from the beginning of the preview. Do not build a Start button or a waiting-for-start state inside the Script.
+
 create(env) may contain helper functions, and helpers may return objects. PlayFeed treats only the object directly returned by create(env) as the GameInstance.
 
 cancel means the platform took over the gesture or interrupted the game. It may only release held or dragged state. It must not trigger firing, scoring, or results that belong to up.
@@ -289,6 +294,7 @@ Rules:
 - The game calls env.setScore() and env.over().
 - stop() stops all animations and timers.
 - Every run begins with a short in-canvas control instruction.
+- The Script does not show its own Start button or wait in a pre-start state.
 - At least one remix slot is present and every slotted element is drawn through env.sprite().
 - No external resources, network, storage, or DOM APIs.
 - No required vertical interaction.
@@ -381,6 +387,7 @@ Core requirements:
 - No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
 - Vertical gestures remain available to the Feed.
 - At the beginning of start(), briefly draw the controls inside the canvas.
+- Do not build a Start button or waiting-for-start state; PlayFeed handles previewing and tap-to-start.
 - Provide at least one remix slot. Every replaceable element must actually call env.sprite(), drawing its original appearance only when no replacement is available.
 - Technical repairs must not restrict or redesign the gameplay.
 - Output exactly one complete JavaScript code block with no other text.
@@ -406,6 +413,7 @@ ${source}
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
 - 垂直手勢保留給 Feed。
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
+- 不可自行製作開始按鈕或等待開始狀態；平台會處理預覽與輕點開局。
 - remixSlots 至少一項；每個可換元素都要實際呼叫 env.sprite()，沒有素材時才畫原本外觀。
 - 技術修復不應限制或重新設計玩法。
 - 最後只輸出一個完整 JavaScript 程式碼區塊，不要加入其他文字。

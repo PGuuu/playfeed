@@ -133,8 +133,6 @@
     color: #fff; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.16);
     backdrop-filter: blur(3px); box-shadow: 0 10px 32px rgba(0,0,0,.12);
     text-shadow: 0 1px 7px rgba(0,0,0,.48); }
-  .overlay-main.start-only { width: auto; padding: 0; border: 0; background: transparent;
-    backdrop-filter: none; box-shadow: none; text-shadow: none; }
   .overlay h2 { font-size: 26px; font-weight: 700; }
   .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
   .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
@@ -146,21 +144,6 @@
   @keyframes pvblink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
   .overlay .go { border: none; cursor: pointer; background: #262626; color: #fff;
     font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
-  .overlay-main.start-only .go { background: linear-gradient(135deg, #ff2d78, #ff8a00);
-    box-shadow: 0 0 0 1px rgba(255,255,255,.65), 0 0 18px rgba(255,45,120,.8),
-      0 0 42px rgba(255,138,0,.5); animation: startGlow 1.8s ease-in-out infinite; }
-  .overlay-main.start-only.attention { animation: startAttention .48s cubic-bezier(.36,.07,.19,.97); }
-  @keyframes startGlow {
-    0%, 100% { transform: scale(1); filter: saturate(1); }
-    50% { transform: scale(1.055); filter: saturate(1.2) brightness(1.08); }
-  }
-  @keyframes startAttention {
-    0%, 100% { transform: translateX(0) rotate(0); }
-    18% { transform: translateX(-9px) rotate(-2deg); }
-    36% { transform: translateX(8px) rotate(2deg); }
-    54% { transform: translateX(-6px) rotate(-1.5deg); }
-    72% { transform: translateX(4px) rotate(1deg); }
-  }
   .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
   .overlay .share-score { border: none; cursor: pointer; background: #efefef;
     color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
@@ -2051,11 +2034,7 @@ function makePost(entry, opts) {
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
         <button class="rmx"><span class="ic">${ICONS.remix}</span><span>二創</span></button>
       </div>
-      <div class="overlay">
-        <div class="overlay-main start-only">
-          <button class="go">開始</button>
-        </div>
-      </div>
+      <div class="overlay hidden"></div>
     </div>`;
 
   const canvas = post.querySelector('canvas');
@@ -2112,19 +2091,19 @@ function makePost(entry, opts) {
     pv.on = true;
     if (!pv.game) pv.game = entry.base.create(pvEnv);
     pv.game.start();
-    schedulePvInput();
+    schedulePvInput(1250);
   }
   function stopPreview() {
     pv.on = false;
     clearTimeout(pv.timer); clearTimeout(pv.restartT); clearInterval(pv.swipeIv);
     if (pv.game) pv.game.stop();
   }
-  function schedulePvInput() {
+  function schedulePvInput(delay = 350 + Math.random() * 550) {
     pv.timer = setTimeout(() => {
       if (!pv.on) return;
       pvDemoInput();
       schedulePvInput();
-    }, 350 + Math.random() * 550);
+    }, delay);
   }
   function pvDemoInput() {
     const x = W * (0.15 + Math.random() * 0.7), y = H * (0.25 + Math.random() * 0.55);
@@ -2204,13 +2183,6 @@ function makePost(entry, opts) {
     });
   }
   wireStart(overlay);
-  function nudgeStartButton() {
-    const startOnly = overlay.querySelector('.start-only');
-    if (!startOnly || overlay.classList.contains('hidden')) return;
-    startOnly.classList.remove('attention');
-    void startOnly.offsetWidth;
-    startOnly.classList.add('attention');
-  }
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
@@ -2225,7 +2197,7 @@ function makePost(entry, opts) {
     }
     gest = {
       id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
-      claimed: false, gaveDown: false, ignoreStartNudge: !!interactive, startedAt: e.timeStamp
+      claimed: false, gaveDown: false, ignoreTapStart: !!interactive, startedAt: e.timeStamp
     };
     if (e.target === canvas && state.running && state.game) {
       const [x, y] = toLogical(e);
@@ -2263,8 +2235,9 @@ function makePost(entry, opts) {
     const finished = gest;
     const dx = e.clientX - finished.x0;
     const dy = e.clientY - finished.y0;
-    if (!state.running && !finished.ignoreStartNudge && Math.hypot(dx, dy) < 12 &&
-        e.timeStamp - finished.startedAt < 520) nudgeStartButton();
+    if (!cancelled && !state.running && overlay.classList.contains('hidden') &&
+        !finished.ignoreTapStart && Math.hypot(dx, dy) < 12 &&
+        e.timeStamp - finished.startedAt < 520) begin();
     if (!finished.swiped && finished.gaveDown && state.running && state.game) {
       const [x, y] = toLogical(e);
       state.game.input(cancelled ? 'cancel' : 'up', x, y);
@@ -2310,9 +2283,7 @@ function makePost(entry, opts) {
       stage.classList.remove('playing');
       if (state.game && state.running) { state.game.stop(); state.running = false; }
       if (!overlay.classList.contains('hidden')) return;
-      overlay.classList.remove('hidden');
-      overlay.innerHTML = `<div class="overlay-main start-only"><button class="go">開始</button></div>`;
-      wireStart(overlay);
+      overlay.replaceChildren();
     }
   };
 }

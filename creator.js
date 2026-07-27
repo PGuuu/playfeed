@@ -334,7 +334,8 @@ function sprite(key,cx,cy,size,flip){const image=SPRITES[key];if(!image||!image.
 const env={W:400,H:700,ctx,beep,sprite,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
 function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
-function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setInterval(()=>{if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)},380+Math.random()*240)}
+function autoInput(){if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
+function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setTimeout(()=>{if(ended)return;autoInput();autoTimer=real.setInterval(autoInput,480+Math.random()*180)},1250)}
 addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start(false);else if(m.type==='auto')start(true);else if(m.type==='stop')stop();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
 addEventListener('error',e=>send('runtime-error',{message:String(e.message||'執行錯誤')}));
 try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];send('ready')}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
@@ -962,7 +963,7 @@ function captureDraftAutomatically() {
     const runtime = createRuntime(holder, draft.source, draft.metadata.duration, msg => {
       if (msg.type === 'ready') {
         runtime.send('auto');
-        setTimeout(() => runtime.send('capture'), 900);
+        setTimeout(() => runtime.send('capture'), 1800);
       } else if (msg.type === 'capture') finish(msg.image);
       else if (msg.type === 'runtime-error') finish(null);
     });
@@ -1168,13 +1169,10 @@ function addSandboxPost(row, options = {}) {
   const resetOverlay = (finalScore = null) => {
     overlay.replaceChildren();
     if (finalScore === null) {
-      const startOnly = el('div', 'overlay-main start-only');
-      const go = el('button', 'go', '開始');
-      go.addEventListener('click', event => { event.stopPropagation(); begin(); });
-      startOnly.appendChild(go);
-      overlay.appendChild(startOnly);
+      overlay.classList.add('hidden');
       return;
     }
+    overlay.classList.remove('hidden');
     const card = el('div', 'overlay-main');
     const author = el('button', 'author-link', entry.author);
     author.addEventListener('click', event => {
@@ -1220,6 +1218,10 @@ function addSandboxPost(row, options = {}) {
       if (msg.type === 'over' && playing) {
         playing = false; stage.classList.remove('playing'); overlay.classList.remove('hidden');
         resetOverlay(msg.score); submitPublishedScore(entry, msg.score, bestChip);
+      } else if (msg.type === 'over' && previewing) {
+        setTimeout(() => {
+          if (previewing && !playing) spawn('auto');
+        }, 900);
       }
       if (msg.type === 'runtime-error') {
         errorBox.textContent = `遊戲執行錯誤：${msg.message}`; errorBox.style.display = 'block';
@@ -1239,14 +1241,7 @@ function addSandboxPost(row, options = {}) {
   const stopAll = () => {
     if (gesture && runtime) runtime.send('input', { inputType: 'cancel', x: gesture.x, y: gesture.y });
     gesture = null; playing = false; previewing = false; stage.classList.remove('playing');
-    destroyRuntime(); overlay.classList.remove('hidden'); resetOverlay();
-  };
-  const nudgeStartButton = () => {
-    const startOnly = overlay.querySelector('.start-only');
-    if (!startOnly || overlay.classList.contains('hidden')) return;
-    startOnly.classList.remove('attention');
-    void startOnly.offsetWidth;
-    startOnly.classList.add('attention');
+    destroyRuntime(); resetOverlay();
   };
 
   function logical(event) {
@@ -1262,7 +1257,7 @@ function addSandboxPost(row, options = {}) {
     const gaveDown = !!(event.target === inputLayer && playing && runtime);
     gesture = {
       id: event.pointerId, x0: event.clientX, y0: event.clientY,
-      x, y, claimed: false, swiped: false, gaveDown, ignoreStartNudge: !!interactive,
+      x, y, claimed: false, swiped: false, gaveDown, ignoreTapStart: !!interactive,
       startedAt: event.timeStamp
     };
     if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
@@ -1291,8 +1286,9 @@ function addSandboxPost(row, options = {}) {
     const finished = gesture;
     const dx = event.clientX - finished.x0;
     const dy = event.clientY - finished.y0;
-    if (!playing && !finished.ignoreStartNudge && Math.hypot(dx, dy) < 12 &&
-        event.timeStamp - finished.startedAt < 520) nudgeStartButton();
+    if (!cancelled && !playing && overlay.classList.contains('hidden') &&
+        !finished.ignoreTapStart && Math.hypot(dx, dy) < 12 &&
+        event.timeStamp - finished.startedAt < 520) begin();
     if (!finished.swiped && finished.gaveDown && runtime) {
       runtime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
     }
