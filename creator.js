@@ -156,6 +156,7 @@ function validateScript(raw) {
     bg: read('bg'),
     tags: read('tags'),
     controls: read('controls'),
+    preview: read('preview'),
     duration: read('duration'),
     score: read('score'),
     remixSlots: read('remixSlots') || []
@@ -178,6 +179,11 @@ function validateScript(raw) {
     errors.push('controls 必須是至少含一項的字串陣列。');
   } else if (metadata.controls.some(x => VERTICAL_CONTROLS.test(x))) {
     errors.push('controls 包含垂直操作；垂直手勢必須保留給 Feed。');
+  }
+  if (metadata.preview === undefined) {
+    metadata.preview = 'cover';
+  } else if (!['cover', 'demo'].includes(metadata.preview)) {
+    errors.push('preview 只能是 cover 或 demo。');
   }
   if (metadata.duration === undefined) {
     metadata.duration = 45;
@@ -336,7 +342,7 @@ function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,40
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function autoInput(){if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setTimeout(()=>{if(ended)return;autoInput();autoTimer=real.setInterval(autoInput,480+Math.random()*180)},1250)}
-addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start(false);else if(m.type==='auto')start(true);else if(m.type==='stop')stop();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
+addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start'||m.type==='preview')start(false);else if(m.type==='auto')start(true);else if(m.type==='stop')stop();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
 addEventListener('error',e=>send('runtime-error',{message:String(e.message||'執行錯誤')}));
 try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];send('ready')}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
 })();<\/script></body></html>`;
@@ -797,6 +803,7 @@ function renderValidation(result) {
   const meta = el('div', 'creator-meta');
   const pairs = [
     ['結束方式', '依遊戲本身規則'],
+    ['預覽方式', result.metadata.preview === 'demo' ? '自動示範' : '封面待機'],
     ['操作類型', result.metadata.controls.join('、')],
     ['Remix 元素', result.metadata.remixSlots.length ? result.metadata.remixSlots.map(x => x.label).join('、') : '無'],
     ['排行榜', `${result.metadata.score.label} · ${result.metadata.score.order === 'higher' ? '愈高愈好' : '愈低愈好'}`],
@@ -867,6 +874,7 @@ function legacyRowToPublished(row) {
     bg: payload.bg || '#18354a',
     tags: payload.tags || [],
     controls: payload.controls || [],
+    preview: payload.preview || previewModeFromScript(payload.script),
     duration: payload.duration || 45,
     score: payload.score || { label: '分數', order: 'higher' },
     remix_slots: payload.remixSlots || [],
@@ -962,7 +970,7 @@ function captureDraftAutomatically() {
     };
     const runtime = createRuntime(holder, draft.source, draft.metadata.duration, msg => {
       if (msg.type === 'ready') {
-        runtime.send('auto');
+        runtime.send(draft.metadata.preview === 'demo' ? 'auto' : 'preview');
         setTimeout(() => runtime.send('capture'), 1800);
       } else if (msg.type === 'capture') finish(msg.image);
       else if (msg.type === 'runtime-error') finish(null);
@@ -1022,6 +1030,19 @@ function publishedAuthorText(authorId, name) {
   return host.user && authorId === host.user.id ? '@我' : `@${name || '玩家'}`;
 }
 
+function previewModeFromScript(source) {
+  if (typeof source !== 'string' || !source) return 'cover';
+  try {
+    const program = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
+    const game = findRegistration(program);
+    const prop = game && getProperty(game, 'preview');
+    const value = prop ? staticValue(prop.value) : undefined;
+    return value === 'demo' ? 'demo' : 'cover';
+  } catch (_) {
+    return 'cover';
+  }
+}
+
 function normalisePublished(row) {
   const officialBase = (window.GAMES || []).find(game => game.id === row.slug) || null;
   const entry = {
@@ -1039,6 +1060,7 @@ function normalisePublished(row) {
     authorId: row.author_id,
     authorName: row.author_name || '玩家',
     duration: row.duration,
+    preview: officialBase ? (officialBase.preview || 'demo') : (row.preview || previewModeFromScript(row.script)),
     score: row.score || { label: '分數', order: 'higher' },
     remixSlots: row.remix_slots?.length ? row.remix_slots : (officialBase?.remixSlots || []),
     screenshot: row.screenshot || null,
@@ -1132,6 +1154,7 @@ function addSandboxPost(row, options = {}) {
   const frameHost = el('div', 'sandbox-frame-host');
   frameHost.style.setProperty('--sandbox-bg', entry.bg || '#fff');
   const inputLayer = el('div', 'sandbox-input');
+  const tapHint = el('div', 'tap-start-hint hidden', '點一下開始');
   const hud = el('div', 'hud');
   const scoreChip = el('span', 'chip score-chip');
   scoreChip.append(document.createTextNode(`${entry.score.label || '分數'} `), el('b', 'sc', '0'));
@@ -1200,7 +1223,7 @@ function addSandboxPost(row, options = {}) {
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, overlay, errorBox);
+  stage.append(frameHost, inputLayer, hud, rail, tapHint, overlay, errorBox);
   post.appendChild(stage);
   if (options.container) options.container.appendChild(post);
   else host.feed.prepend(post);
@@ -1220,7 +1243,7 @@ function addSandboxPost(row, options = {}) {
         resetOverlay(msg.score); submitPublishedScore(entry, msg.score, bestChip);
       } else if (msg.type === 'over' && previewing) {
         setTimeout(() => {
-          if (previewing && !playing) spawn('auto');
+          if (previewing && !playing) spawn(entry.preview === 'demo' ? 'auto' : 'preview');
         }, 900);
       }
       if (msg.type === 'runtime-error') {
@@ -1232,15 +1255,19 @@ function addSandboxPost(row, options = {}) {
   };
   const begin = () => {
     playing = true; previewing = false; scoreChip.querySelector('b').textContent = '0';
+    tapHint.classList.add('hidden');
     overlay.classList.add('hidden'); stage.classList.add('playing'); spawn('start');
   };
   const startPreview = () => {
     if (playing || previewing) return;
-    previewing = true; spawn('auto');
+    previewing = true;
+    tapHint.classList.remove('hidden');
+    spawn(entry.preview === 'demo' ? 'auto' : 'preview');
   };
   const stopAll = () => {
     if (gesture && runtime) runtime.send('input', { inputType: 'cancel', x: gesture.x, y: gesture.y });
     gesture = null; playing = false; previewing = false; stage.classList.remove('playing');
+    tapHint.classList.add('hidden');
     destroyRuntime(); resetOverlay();
   };
 
@@ -1313,7 +1340,7 @@ function addSandboxPost(row, options = {}) {
     deactivate: stopAll,
     setSpriteData(spriteData) {
       entry.spriteData = { ...(spriteData || {}) };
-      if (runtime) spawn(playing ? 'start' : 'auto');
+      if (runtime) spawn(playing ? 'start' : (entry.preview === 'demo' ? 'auto' : 'preview'));
     },
     setReactions(count, mine, dislikeCount, disliked) {
       like.classList.toggle('liked', mine); like.querySelector('.lc').textContent = String(count);
@@ -1378,6 +1405,7 @@ function officialSubmission(game) {
     bg: game.bg,
     tags: ['official'],
     controls: ['tap'],
+    preview: game.preview || 'demo',
     score: { label: '分數', order: 'higher' },
     remixSlots: game.remixSlots || [],
   };
@@ -1506,7 +1534,8 @@ function capturePublishedThumbnail(id, force = false, entryOverride = null) {
     };
     runtime = createRuntime(holder, row.script, row.duration, msg => {
       if (msg.type === 'ready') {
-        runtime.send('auto');
+        const previewMode = entryOverride?.preview || previewModeFromScript(row.script);
+        runtime.send(previewMode === 'demo' ? 'auto' : 'preview');
         setTimeout(() => runtime?.send('capture'), 1500);
       } else if (msg.type === 'capture') {
         finish(msg.image);

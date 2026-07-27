@@ -5,7 +5,7 @@
 window.GAMES = (window.GAMES || []).concat([
 
 {
-  id: 'pixel-guess', title: '像素猜猜：馬賽克裡是什麼', author: '@眼力檢定所', tip: '圖會慢慢變清楚，越早猜中分越高，猜錯扣 30', bg: '#0f2a1a',
+  id: 'pixel-guess', title: '像素猜猜：馬賽克裡是什麼', author: '@眼力檢定所', tip: '圖會慢慢變清楚，越早猜中分越高，猜錯扣 30', bg: '#0f2a1a', preview: 'cover',
   remixSlots: [
     { key: 'mascot', label: '猜題吉祥物', hint: '題目畫面右上角的裝飾角色', default: '🔍', shape: 'circle' }
   ],

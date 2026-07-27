@@ -21,6 +21,7 @@ window.GAMES = (window.GAMES || []).concat([
     bg: '#18354a',
     tags: [],
     controls: ['tap'],
+    preview: 'cover',
     score: { label: '分數', order: 'higher', decimals: 0 },
     remixSlots: [
       {
@@ -61,6 +62,7 @@ metadata 規則：
 - bg 必須是十六進位色碼。
 - tags 是字串陣列，可以為空。
 - controls 至少一項，可使用 tap、hold、horizontal-drag、left-right 或它們的組合。
+- preview 決定尚未正式開始時的預覽方式：cover 或 demo。未填時預設為 cover。
 - duration 是選配的預估秒數，不是時間限制。可以省略，遊戲可依命數、目標、失敗條件或自己的規則結束。
 - score.order 使用 higher 或 lower；decimals 建議為 0。
 - remixSlots 至少要有一項，讓玩家可以替換遊戲中的角色或物件外觀。
@@ -85,7 +87,14 @@ GameInstance 必須包含：
 
 每次 start() 開局時，遊戲必須直接在 canvas 畫面中短暫顯示操作方法。提示應簡短、清楚，可在第一次操作後或數秒後淡出；不可使用 DOM 製作提示。
 
-玩家滑到這款遊戲時，PlayFeed 會先呼叫 start() 並以自動輸入展示玩法；玩家輕點遊戲畫面後，平台會重新呼叫 start() 正式開局。因此預覽一開始就應看得懂操作，Script 不要自行製作「開始」按鈕或等待開始狀態。
+玩家滑到這款遊戲時，PlayFeed 會顯示「點一下開始」，並先呼叫 start() 產生預覽。玩家輕點後，平台會重新呼叫 start()，清除預覽狀態並正式開局。Script 不要自行製作「開始」按鈕。
+
+請依玩法選擇預覽方式：
+
+- preview: 'cover'（預設）：只顯示不會劇透的首頁、封面或待機畫面，平台不送出自動輸入。適合塔羅／抽牌、問答、記憶、劇情選擇、驚喜揭露，以及任何自動操作會替玩家做決定的遊戲。start() 在沒有輸入時不得揭露答案、抽牌或推進關鍵結果。
+- preview: 'demo'：平台會在短暫顯示操作方法後送出隨機合法輸入，讓背景自動示範玩法。適合動作、節奏、閃避、接物等不怕展示過程的遊戲。
+
+不論使用哪一種，正式開局的 start() 都必須完整重設狀態。預覽中的分數、隨機結果、計時與進度不可帶入正式遊戲。
 
 create(env) 內可以自由建立輔助函式，也可以讓輔助函式回傳物件。平台只把 create(env) 自己直接回傳的物件視為 GameInstance。
 
@@ -141,6 +150,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 - 遊戲會呼叫 env.setScore() 與 env.over()。
 - stop() 能停止全部動畫與 timer。
 - 每次開局會先在遊戲畫面中顯示簡短操作提示。
+- preview 使用 cover 或 demo，並選擇不會劇透或替玩家做決定的模式。
 - 不會自行顯示開始按鈕或停在等待開始狀態。
 - remixSlots 至少一項，而且每個可換元素都實際透過 env.sprite() 繪製。
 - 沒有外部資源、網路、儲存或 DOM API。
@@ -174,6 +184,7 @@ window.GAMES = (window.GAMES || []).concat([
     bg: '#18354a',
     tags: [],
     controls: ['tap'],
+    preview: 'cover',
     score: { label: 'Score', order: 'higher', decimals: 0 },
     remixSlots: [
       {
@@ -214,6 +225,7 @@ Metadata rules:
 - bg must be a hexadecimal color.
 - tags is an array of strings and may be empty.
 - controls must contain at least one value. Use tap, hold, horizontal-drag, left-right, or a combination.
+- preview controls what appears before the player formally starts: cover or demo. It defaults to cover when omitted.
 - duration is an optional estimate, not a time limit. It may be omitted. A game may end through lives, goals, failure conditions, or its own rules.
 - score.order is higher or lower; decimals should normally be 0.
 - remixSlots must contain at least one visual element that players can replace.
@@ -238,7 +250,14 @@ GameInstance must contain:
 
 At the beginning of every start(), briefly show the controls directly inside the canvas. Keep the instruction short and clear; it may fade after the first input or after a few seconds. Do not use DOM elements for instructions.
 
-When a player scrolls to the game, PlayFeed calls start() and demonstrates the gameplay with automatic input. When the player taps the game, PlayFeed calls start() again for the real run. Make the controls understandable from the beginning of the preview. Do not build a Start button or a waiting-for-start state inside the Script.
+When a player scrolls to the game, PlayFeed shows “Tap to play” and calls start() to create the preview. When the player taps, PlayFeed calls start() again, discards the preview state, and begins the real run. Do not build a Start button inside the Script.
+
+Choose the preview mode that fits the game:
+
+- preview: 'cover' (default): show a non-spoiling title, cover, or idle scene. PlayFeed sends no automatic input. Use this for tarot/card draws, quizzes, memory games, story choices, surprise reveals, and any game where automation would make a decision for the player. With no input, start() must not reveal an answer, draw a card, or advance a key result.
+- preview: 'demo': after the short in-canvas control instruction, PlayFeed sends random valid input to demonstrate the gameplay in the background. Use this for action, rhythm, dodging, catching, and other games where showing the action does not spoil the experience.
+
+In both modes, start() must fully reset the game for the real run. Preview scores, random outcomes, timers, and progress must never carry over.
 
 create(env) may contain helper functions, and helpers may return objects. PlayFeed treats only the object directly returned by create(env) as the GameInstance.
 
@@ -294,6 +313,7 @@ Rules:
 - The game calls env.setScore() and env.over().
 - stop() stops all animations and timers.
 - Every run begins with a short in-canvas control instruction.
+- preview is cover or demo and is chosen so the preview cannot spoil content or decide for the player.
 - The Script does not show its own Start button or wait in a pre-start state.
 - At least one remix slot is present and every slotted element is drawn through env.sprite().
 - No external resources, network, storage, or DOM APIs.
@@ -387,7 +407,8 @@ Core requirements:
 - No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
 - Vertical gestures remain available to the Feed.
 - At the beginning of start(), briefly draw the controls inside the canvas.
-- Do not build a Start button or waiting-for-start state; PlayFeed handles previewing and tap-to-start.
+- Use preview: 'cover' for hidden information or player decisions, and preview: 'demo' only when automatic input cannot spoil the game.
+- Do not build a Start button; PlayFeed handles previewing and tap-to-start.
 - Provide at least one remix slot. Every replaceable element must actually call env.sprite(), drawing its original appearance only when no replacement is available.
 - Technical repairs must not restrict or redesign the gameplay.
 - Output exactly one complete JavaScript code block with no other text.
@@ -413,7 +434,8 @@ ${source}
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
 - 垂直手勢保留給 Feed。
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
-- 不可自行製作開始按鈕或等待開始狀態；平台會處理預覽與輕點開局。
+- 隱藏資訊或需要玩家決定的遊戲使用 preview: 'cover'；只有不怕自動輸入劇透時才使用 preview: 'demo'。
+- 不可自行製作開始按鈕；平台會處理預覽與輕點開局。
 - remixSlots 至少一項；每個可換元素都要實際呼叫 env.sprite()，沒有素材時才畫原本外觀。
 - 技術修復不應限制或重新設計玩法。
 - 最後只輸出一個完整 JavaScript 程式碼區塊，不要加入其他文字。

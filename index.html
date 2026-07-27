@@ -152,6 +152,19 @@
   .overlay .result-score-label { display: block; margin-bottom: 3px; font-size: 12px;
     font-weight: 650; opacity: .78; }
   .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
+  .tap-start-hint { position: absolute; z-index: 4; left: 50%;
+    top: calc(50% + var(--game-top-height) / 2); transform: translate(-50%, -50%);
+    padding: 10px 17px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+    color: #111; background: rgba(255,255,255,.86); border: 1px solid rgba(255,255,255,.72);
+    box-shadow: 0 6px 22px rgba(0,0,0,.18); backdrop-filter: blur(5px);
+    font-size: 15px; font-weight: 750; letter-spacing: .01em;
+    animation: tapHintArrive .72s cubic-bezier(.2,.8,.2,1) both; }
+  .tap-start-hint.hidden { display: none; }
+  @keyframes tapHintArrive {
+    0% { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.94); }
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
+    100% { opacity: .9; transform: translate(-50%, -50%) scale(1); }
+  }
 
   .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
     background: rgba(255,255,255,0.92); color: #111; font-size: 14px; font-weight: 500;
@@ -2034,6 +2047,7 @@ function makePost(entry, opts) {
         <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
         <button class="rmx"><span class="ic">${ICONS.remix}</span><span>二創</span></button>
       </div>
+      <div class="tap-start-hint hidden">點一下開始</div>
       <div class="overlay hidden"></div>
     </div>`;
 
@@ -2042,6 +2056,7 @@ function makePost(entry, opts) {
   const ctx = canvas.getContext('2d');
   const stage = post.querySelector('.stage');
   const overlay = post.querySelector('.overlay');
+  const tapHint = post.querySelector('.tap-start-hint');
   const scEl = post.querySelector('.sc');
   const bestChip = post.querySelector('.best-chip');
   const bsEl = post.querySelector('.bs');
@@ -2065,7 +2080,7 @@ function makePost(entry, opts) {
     return true;
   };
 
-  /* 實況預覽（attract mode）：滑到這格時，遊戲自己在標題後面隨機試玩 */
+  /* 預覽：cover 只顯示遊戲首頁；demo 才由平台送出隨機輸入示範玩法。 */
   const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
   function fitCanvas() {
     const rect = canvas.getBoundingClientRect();
@@ -2091,10 +2106,12 @@ function makePost(entry, opts) {
     pv.on = true;
     if (!pv.game) pv.game = entry.base.create(pvEnv);
     pv.game.start();
-    schedulePvInput(1250);
+    tapHint.classList.remove('hidden');
+    if ((entry.preview || entry.base.preview || 'demo') === 'demo') schedulePvInput(1250);
   }
   function stopPreview() {
     pv.on = false;
+    tapHint.classList.add('hidden');
     clearTimeout(pv.timer); clearTimeout(pv.restartT); clearInterval(pv.swipeIv);
     if (pv.game) pv.game.stop();
   }
@@ -2147,6 +2164,7 @@ function makePost(entry, opts) {
           </div>
         </div>`;
       overlay.classList.remove('hidden');
+      tapHint.classList.add('hidden');
       wireStart(overlay);
       let cardURL = null;
       buildShareCard(snap, entry.title, score, u => cardURL = u);
@@ -2154,7 +2172,8 @@ function makePost(entry, opts) {
         if (cardURL) shareScoreCard(cardURL, entry, score);
         else toast('成績圖產生中，再按一次');
       });
-      startPreview();   /* 結算畫面後面繼續跑實況 */
+      startPreview();   /* 結算畫面後面繼續跑預覽，但不重複顯示開局提示 */
+      tapHint.classList.add('hidden');
     }
   };
 
@@ -2167,6 +2186,7 @@ function makePost(entry, opts) {
     overlay.classList.add('hidden');
     stage.classList.add('playing');
     state.running = true;
+    tapHint.classList.add('hidden');
     state.game.start();
   }
   function wireStart(root) {
@@ -2302,7 +2322,7 @@ const io = new IntersectionObserver(ents => {
 function toBaseEntry(g) {
   return { id: g.id, base: g, title: g.title, author: '@我',
            authorId: officialOwner.id, authorName: officialOwner.name, isOfficial: true,
-           tip: g.tip, bg: g.bg,
+           tip: g.tip, bg: g.bg, preview: g.preview || 'demo',
            remixSlots: g.remixSlots, sprites: {}, spriteData: {} };
 }
 function toRemixEntry(r) {
@@ -2318,6 +2338,7 @@ function toRemixEntry(r) {
       tip: base.tip,
       description: base.description,
       bg: base.bg,
+      preview: base.preview || 'cover',
       remixSlots: base.remixSlots || [],
       sprites: {},
       spriteData: r.sprites || {},
@@ -2334,6 +2355,7 @@ function toRemixEntry(r) {
   return { id: 'remix:' + r.id, base, title: r.name,
            author: '@' + (r.author || '玩家') + '·改造',
            authorId: r.user_id, authorName: r.author || '玩家', tip: base.tip, bg: base.bg,
+           preview: base.preview || 'demo',
            remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
            spriteData: r.sprites || {}, remixOf: r.base_id, remixMeta: r };
 }
