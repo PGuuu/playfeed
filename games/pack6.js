@@ -6,6 +6,7 @@ window.GAMES = (window.GAMES || []).concat([
   id: 'last-rain-bus',
   title: '末班雨公車：寫給明天的信',
   author: '@playfeed 官方',
+  description: '一篇在雨夜公車上做選擇、走向四種結局的短篇互動故事。',
   tip: '點擊翻開故事，再選擇畫面左邊或右邊，走向不同結局',
   bg: '#7ed6df',
   preview: 'cover',
