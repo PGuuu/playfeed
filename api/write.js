@@ -14,11 +14,10 @@ const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
 const PROFILE_PREFIX = '__profile__:';
 const AVATAR_PREFIX = '__avatar__:';
-const OFFICIAL_GAME_VERSION = 'official-1.1.1';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
-  'crossy-chicken', 'softserve', 'last-rain-bus', 'book-of-answers',
+  'crossy-chicken', 'softserve', 'last-rain-bus', 'sand-canvas',
 ];
 const OFFICIAL_BACKGROUNDS = {
   dodge: '#65C7C4',
@@ -36,7 +35,7 @@ const OFFICIAL_BACKGROUNDS = {
   'crossy-chicken': '#91DF72',
   softserve: '#FFB7D2',
   'last-rain-bus': '#7ED6DF',
-  'book-of-answers': '#151936',
+  'sand-canvas': '#F6E2B8',
 };
 const recentRequests = new Map();
 
@@ -411,7 +410,7 @@ async function syncOfficialGames(user, body) {
       slug: id,
       suggested_id: id,
       api_version: 1,
-      game_version: OFFICIAL_GAME_VERSION,
+      game_version: 'official-1.0.0',
       title: safeText(game.title, { name: 'title', max: 80 }),
       description: safeText(game.description || game.tip, { name: 'description', max: 240 }),
       tip: safeText(game.tip, { name: 'tip', max: 160 }),
@@ -426,7 +425,7 @@ async function syncOfficialGames(user, body) {
       author_id: user.id,
       author_name: publicName(user),
       status: 'published',
-      created_at: id === 'book-of-answers'
+      created_at: id === 'sand-canvas'
         ? new Date('2026-07-28T12:00:00.000Z').toISOString()
         : id === 'last-rain-bus'
           ? new Date('2026-07-28T00:00:00.000Z').toISOString()
