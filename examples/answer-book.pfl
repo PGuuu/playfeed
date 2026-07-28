@@ -84,7 +84,6 @@ playfeed 1
         "background": "#543b78",
         "backgroundEnd": "#14162f",
         "title": "書給你的回答",
-        "text": "「{{answer}}」",
         "hint": "答案不是命令，只是一面鏡子",
         "visual": {
           "remix": "book",
@@ -94,6 +93,18 @@ playfeed 1
           "size": 230,
           "color": "#fff0b2",
           "glow": "#fff5b8"
+        },
+        "visualText": {
+          "text": "「{{answer}}」",
+          "x": 200,
+          "y": 390,
+          "width": 178,
+          "height": 114,
+          "size": 22,
+          "color": "#29223f",
+          "panelColor": "#fffbe8",
+          "borderColor": "#c8a96b",
+          "glow": "#fff3a6"
         },
         "choices": [
           {

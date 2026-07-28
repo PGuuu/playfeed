@@ -46,11 +46,12 @@ function createHarness(source) {
   globalThis.window = { GAMES: [] };
   new Function(source)();
   const game = window.GAMES[0];
-  const events = { scores: [], over: [], sprites: 0 };
+  const events = { scores: [], over: [], sprites: 0, texts: [] };
   const gradient = { addColorStop() {} };
   const context = new Proxy({
     measureText(text) { return { width: String(text).length * 9 }; },
     createLinearGradient() { return gradient; },
+    fillText(text) { events.texts.push(String(text)); },
   }, {
     get(target, key) {
       if (key in target) return target[key];
@@ -141,6 +142,11 @@ assert.throws(
   harness.runFrames(80);
   harness.instance.input('up', 200, 400);
   harness.runFrames(1);
+  assert.ok(
+    compiled.get('answer-book.pfl').spec.flow.data.answers.some(answer =>
+      harness.events.texts.some(text => text.includes(answer))),
+    'the selected answer should be drawn visibly on the book',
+  );
   harness.instance.input('down', 100, 600);
   harness.instance.input('up', 100, 600);
   assert.equal(harness.events.over.length, 1, 'answer book should finish after choosing 完成');

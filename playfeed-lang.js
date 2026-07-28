@@ -128,6 +128,25 @@ function normaliseSpec(input) {
           fail(`scene.visual.remix 找不到「${scene.visual.remix}」。`);
         }
       }
+      if (scene.visualText !== undefined) {
+        const visualText = scene.visualText;
+        if (!visualText || typeof visualText !== 'object' || Array.isArray(visualText)) {
+          fail('scene.visualText 必須是物件。');
+        }
+        if (typeof visualText.text !== 'string' || !visualText.text.trim()) {
+          fail('scene.visualText.text 必須是文字。');
+        }
+        for (const key of ['color', 'panelColor', 'borderColor', 'glow']) {
+          if (visualText[key] !== undefined && typeof visualText[key] !== 'string') {
+            fail(`scene.visualText.${key} 必須是文字。`);
+          }
+        }
+        for (const key of ['x', 'y', 'width', 'height', 'size']) {
+          if (visualText[key] !== undefined && !Number.isFinite(Number(visualText[key]))) {
+            fail(`scene.visualText.${key} 必須是數字。`);
+          }
+        }
+      }
       if (scene.hold !== undefined) {
         const hold = scene.hold;
         if (!hold || typeof hold !== 'object' || Array.isArray(hold)) fail('scene.hold 必須是物件。');
@@ -359,6 +378,31 @@ function flowEngine(env, spec) {
     ctx.fillText(label, W / 2, y + 39);
     ctx.restore();
   }
+  function drawVisualText(scene) {
+    const overlay = scene.visualText;
+    if (!overlay || typeof overlay !== 'object') return;
+    const visual = scene.visual || {};
+    const x = Number(overlay.x) || Number(visual.x) || W / 2;
+    const y = Number(overlay.y) || Number(visual.y) || H * .52;
+    const width = Number(overlay.width) || Math.min(190, (Number(visual.size) || 220) * .76);
+    const height = Number(overlay.height) || 112;
+    const size = Math.max(14, Math.min(34, Number(overlay.size) || 22));
+    ctx.save();
+    ctx.shadowColor = overlay.glow || 'rgba(255,245,184,.78)';
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = overlay.panelColor || 'rgba(255,250,225,.96)';
+    roundRect(x - width / 2, y - height / 2, width, height, 12); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = overlay.borderColor || 'rgba(113,83,38,.28)';
+    roundRect(x - width / 2, y - height / 2, width, height, 12); ctx.stroke();
+    ctx.fillStyle = overlay.color || '#29223f';
+    ctx.font = `900 ${size}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    wrap(overlay.text, x, y - size * .35, width - 24, size * 1.28, 3);
+    ctx.restore();
+  }
   function draw() {
     if (!alive) return;
     time++;
@@ -368,6 +412,7 @@ function flowEngine(env, spec) {
     gradient.addColorStop(0, bg); gradient.addColorStop(1, scene.backgroundEnd || '#101426');
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
     drawVisual(scene);
+    drawVisualText(scene);
     drawHold(scene);
     ctx.textAlign = 'center';
     ctx.fillStyle = scene.titleColor || '#fff';

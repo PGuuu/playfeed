@@ -95,6 +95,25 @@ playfeed 1
 
 \`minSeconds\` 未達時不會觸發 release；\`page-flip\` 會在按住期間持續翻頁，phrases 會逐句淡入淡出。
 
+需要把結果、卡牌文字或回答直接顯示在主要物件上時，可在 scene 加入：
+
+\`\`\`json
+"visualText": {
+  "text": "「{{answer}}」",
+  "x": 200,
+  "y": 390,
+  "width": 178,
+  "height": 114,
+  "size": 22,
+  "color": "#29223f",
+  "panelColor": "#fffbe8",
+  "borderColor": "#c8a96b",
+  "glow": "#fff3a6"
+}
+\`\`\`
+
+visualText 會建立高對比文字面板並疊在 visual 上。結果與其所屬物件有直接關係時，優先使用 visualText，不要把結果放在畫面無關的位置。
+
 ### catcher：接物、閃避、左右移動
 
 把共通格式的 \`remix\` 換成與 player/items 對應的元素，並加入：
@@ -172,7 +191,7 @@ Use \`preview: "cover"\` for cards, answers, stories, surprises, and anything au
 
 Choose one mode:
 
-1. \`flow\` for stories, quizzes, cards, answers, and branching interactions. Define \`flow.initial\`, \`flow.data\`, and \`flow.scenes\`. Scenes may use \`on.down\`, \`on.tap\`, or \`on.release\`; actions may use \`set\`, \`random\`, \`go\`, \`score\`, and \`end\`. Insert state with \`{{variable}}\`. A scene may have up to two choices with action arrays. For a meaningful hold interaction, add \`scene.hold\` with \`effect: "page-flip"\`, \`minSeconds\`, \`phraseSeconds\`, labels, and a \`phrases\` array. A release shorter than \`minSeconds\` will not advance.
+1. \`flow\` for stories, quizzes, cards, answers, and branching interactions. Define \`flow.initial\`, \`flow.data\`, and \`flow.scenes\`. Scenes may use \`on.down\`, \`on.tap\`, or \`on.release\`; actions may use \`set\`, \`random\`, \`go\`, \`score\`, and \`end\`. Insert state with \`{{variable}}\`. A scene may have up to two choices with action arrays. For a meaningful hold interaction, add \`scene.hold\` with \`effect: "page-flip"\`, \`minSeconds\`, \`phraseSeconds\`, labels, and a \`phrases\` array. A release shorter than \`minSeconds\` will not advance. Use \`scene.visualText\` to place a high-contrast result, card text, or answer panel directly on top of the scene's main visual.
 2. \`catcher\` for catching, dodging, and horizontal movement. Define \`catcher.duration\`, \`lives\`, \`player\`, and \`items\`. Items support \`every\`, \`speed\`, \`size\`, \`points\`, \`danger\`, and \`missLife\`. Every \`player.remix\` and \`item.remix\` key must have a matching entry in the root \`remix\` array.
 3. \`region-grid\` for rectangular number-partition puzzles. Define \`grid.rows\`, \`cols\`, \`palette\`, and \`clues\` as \`{r,c,n}\`. Coordinates start at zero.
 
