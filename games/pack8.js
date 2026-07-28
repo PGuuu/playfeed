@@ -2,11 +2,11 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.1.0',
+  gameVersion: '1.2.0',
   id: 'neon-last-stand',
   title: '霓虹終線',
   author: '@playfeed 官方',
-  description: '左右移動守衛，自動擊破不斷下壓的霓虹核心，並在戰鬥中選擇強化。',
+  description: '左右移動守衛，持續突破愈來愈危險的霓虹防線與頭目。',
   tip: '左右拖曳守衛；強化出現時點選左邊或右邊',
   bg: '#160C29',
   tags: ['defense', 'roguelike', 'shooter', 'neon'],
@@ -65,7 +65,9 @@ window.GAMES = (window.GAMES || []).concat([
     let energy = 0;
     let nextEnergy = 7;
     let upgradeCount = 0;
+    let midUpgradeTaken = false;
     let choices = null;
+    let rewardChoice = false;
     let fireClock = 0;
     let spawnClock = 0;
     let fireInterval = 0.31;
@@ -76,7 +78,11 @@ window.GAMES = (window.GAMES || []).concat([
     let flash = 0;
     let bossSpawned = false;
     let spawnedCount = 0;
-    const regularTarget = 32;
+    let zone = 1;
+
+    function zoneTarget() {
+      return Math.min(28, 16 + (zone - 1) * 2);
+    }
 
     function clamp(value, low, high) {
       return Math.max(low, Math.min(high, value));
@@ -110,10 +116,25 @@ window.GAMES = (window.GAMES || []).concat([
     }
 
     function spawnEnemy(isBoss) {
-      const progress = Math.min(1, spawnedCount / regularTarget);
-      const size = isBoss ? Math.min(W * 0.46, 184) : 44 + Math.random() * 38;
-      const hpBase = 2 + Math.floor(progress * 4) + Math.floor(Math.random() * 3);
-      const hp = isBoss ? 38 + upgradeCount * 7 : hpBase;
+      const progress = Math.min(1, spawnedCount / zoneTarget());
+      const kindRoll = Math.random();
+      const kind = isBoss
+        ? 'boss'
+        : zone >= 4 && kindRoll < 0.18
+          ? 'armored'
+          : zone >= 3 && kindRoll < 0.4
+            ? 'swift'
+            : zone >= 2 && kindRoll < 0.64
+              ? 'zigzag'
+              : 'normal';
+      const size = isBoss
+        ? Math.min(W * 0.46, 184)
+        : kind === 'swift'
+          ? 36 + Math.random() * 20
+          : 44 + Math.random() * 38;
+      const hpBase = 1 + Math.floor(zone * 0.72) + Math.floor(progress * 3) + Math.floor(Math.random() * 3);
+      const hp = isBoss ? 24 + zone * 14 + upgradeCount * 2 : hpBase + (kind === 'armored' ? 4 + Math.floor(zone / 2) : 0);
+      const baseSpeed = 18 + Math.min(34, zone * 3.1) + progress * 9 + Math.random() * 7;
       enemies.push({
         x: 24 + size / 2 + Math.random() * Math.max(1, W - 48 - size),
         y: isBoss ? 74 : 58,
@@ -121,9 +142,11 @@ window.GAMES = (window.GAMES || []).concat([
         h: isBoss ? 82 : size * (0.58 + Math.random() * 0.25),
         hp,
         maxHp: hp,
-        speed: isBoss ? 9 : 19 + progress * 18 + Math.random() * 9,
+        speed: isBoss ? Math.min(18, 8 + zone * 0.8) : baseSpeed * (kind === 'swift' ? 1.45 : 1),
         color: isBoss ? '#FF2E93' : colors[Math.floor(Math.random() * colors.length)],
         boss: !!isBoss,
+        kind,
+        vx: kind === 'zigzag' ? (Math.random() < 0.5 ? -1 : 1) * (24 + zone * 2) : 0,
         hit: 0,
         phase: Math.random() * Math.PI * 2
       });
@@ -185,11 +208,22 @@ window.GAMES = (window.GAMES || []).concat([
       burst(enemy.x, enemy.y, enemy.color, enemy.boss ? 42 : 16);
       env.setScore(score);
       if (enemy.boss) {
-        alive = false;
-        env.over(score);
+        const clearedZone = zone;
+        zone += 1;
+        bossSpawned = false;
+        spawnedCount = 0;
+        midUpgradeTaken = false;
+        shield = Math.min(100, shield + 20);
+        energy = 0;
+        nextEnergy = Math.max(7, Math.ceil(zoneTarget() * 0.55));
+        spawnClock = 1;
+        showUpgrade(true, clearedZone);
         return;
       }
-      if (energy >= nextEnergy && upgradeCount < 3 && !choices) showUpgrade();
+      if (energy >= nextEnergy && !midUpgradeTaken && !choices) {
+        midUpgradeTaken = true;
+        showUpgrade(false, zone);
+      }
     }
 
     function hitEnemy(enemy, amount) {
@@ -214,11 +248,13 @@ window.GAMES = (window.GAMES || []).concat([
       if (enemy.hp <= 0) destroyEnemy(enemy);
     }
 
-    function showUpgrade() {
+    function showUpgrade(isReward, clearedZone) {
       const first = (upgradeCount * 2 + Math.floor(Math.random() * 2)) % upgrades.length;
       let second = (first + 1 + Math.floor(Math.random() * (upgrades.length - 1))) % upgrades.length;
       if (second === first) second = (second + 1) % upgrades.length;
       choices = [upgrades[first], upgrades[second]];
+      rewardChoice = !!isReward;
+      choices.clearedZone = clearedZone || zone;
       dragging = false;
       burst(W / 2, H * 0.48, '#37E6FF', 24);
     }
@@ -227,13 +263,20 @@ window.GAMES = (window.GAMES || []).concat([
       if (!choice) return;
       if (choice[0] === 'rapid') fireInterval = Math.max(0.13, fireInterval * 0.66);
       if (choice[0] === 'power') damage += 1;
-      if (choice[0] === 'multi') lanes = Math.min(3, lanes + 1);
+      if (choice[0] === 'rapid' && fireInterval <= 0.135) damage += 1;
+      if (choice[0] === 'multi') {
+        if (lanes < 3) lanes += 1;
+        else damage += 1;
+      }
       if (choice[0] === 'shield') shield = Math.min(100, shield + 40);
-      if (choice[0] === 'chain') chainLevel = Math.min(2, chainLevel + 1);
+      if (choice[0] === 'chain') {
+        if (chainLevel < 3) chainLevel += 1;
+        else damage += 1;
+      }
       choices = null;
+      rewardChoice = false;
       upgradeCount += 1;
       energy = 0;
-      nextEnergy += 3;
       flash = 0.28;
     }
 
@@ -265,12 +308,13 @@ window.GAMES = (window.GAMES || []).concat([
       }
 
       spawnClock -= dt;
-      const spawnEvery = Math.max(0.42, 0.88 - spawnedCount * 0.012);
-      if (spawnClock <= 0 && spawnedCount < regularTarget) {
+      const target = zoneTarget();
+      const spawnEvery = Math.max(0.32, 0.86 - zone * 0.038 - spawnedCount * 0.007);
+      if (spawnClock <= 0 && spawnedCount < target) {
         spawnEnemy(false);
         spawnClock = spawnEvery;
       }
-      if (!bossSpawned && spawnedCount >= regularTarget && enemies.length === 0) {
+      if (!bossSpawned && spawnedCount >= target && enemies.length === 0) {
         bossSpawned = true;
         spawnEnemy(true);
       }
@@ -304,6 +348,11 @@ window.GAMES = (window.GAMES || []).concat([
       for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
         enemy.y += enemy.speed * dt;
+        enemy.x += enemy.vx * dt;
+        if (enemy.x < enemy.w / 2 + 12 || enemy.x > W - enemy.w / 2 - 12) {
+          enemy.vx *= -1;
+          enemy.x = clamp(enemy.x, enemy.w / 2 + 12, W - enemy.w / 2 - 12);
+        }
         enemy.phase += dt * 3;
         enemy.hit = Math.max(0, enemy.hit - dt);
         if (enemy.hp <= 0) {
@@ -373,9 +422,25 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fillStyle = enemy.color;
       roundedRect(-enemy.w / 2, -enemy.h / 2, enemy.w, enemy.h, enemy.boss ? 9 : 5);
       ctx.fill();
-      ctx.lineWidth = enemy.boss ? 4 : 2;
+      ctx.lineWidth = enemy.boss ? 4 : enemy.kind === 'armored' ? 5 : 2;
       ctx.strokeStyle = '#FFE6FA';
       ctx.stroke();
+      if (enemy.kind === 'armored') {
+        ctx.globalAlpha = 0.68;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#37E6FF';
+        roundedRect(-enemy.w / 2 + 7, -enemy.h / 2 + 7, enemy.w - 14, enemy.h - 14, 4);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      if (enemy.kind === 'swift') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.moveTo(-9, -enemy.h / 2 - 7);
+        ctx.lineTo(0, -enemy.h / 2 - 17);
+        ctx.lineTo(9, -enemy.h / 2 - 7);
+        ctx.fill();
+      }
 
       if (!sprite('enemy-core', 0, 0, Math.min(enemy.w, enemy.h) * 0.54)) {
         ctx.fillStyle = 'rgba(18,8,35,.82)';
@@ -453,8 +518,11 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.textBaseline = 'middle';
       ctx.fillText(`${text('擊破', 'Kills')} ${score}`, 34, 42);
       ctx.textAlign = 'right';
+      const target = zoneTarget();
       ctx.fillText(
-        bossSpawned ? text('最終核心', 'FINAL CORE') : `${text('核心', 'Cores')} ${Math.min(spawnedCount, regularTarget)}/${regularTarget}`,
+        bossSpawned
+          ? `${text('區域', 'ZONE')} ${zone} · ${text('頭目', 'BOSS')}`
+          : `${text('區域', 'ZONE')} ${zone} · ${Math.min(spawnedCount, target)}/${target}`,
         W - 34,
         42
       );
@@ -492,11 +560,20 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = '900 25px system-ui, sans-serif';
-      ctx.fillText(text('選擇一項強化', 'CHOOSE AN UPGRADE'), W / 2, H * 0.29);
+      ctx.font = `900 ${english && rewardChoice ? 22 : 25}px system-ui, sans-serif`;
+      const upgradeTitle = rewardChoice
+        ? text(`區域 ${choices.clearedZone} 突破`, `ZONE ${choices.clearedZone} CLEARED`)
+        : text('選擇一項強化', 'CHOOSE AN UPGRADE');
+      ctx.fillText(upgradeTitle, W / 2, H * 0.29);
       ctx.font = '600 13px system-ui, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,.7)';
-      ctx.fillText(text('點左邊或右邊，戰鬥會立刻繼續', 'Tap left or right to continue'), W / 2, H * 0.335);
+      ctx.fillText(
+        rewardChoice
+          ? text(`防線修復 20%，選擇強化進入區域 ${zone}`, `Shield +20%. Choose an upgrade for Zone ${zone}`)
+          : text('點左邊或右邊，戰鬥會立刻繼續', 'Tap left or right to continue'),
+        W / 2,
+        H * 0.335
+      );
 
       const gap = 14;
       const cardW = (W - 46 - gap) / 2;
@@ -640,7 +717,9 @@ window.GAMES = (window.GAMES || []).concat([
       energy = 0;
       nextEnergy = 7;
       upgradeCount = 0;
+      midUpgradeTaken = false;
       choices = null;
+      rewardChoice = false;
       fireClock = 0.18;
       spawnClock = 0.45;
       fireInterval = 0.31;
@@ -651,6 +730,7 @@ window.GAMES = (window.GAMES || []).concat([
       flash = 0;
       bossSpawned = false;
       spawnedCount = 0;
+      zone = 1;
       makeStars();
       raf = requestAnimationFrame(loop);
     }

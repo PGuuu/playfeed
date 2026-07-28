@@ -5,6 +5,7 @@ const code = fs.readFileSync(new URL('../games/pack8.js', import.meta.url), 'utf
 let callback = null;
 let now = 0;
 let finalScore = null;
+let currentScore = 0;
 const gradient = { addColorStop() {} };
 const ctx = new Proxy({}, {
   get(target, key) {
@@ -41,7 +42,9 @@ const instance = game.create({
   H: 700,
   locale: 'en',
   sprite: () => false,
-  setScore() {},
+  setScore(score) {
+    currentScore = score;
+  },
   over(score) {
     finalScore = score;
   }
@@ -61,5 +64,37 @@ for (let frame = 0; frame < 5000 && finalScore === null; frame++) {
   }
 }
 instance.stop();
-if (!Number.isFinite(finalScore)) throw new Error('Game did not finish with a finite score');
-console.log(`pack8 runtime test passed (score ${finalScore})`);
+if (!Number.isFinite(currentScore) || currentScore <= 24) {
+  throw new Error(`Endless run did not continue beyond the first boss (score ${currentScore})`);
+}
+if (finalScore !== null && !Number.isFinite(finalScore)) throw new Error('Game ended with a non-finite score');
+const endlessScore = currentScore;
+
+callback = null;
+now = 0;
+finalScore = null;
+currentScore = 0;
+const doomed = game.create({
+  ctx,
+  W: 400,
+  H: 700,
+  locale: 'zh-Hant',
+  sprite: () => false,
+  setScore(score) {
+    currentScore = score;
+  },
+  over(score) {
+    finalScore = score;
+  }
+});
+doomed.start();
+for (let frame = 0; frame < 6000 && finalScore === null; frame++) {
+  const fn = callback;
+  if (!fn) throw new Error(`Animation stopped before loss at frame ${frame}`);
+  callback = null;
+  now += 16.667;
+  fn(now);
+}
+doomed.stop();
+if (!Number.isFinite(finalScore)) throw new Error('An unattended run did not end when the shield failed');
+console.log(`pack8 endless runtime test passed (continued score ${endlessScore}, loss score ${finalScore})`);

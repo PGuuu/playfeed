@@ -411,7 +411,7 @@ async function syncOfficialGames(user, body) {
       slug: id,
       suggested_id: id,
       api_version: 1,
-      game_version: id === 'neon-last-stand' ? 'official-1.1.0' : 'official-1.0.0',
+      game_version: id === 'neon-last-stand' ? 'official-1.2.0' : 'official-1.0.0',
       title: safeText(game.title, { name: 'title', max: 80 }),
       description: safeText(game.description || game.tip, { name: 'description', max: 240 }),
       tip: safeText(game.tip, { name: 'tip', max: 160 }),
