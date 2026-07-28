@@ -15,8 +15,9 @@ function script(createBody) {
     controls: ['tap'],
     duration: 30,
     score: { label: 'Score', order: 'higher' },
-    remixSlots: [],
+    remixSlots: [{ key: 'test', label: 'Test', hint: 'Test element', default: 'Dot', shape: 'circle' }],
     create(env) {
+      function drawRemix() { env.sprite('test', 10, 10, 10); }
       ${createBody}
     }
   }]);`;

@@ -1,6 +1,8 @@
 import { parse } from './vendor/acorn.mjs';
 import { FULL_SPEC, FULL_SPEC_EN, buildMechanicPrompt, buildRepairPrompt } from './creator-spec.js';
 import { findReturnedGameInstance, hasGameInstanceMethod } from './validator-ast.mjs';
+import { compilePlayFeedLanguage, isPlayFeedLanguage } from './playfeed-lang.js';
+import { PLAYFEED_LANGUAGE_SPEC, PLAYFEED_LANGUAGE_SPEC_EN } from './playfeed-language-spec.js';
 
 const host = window.PlayFeedHost;
 if (!host) throw new Error('PlayFeedHost 尚未初始化');
@@ -109,8 +111,8 @@ function addIssue(list, message, node) {
 
 function extractScript(raw) {
   const input = String(raw || '').trim();
-  if (!input) return { error: '請先貼上完整的 JavaScript Script。' };
-  const blocks = [...input.matchAll(/```(?:javascript|js)?[ \t]*\r?\n([\s\S]*?)```/gi)];
+  if (!input) return { error: '請先貼上完整的 PlayFeed Language 或 JavaScript Script。' };
+  const blocks = [...input.matchAll(/```(?:javascript|js|playfeed|pfl)?[ \t]*\r?\n([\s\S]*?)```/gi)];
   if (blocks.length > 1) return { error: '找到兩個以上的程式碼區塊。請只貼上一個完整 Script。' };
   if (blocks.length === 1) return { source: blocks[0][1].trim() };
   if (input.includes('```')) return { error: 'Markdown 程式碼圍欄不完整。請重新貼上完整 Script。' };
@@ -120,9 +122,26 @@ function extractScript(raw) {
 function validateScript(raw) {
   const extracted = extractScript(raw);
   if (extracted.error) return { source: '', errors: [extracted.error], warnings: [] };
-  const source = extracted.source;
+  const displaySource = extracted.source;
   const errors = [];
   const warnings = [];
+  let source = displaySource;
+  let languageSpec = null;
+  if (isPlayFeedLanguage(displaySource)) {
+    try {
+      const compiled = compilePlayFeedLanguage(displaySource);
+      source = compiled.source;
+      languageSpec = compiled.spec;
+    } catch (error) {
+      return {
+        source: displaySource,
+        displaySource,
+        errors: [String(error?.message || error)],
+        warnings,
+        languageSpec: null,
+      };
+    }
+  }
   if (new TextEncoder().encode(source).length > MAX_SCRIPT_BYTES) {
     errors.push(`Script 超過 ${Math.round(MAX_SCRIPT_BYTES / 1000)} KB 上限。`);
   }
@@ -132,13 +151,13 @@ function validateScript(raw) {
     program = parse(source, { ecmaVersion: 'latest', sourceType: 'script', locations: true });
   } catch (error) {
     const line = error.loc?.line ? `第 ${error.loc.line} 行：` : '';
-    return { source, errors: [`${line}JavaScript 語法錯誤：${error.message}`], warnings };
+    return { source, displaySource, errors: [`${line}JavaScript 語法錯誤：${error.message}`], warnings, languageSpec };
   }
 
   const game = findRegistration(program);
   if (!game) {
     errors.push('頂層必須且只能有一個 window.GAMES = (window.GAMES || []).concat([{ ... }]) 註冊。');
-    return { source, errors, warnings };
+    return { source, displaySource, errors, warnings, languageSpec };
   }
 
   const read = name => {
@@ -288,7 +307,15 @@ function validateScript(raw) {
     if (!hasCancel) addIssue(errors, 'input() 沒有安全處理 cancel。', createProp);
   }
 
-  return { source, errors: [...new Set(errors)], warnings: [...new Set(warnings)], metadata, program };
+  return {
+    source,
+    displaySource,
+    errors: [...new Set(errors)],
+    warnings: [...new Set(warnings)],
+    metadata,
+    program,
+    languageSpec,
+  };
 }
 
 function encodeSource(source) {
@@ -422,20 +449,21 @@ function buildCreatorUI() {
       <section class="creator-step" data-step="1">
         <span class="creator-step-no">1</span><div class="creator-step-content">
           <h2 id="creatorCopyTitle">複製創作規格</h2>
-          <p id="creatorCopyText">複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
+          <p id="creatorCopyText">複製精簡的 PlayFeed Language 規格，交給自己的 AI 製作互動。</p>
           <button class="creator-action" id="copyCreatorSpec">複製遊戲創作規格</button>
+          <button class="creator-ghost" id="copyCreatorJsSpec">特殊玩法：複製完整 JavaScript 規格</button>
         </div>
       </section>
       <section class="creator-step" data-step="2">
         <span class="creator-step-no">2</span><div class="creator-step-content">
           <h2 id="creatorAiTitle">交給自己的 AI 創作</h2>
-          <p id="creatorAiText">把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。</p>
+          <p id="creatorAiText">把規格貼給你使用的 AI，再告訴它你想製作什麼互動。它最後應只輸出一個完整 PlayFeed 程式碼區塊。</p>
         </div>
       </section>
       <section class="creator-step" data-step="3">
         <span class="creator-step-no">3</span><div class="creator-step-content">
           <h2>貼上生成的程式碼</h2>
-          <p>可以貼純 JavaScript，也可以直接貼含有單一程式碼區塊的完整回覆。</p>
+          <p>可以貼 PlayFeed Language 或既有 JavaScript，也可以直接貼含有單一程式碼區塊的完整回覆。</p>
           <textarea id="creatorSource" spellcheck="false" placeholder="在這裡貼上完整的遊戲 Script"></textarea>
           <div class="creator-source-actions">
             <button class="creator-ghost creator-paste" id="focusCreatorSource">從剪貼簿貼上</button>
@@ -464,9 +492,15 @@ function buildCreatorUI() {
   root.querySelector('#copyCreatorSpec').addEventListener('click', event => {
     const text = mechanicContext
       ? buildMechanicPrompt(mechanicContext, host.locale)
-      : (host.locale === 'en' ? FULL_SPEC_EN : FULL_SPEC);
+      : (host.locale === 'en' ? PLAYFEED_LANGUAGE_SPEC_EN : PLAYFEED_LANGUAGE_SPEC);
     copyText(text, mechanicContext ? '玩法模板與創作規格已複製' : '完整創作規格已複製');
     event.currentTarget.textContent = mechanicContext ? '✓ 已複製玩法模板' : '✓ 已複製創作規格';
+    root.querySelector('[data-step="1"]').classList.add('done');
+    root.querySelector('[data-step="2"]').classList.add('next');
+  });
+  root.querySelector('#copyCreatorJsSpec').addEventListener('click', event => {
+    copyText(host.locale === 'en' ? FULL_SPEC_EN : FULL_SPEC, '完整 JavaScript 規格已複製');
+    event.currentTarget.textContent = '✓ 已複製完整 JavaScript 規格';
     root.querySelector('[data-step="1"]').classList.add('done');
     root.querySelector('[data-step="2"]').classList.add('next');
   });
@@ -554,13 +588,16 @@ function setCreatorMode(context) {
   creatorRoot.querySelector('#creatorCopyTitle').textContent = special ? '複製玩法模板' : '複製創作規格';
   creatorRoot.querySelector('#creatorCopyText').textContent = special
     ? '複製這款遊戲的玩法配方與 PlayFeed 執行規格。'
-    : '複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。';
+    : '複製精簡的 PlayFeed Language 規格，交給自己的 AI 製作互動。';
   creatorRoot.querySelector('#creatorAiTitle').textContent = special ? '告訴 AI 你的新主題' : '交給自己的 AI 創作';
   creatorRoot.querySelector('#creatorAiText').textContent = special
     ? '把玩法模板貼給自己的 AI，再告訴它想換成什麼主題。它最後應只輸出一個完整 JavaScript 程式碼區塊。'
-    : '把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。';
+    : '把規格貼給你使用的 AI，再告訴它你想製作什麼互動。它最後應只輸出一個完整 PlayFeed 程式碼區塊。';
   const copy = creatorRoot.querySelector('#copyCreatorSpec');
+  const copyJs = creatorRoot.querySelector('#copyCreatorJsSpec');
   copy.textContent = special ? '複製玩法模板＋創作規格' : '複製遊戲創作規格';
+  copyJs.hidden = special;
+  if (!special) copyJs.textContent = '特殊玩法：複製完整 JavaScript 規格';
   if (special) {
     creatorRoot.querySelector('#creatorMechanicTitle').textContent = mechanicContext.sourceTitle;
     creatorRoot.querySelector('#creatorMechanicSummary').textContent = mechanicContext.summary;
@@ -603,9 +640,11 @@ function resetCreator() {
   creatorRoot.querySelector('#creatorSource').value = '';
   creatorRoot.querySelector('#creatorResult').innerHTML = '<div class="creator-result-empty">尚未驗證遊戲</div>';
   const copy = creatorRoot.querySelector('#copyCreatorSpec');
+  const copyJs = creatorRoot.querySelector('#copyCreatorJsSpec');
   const validate = creatorRoot.querySelector('#validateCreatorSource');
   clearTimeout(validationFeedbackTimer);
   copy.textContent = '複製遊戲創作規格';
+  copyJs.textContent = '特殊玩法：複製完整 JavaScript 規格';
   validate.classList.remove('checking', 'passed', 'failed');
   validate.disabled = false;
   validate.textContent = '驗證遊戲 Script';
@@ -753,13 +792,13 @@ function renderValidation(result) {
     copyReport.addEventListener('click', () => copyText(reportText(result), '錯誤報告已複製'));
     const copyRepair = el('button', '', '複製修復規格＋原始 Script');
     copyRepair.addEventListener('click', () =>
-      copyText(buildRepairPrompt(reportText(result), result.source, host.locale), '修復規格已複製'));
+      copyText(buildRepairPrompt(reportText(result), result.displaySource || result.source, host.locale), '修復規格已複製'));
     buttons.append(copyReport, copyRepair);
     body.appendChild(buttons);
-    if (result.source) {
+    if (result.displaySource || result.source) {
       const details = el('details', 'creator-edit');
       details.innerHTML = '<summary>查看擷取到的 Script</summary>';
-      details.appendChild(el('pre', 'creator-code', result.source));
+      details.appendChild(el('pre', 'creator-code', result.displaySource || result.source));
       body.appendChild(details);
     }
     card.appendChild(body);
@@ -802,6 +841,7 @@ function renderValidation(result) {
 
   const meta = el('div', 'creator-meta');
   const pairs = [
+    ['格式', result.languageSpec ? 'PlayFeed Language v1' : 'JavaScript'],
     ['結束方式', '依遊戲本身規則'],
     ['預覽方式', result.metadata.preview === 'demo' ? '自動示範' : '封面待機'],
     ['操作類型', result.metadata.controls.join('、')],
