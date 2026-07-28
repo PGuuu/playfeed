@@ -1439,7 +1439,7 @@ function officialSubmission(game) {
     gameVersion: 'official-1.0.0',
     id: game.id,
     title: game.title,
-    description: game.tip,
+    description: game.description || game.tip,
     author: '@我',
     tip: game.tip,
     bg: game.bg,

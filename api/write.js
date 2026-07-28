@@ -17,7 +17,7 @@ const AVATAR_PREFIX = '__avatar__:';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
-  'crossy-chicken', 'softserve', 'last-rain-bus',
+  'crossy-chicken', 'softserve', 'last-rain-bus', 'book-of-answers',
 ];
 const OFFICIAL_BACKGROUNDS = {
   dodge: '#65C7C4',
@@ -35,6 +35,7 @@ const OFFICIAL_BACKGROUNDS = {
   'crossy-chicken': '#91DF72',
   softserve: '#FFB7D2',
   'last-rain-bus': '#7ED6DF',
+  'book-of-answers': '#151936',
 };
 const recentRequests = new Map();
 
@@ -424,9 +425,11 @@ async function syncOfficialGames(user, body) {
       author_id: user.id,
       author_name: publicName(user),
       status: 'published',
-      created_at: id === 'last-rain-bus'
-        ? new Date('2026-07-28T00:00:00.000Z').toISOString()
-        : new Date(Date.UTC(2025, 0, 1 + index)).toISOString(),
+      created_at: id === 'book-of-answers'
+        ? new Date('2026-07-28T12:00:00.000Z').toISOString()
+        : id === 'last-rain-bus'
+          ? new Date('2026-07-28T00:00:00.000Z').toISOString()
+          : new Date(Date.UTC(2025, 0, 1 + index)).toISOString(),
       updated_at: new Date().toISOString(),
     };
   });
