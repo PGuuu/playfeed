@@ -135,6 +135,11 @@ assert.throws(
   harness.instance.start();
   harness.instance.input('down', 200, 400);
   harness.instance.input('up', 200, 400);
+  harness.runFrames(2);
+  assert.equal(harness.events.over.length, 0, 'a short hold must not reveal or finish the answer');
+  harness.instance.input('down', 200, 400);
+  harness.runFrames(80);
+  harness.instance.input('up', 200, 400);
   harness.runFrames(1);
   harness.instance.input('down', 100, 600);
   harness.instance.input('up', 100, 600);

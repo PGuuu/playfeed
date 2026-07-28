@@ -128,6 +128,26 @@ function normaliseSpec(input) {
           fail(`scene.visual.remix 找不到「${scene.visual.remix}」。`);
         }
       }
+      if (scene.hold !== undefined) {
+        const hold = scene.hold;
+        if (!hold || typeof hold !== 'object' || Array.isArray(hold)) fail('scene.hold 必須是物件。');
+        if (hold.effect !== undefined && hold.effect !== 'page-flip') fail('scene.hold.effect 目前只支援 page-flip。');
+        if (hold.minSeconds !== undefined && !(Number(hold.minSeconds) >= 0 && Number(hold.minSeconds) <= 10)) {
+          fail('scene.hold.minSeconds 必須介於 0 到 10 秒。');
+        }
+        if (hold.phraseSeconds !== undefined && !(Number(hold.phraseSeconds) >= .25 && Number(hold.phraseSeconds) <= 5)) {
+          fail('scene.hold.phraseSeconds 必須介於 0.25 到 5 秒。');
+        }
+        for (const key of ['label', 'activeLabel', 'shortLabel', 'phraseColor', 'buttonColor', 'glow']) {
+          if (hold[key] !== undefined && typeof hold[key] !== 'string') fail(`scene.hold.${key} 必須是文字。`);
+        }
+        if (hold.phrases !== undefined) {
+          if (!Array.isArray(hold.phrases) || hold.phrases.length < 1 || hold.phrases.length > 30 ||
+              hold.phrases.some(phrase => typeof phrase !== 'string' || !phrase.trim() || phrase.length > 80)) {
+            fail('scene.hold.phrases 必須是一至三十句、每句不超過 80 字的文字陣列。');
+          }
+        }
+      }
       if (scene.on !== undefined) {
         if (!scene.on || typeof scene.on !== 'object' || Array.isArray(scene.on)) fail('scene.on 必須是物件。');
         for (const [eventName, actions] of Object.entries(scene.on)) {
@@ -195,6 +215,7 @@ function normaliseSpec(input) {
 function flowEngine(env, spec) {
   const ctx = env.ctx, W = env.W, H = env.H;
   let alive = false, raf = 0, sceneId = spec.flow.initial, held = false, time = 0;
+  let holdStarted = 0, holdNudgeUntil = 0;
   let state = {}, lastResult = 0;
   const scenes = {};
   for (const scene of spec.flow.scenes) scenes[scene.id] = scene;
@@ -260,11 +281,30 @@ function flowEngine(env, spec) {
     const visual = scene.visual || {};
     const x = Number(visual.x) || W / 2, y = Number(visual.y) || H * .52;
     const size = Number(visual.size) || 170;
+    const pageFlip = held && scene.hold && scene.hold.effect === 'page-flip';
     ctx.save();
     const pulse = 1 + Math.sin(time * .035) * (held ? .045 : .018);
-    ctx.translate(x, y); ctx.scale(pulse, pulse); ctx.translate(-x, -y);
+    ctx.translate(x, y);
+    ctx.scale(pulse, pulse);
+    if (pageFlip) ctx.rotate(Math.sin(time * .28) * .025);
+    ctx.translate(-x, -y);
     if (visual.remix && env.sprite(visual.remix, x, y, size)) { ctx.restore(); return; }
     ctx.shadowColor = visual.glow || '#91f5ff'; ctx.shadowBlur = held ? 34 : 15;
+    if (pageFlip) {
+      const flip = (Math.sin(time * .42) + 1) / 2;
+      for (let page = 3; page >= 1; page--) {
+        const offset = page * 4 + flip * page * 2;
+        ctx.fillStyle = `rgba(255,248,218,${.16 + page * .09})`;
+        roundRect(
+          x - size * .42 + offset,
+          y - size * .3 - offset * .35,
+          size * .84,
+          size * .6,
+          18
+        );
+        ctx.fill();
+      }
+    }
     ctx.fillStyle = visual.color || '#f4d58d';
     if (visual.shape === 'circle') {
       ctx.beginPath(); ctx.arc(x, y, size / 2, 0, Math.PI * 2); ctx.fill();
@@ -273,6 +313,50 @@ function flowEngine(env, spec) {
       ctx.fillStyle = 'rgba(255,255,255,.42)';
       roundRect(x - size * .34, y - size * .22, size * .68, size * .08, 4); ctx.fill();
     }
+    ctx.restore();
+  }
+  function drawHold(scene) {
+    const hold = scene.hold;
+    if (!hold || typeof hold !== 'object') return;
+    const phrases = Array.isArray(hold.phrases) ? hold.phrases : [];
+    if (held && phrases.length) {
+      const phraseFrames = Math.max(18, (Number(hold.phraseSeconds) || .72) * 60);
+      const cycle = time - holdStarted;
+      const phrase = phrases[Math.floor(cycle / phraseFrames) % phrases.length];
+      const phase = (cycle % phraseFrames) / phraseFrames;
+      const alpha = Math.max(0, Math.sin(Math.PI * phase)) * .72;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = hold.phraseColor || '#fff8cf';
+      ctx.font = '700 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = hold.glow || '#8ce8ff';
+      ctx.shadowBlur = 16;
+      wrap(phrase, W / 2, 258 - Math.sin(Math.PI * phase) * 9, W - 72, 22, 2);
+      ctx.restore();
+    }
+
+    const nudging = time < holdNudgeUntil;
+    const label = nudging
+      ? (hold.shortLabel || '再按久一點')
+      : held
+        ? (hold.activeLabel || '正在翻閱…')
+        : (hold.label || '按住');
+    const width = Math.min(W - 60, Number(hold.buttonWidth) || 270);
+    const x = (W - width) / 2, y = H - 132;
+    ctx.save();
+    ctx.shadowColor = nudging ? '#ff8d8d' : (hold.glow || '#8ce8ff');
+    ctx.shadowBlur = held || nudging ? 28 : 18 + Math.sin(time * .09) * 7;
+    ctx.fillStyle = held ? 'rgba(255,248,207,.96)' : 'rgba(15,20,46,.88)';
+    roundRect(x, y, width, 64, 32); ctx.fill();
+    ctx.lineWidth = nudging ? 4 : 3;
+    ctx.strokeStyle = nudging ? '#ff8d8d' : (hold.buttonColor || '#fff0a6');
+    roundRect(x, y, width, 64, 32); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = held ? '#1a1d34' : '#fff';
+    ctx.font = '900 17px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, W / 2, y + 39);
     ctx.restore();
   }
   function draw() {
@@ -284,6 +368,7 @@ function flowEngine(env, spec) {
     gradient.addColorStop(0, bg); gradient.addColorStop(1, scene.backgroundEnd || '#101426');
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, W, H);
     drawVisual(scene);
+    drawHold(scene);
     ctx.textAlign = 'center';
     ctx.fillStyle = scene.titleColor || '#fff';
     ctx.font = `800 ${Number(scene.titleSize) || 28}px sans-serif`;
@@ -307,16 +392,22 @@ function flowEngine(env, spec) {
   }
   function start() {
     cancelAnimationFrame(raf); alive = true; held = false; time = 0;
+    holdStarted = 0; holdNudgeUntil = 0;
     sceneId = spec.flow.initial; state = {}; lastResult = 0; env.setScore(0); draw();
   }
-  function stop() { alive = false; held = false; cancelAnimationFrame(raf); }
+  function stop() { alive = false; held = false; holdStarted = 0; cancelAnimationFrame(raf); }
   function input(type, x) {
     if (!alive) return;
-    if (type === 'cancel') { held = false; return; }
-    const scene = scenes[sceneId] || {};
-    if (type === 'down') { held = true; event('down'); }
+    if (type === 'cancel') { held = false; holdStarted = 0; return; }
+    if (type === 'down') { held = true; holdStarted = time; holdNudgeUntil = 0; event('down'); }
     if (type === 'up') {
+      const scene = scenes[sceneId] || {};
+      const heldFrames = Math.max(0, time - holdStarted);
       held = false;
+      if (scene.hold && heldFrames < (Number(scene.hold.minSeconds) || 0) * 60) {
+        holdNudgeUntil = time + 60;
+        return;
+      }
       const choices = Array.isArray(scene.choices) ? scene.choices.slice(0, 2) : [];
       if (choices.length) {
         const choice = choices.length === 1 ? choices[0] : choices[x < W / 2 ? 0 : 1];

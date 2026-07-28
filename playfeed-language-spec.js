@@ -79,6 +79,22 @@ playfeed 1
 
 場景可用 \`on.down\`、\`on.tap\`、\`on.release\`。action 可用 \`set\`、\`random\`、\`go\`、\`score\`、\`end\`。文字可插入 \`{{變數}}\`。每個場景最多兩個 choices。
 
+需要讓「按住」本身形成體驗時，可在 scene 加入：
+
+\`\`\`json
+"hold": {
+  "effect": "page-flip",
+  "minSeconds": 1.2,
+  "phraseSeconds": 0.7,
+  "label": "按住書本翻閱",
+  "activeLabel": "正在尋找答案…",
+  "shortLabel": "再按久一點",
+  "phrases": ["先別急著決定", "答案正在靠近", "現在，準備放開"]
+}
+\`\`\`
+
+\`minSeconds\` 未達時不會觸發 release；\`page-flip\` 會在按住期間持續翻頁，phrases 會逐句淡入淡出。
+
 ### catcher：接物、閃避、左右移動
 
 把共通格式的 \`remix\` 換成與 player/items 對應的元素，並加入：
@@ -156,7 +172,7 @@ Use \`preview: "cover"\` for cards, answers, stories, surprises, and anything au
 
 Choose one mode:
 
-1. \`flow\` for stories, quizzes, cards, answers, and branching interactions. Define \`flow.initial\`, \`flow.data\`, and \`flow.scenes\`. Scenes may use \`on.down\`, \`on.tap\`, or \`on.release\`; actions may use \`set\`, \`random\`, \`go\`, \`score\`, and \`end\`. Insert state with \`{{variable}}\`. A scene may have up to two choices with action arrays.
+1. \`flow\` for stories, quizzes, cards, answers, and branching interactions. Define \`flow.initial\`, \`flow.data\`, and \`flow.scenes\`. Scenes may use \`on.down\`, \`on.tap\`, or \`on.release\`; actions may use \`set\`, \`random\`, \`go\`, \`score\`, and \`end\`. Insert state with \`{{variable}}\`. A scene may have up to two choices with action arrays. For a meaningful hold interaction, add \`scene.hold\` with \`effect: "page-flip"\`, \`minSeconds\`, \`phraseSeconds\`, labels, and a \`phrases\` array. A release shorter than \`minSeconds\` will not advance.
 2. \`catcher\` for catching, dodging, and horizontal movement. Define \`catcher.duration\`, \`lives\`, \`player\`, and \`items\`. Items support \`every\`, \`speed\`, \`size\`, \`points\`, \`danger\`, and \`missLife\`. Every \`player.remix\` and \`item.remix\` key must have a matching entry in the root \`remix\` array.
 3. \`region-grid\` for rectangular number-partition puzzles. Define \`grid.rows\`, \`cols\`, \`palette\`, and \`clues\` as \`{r,c,n}\`. Coordinates start at zero.
 
