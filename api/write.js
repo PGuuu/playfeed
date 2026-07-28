@@ -17,7 +17,7 @@ const AVATAR_PREFIX = '__avatar__:';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
-  'crossy-chicken', 'softserve', 'last-rain-bus', 'sand-canvas',
+  'crossy-chicken', 'softserve', 'last-rain-bus', 'sand-canvas', 'neon-last-stand',
 ];
 const OFFICIAL_BACKGROUNDS = {
   dodge: '#65C7C4',
@@ -36,6 +36,7 @@ const OFFICIAL_BACKGROUNDS = {
   softserve: '#FFB7D2',
   'last-rain-bus': '#7ED6DF',
   'sand-canvas': '#F6E2B8',
+  'neon-last-stand': '#160C29',
 };
 const recentRequests = new Map();
 
@@ -425,8 +426,10 @@ async function syncOfficialGames(user, body) {
       author_id: user.id,
       author_name: publicName(user),
       status: 'published',
-      created_at: id === 'sand-canvas'
-        ? new Date('2026-07-28T12:00:00.000Z').toISOString()
+      created_at: id === 'neon-last-stand'
+        ? new Date('2026-07-28T13:00:00.000Z').toISOString()
+        : id === 'sand-canvas'
+          ? new Date('2026-07-28T12:00:00.000Z').toISOString()
         : id === 'last-rain-bus'
           ? new Date('2026-07-28T00:00:00.000Z').toISOString()
           : new Date(Date.UTC(2025, 0, 1 + index)).toISOString(),
