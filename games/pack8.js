@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.2.0',
+  gameVersion: '1.3.0',
   id: 'neon-last-stand',
   title: '霓虹終線',
   author: '@playfeed 官方',
@@ -40,7 +40,7 @@ window.GAMES = (window.GAMES || []).concat([
     const text = (zh, en) => english ? en : zh;
     const colors = ['#FF2E93', '#FF7A38', '#9B5CFF', '#37E6FF', '#F9D84A'];
     const upgrades = [
-      ['rapid', '極速砲管', 'Rapid Barrel', '射擊速度 +35%', 'Fire rate +35%', '⚡'],
+      ['rapid', '極速砲管', 'Rapid Barrel', '射擊速度 +18%', 'Fire rate +18%', '⚡'],
       ['power', '增幅彈頭', 'Power Rounds', '每發傷害 +1', 'Damage +1', '✦'],
       ['multi', '分裂射擊', 'Split Shot', '增加一條彈道', 'Add one firing lane', '⑶'],
       ['shield', '量子護盾', 'Quantum Shield', '修復 40% 防線', 'Restore 40% shield', '⬡'],
@@ -79,9 +79,24 @@ window.GAMES = (window.GAMES || []).concat([
     let bossSpawned = false;
     let spawnedCount = 0;
     let zone = 1;
+    let zonePower = 1;
+    let zoneLeaks = 0;
+    let zoneStartShield = 100;
+    let threatBonus = 0;
+    let perfectClear = false;
 
     function zoneTarget() {
       return Math.min(28, 16 + (zone - 1) * 2);
+    }
+
+    function playerPower() {
+      const laneFactor = 1 + (lanes - 1) * 0.72;
+      const chainFactor = 1 + chainLevel * 0.14;
+      return damage * laneFactor * chainFactor / fireInterval;
+    }
+
+    function challengeLevel() {
+      return Math.max(0, zone - 1 + threatBonus);
     }
 
     function clamp(value, low, high) {
@@ -117,14 +132,15 @@ window.GAMES = (window.GAMES || []).concat([
 
     function spawnEnemy(isBoss) {
       const progress = Math.min(1, spawnedCount / zoneTarget());
+      const challenge = challengeLevel();
       const kindRoll = Math.random();
       const kind = isBoss
         ? 'boss'
-        : zone >= 4 && kindRoll < 0.18
+        : challenge >= 3 && kindRoll < Math.min(0.28, 0.11 + challenge * 0.018)
           ? 'armored'
-          : zone >= 3 && kindRoll < 0.4
+          : challenge >= 2 && kindRoll < Math.min(0.53, 0.3 + challenge * 0.025)
             ? 'swift'
-            : zone >= 2 && kindRoll < 0.64
+            : challenge >= 1 && kindRoll < Math.min(0.78, 0.52 + challenge * 0.025)
               ? 'zigzag'
               : 'normal';
       const size = isBoss
@@ -132,9 +148,12 @@ window.GAMES = (window.GAMES || []).concat([
         : kind === 'swift'
           ? 36 + Math.random() * 20
           : 44 + Math.random() * 38;
-      const hpBase = 1 + Math.floor(zone * 0.72) + Math.floor(progress * 3) + Math.floor(Math.random() * 3);
-      const hp = isBoss ? 24 + zone * 14 + upgradeCount * 2 : hpBase + (kind === 'armored' ? 4 + Math.floor(zone / 2) : 0);
-      const baseSpeed = 18 + Math.min(34, zone * 3.1) + progress * 9 + Math.random() * 7;
+      const healthBudget = zonePower * (0.62 + challenge * 0.055) + progress * (1.5 + challenge * 0.2);
+      const kindHealth = kind === 'armored' ? 1.55 : kind === 'swift' ? 0.72 : 1;
+      const hp = isBoss
+        ? Math.max(28, Math.round(zonePower * (3.8 + challenge * 0.3)))
+        : Math.max(2, Math.round(healthBudget * kindHealth * (0.88 + Math.random() * 0.24)));
+      const baseSpeed = 19 + Math.min(43, challenge * 3.2) + progress * 8 + Math.random() * 6;
       enemies.push({
         x: 24 + size / 2 + Math.random() * Math.max(1, W - 48 - size),
         y: isBoss ? 74 : 58,
@@ -146,6 +165,7 @@ window.GAMES = (window.GAMES || []).concat([
         color: isBoss ? '#FF2E93' : colors[Math.floor(Math.random() * colors.length)],
         boss: !!isBoss,
         kind,
+        armor: kind === 'armored' ? Math.min(3, Math.floor(1 + challenge / 5)) : 0,
         vx: kind === 'zigzag' ? (Math.random() < 0.5 ? -1 : 1) * (24 + zone * 2) : 0,
         hit: 0,
         phase: Math.random() * Math.PI * 2
@@ -209,13 +229,17 @@ window.GAMES = (window.GAMES || []).concat([
       env.setScore(score);
       if (enemy.boss) {
         const clearedZone = zone;
+        perfectClear = zoneLeaks === 0 && shield >= zoneStartShield;
+        if (perfectClear) threatBonus = Math.min(7, threatBonus + 0.7);
+        else if (zoneLeaks <= 1) threatBonus = Math.min(7, threatBonus + 0.2);
         zone += 1;
         bossSpawned = false;
         spawnedCount = 0;
         midUpgradeTaken = false;
-        shield = Math.min(100, shield + 20);
+        shield = Math.min(100, shield + 12);
         energy = 0;
         nextEnergy = Math.max(7, Math.ceil(zoneTarget() * 0.55));
+        zoneLeaks = 0;
         spawnClock = 1;
         showUpgrade(true, clearedZone);
         return;
@@ -228,7 +252,8 @@ window.GAMES = (window.GAMES || []).concat([
 
     function hitEnemy(enemy, amount) {
       if (!enemy || enemy.hp <= 0) return;
-      enemy.hp -= amount;
+      const actualDamage = enemy.armor ? Math.max(0.5, amount - enemy.armor) : amount;
+      enemy.hp -= actualDamage;
       enemy.hit = 0.11;
       burst(enemy.x, enemy.y, '#DFFFFF', 4);
       if (chainLevel > 0) {
@@ -238,7 +263,7 @@ window.GAMES = (window.GAMES || []).concat([
           const target = nearestEnemy(from, previous);
           if (!target) break;
           arcs.push({ ax: from.x, ay: from.y, bx: target.x, by: target.y, life: 0.14 });
-          target.hp -= 1;
+          target.hp -= target.armor ? 0.5 : 1;
           target.hit = 0.1;
           if (target.hp <= 0) destroyEnemy(target);
           previous = from;
@@ -249,10 +274,16 @@ window.GAMES = (window.GAMES || []).concat([
     }
 
     function showUpgrade(isReward, clearedZone) {
-      const first = (upgradeCount * 2 + Math.floor(Math.random() * 2)) % upgrades.length;
-      let second = (first + 1 + Math.floor(Math.random() * (upgrades.length - 1))) % upgrades.length;
-      if (second === first) second = (second + 1) % upgrades.length;
-      choices = [upgrades[first], upgrades[second]];
+      const available = upgrades.filter(item => {
+        if (item[0] === 'rapid') return fireInterval > 0.155;
+        if (item[0] === 'multi') return lanes < 3;
+        if (item[0] === 'chain') return chainLevel < 3;
+        return true;
+      });
+      const firstIndex = (upgradeCount + Math.floor(Math.random() * available.length)) % available.length;
+      let secondIndex = (firstIndex + 1 + Math.floor(Math.random() * Math.max(1, available.length - 1))) % available.length;
+      if (secondIndex === firstIndex) secondIndex = (secondIndex + 1) % available.length;
+      choices = [available[firstIndex], available[secondIndex]];
       rewardChoice = !!isReward;
       choices.clearedZone = clearedZone || zone;
       dragging = false;
@@ -261,22 +292,20 @@ window.GAMES = (window.GAMES || []).concat([
 
     function applyUpgrade(choice) {
       if (!choice) return;
-      if (choice[0] === 'rapid') fireInterval = Math.max(0.13, fireInterval * 0.66);
+      const wasReward = rewardChoice;
+      if (choice[0] === 'rapid') fireInterval = Math.max(0.15, fireInterval * 0.82);
       if (choice[0] === 'power') damage += 1;
-      if (choice[0] === 'rapid' && fireInterval <= 0.135) damage += 1;
-      if (choice[0] === 'multi') {
-        if (lanes < 3) lanes += 1;
-        else damage += 1;
-      }
+      if (choice[0] === 'multi' && lanes < 3) lanes += 1;
       if (choice[0] === 'shield') shield = Math.min(100, shield + 40);
-      if (choice[0] === 'chain') {
-        if (chainLevel < 3) chainLevel += 1;
-        else damage += 1;
-      }
+      if (choice[0] === 'chain' && chainLevel < 3) chainLevel += 1;
       choices = null;
       rewardChoice = false;
       upgradeCount += 1;
       energy = 0;
+      if (wasReward) {
+        zonePower = playerPower();
+        zoneStartShield = shield;
+      }
       flash = 0.28;
     }
 
@@ -309,9 +338,13 @@ window.GAMES = (window.GAMES || []).concat([
 
       spawnClock -= dt;
       const target = zoneTarget();
-      const spawnEvery = Math.max(0.32, 0.86 - zone * 0.038 - spawnedCount * 0.007);
+      const challenge = challengeLevel();
+      const spawnEvery = Math.max(0.25, 0.84 - challenge * 0.043 - spawnedCount * 0.006);
       if (spawnClock <= 0 && spawnedCount < target) {
         spawnEnemy(false);
+        if (challenge >= 5 && spawnedCount < target && Math.random() < Math.min(0.32, 0.08 + challenge * 0.018)) {
+          spawnEnemy(false);
+        }
         spawnClock = spawnEvery;
       }
       if (!bossSpawned && spawnedCount >= target && enemies.length === 0) {
@@ -358,7 +391,9 @@ window.GAMES = (window.GAMES || []).concat([
         if (enemy.hp <= 0) {
           enemies.splice(i, 1);
         } else if (enemy.y + enemy.h / 2 >= defenseY) {
-          shield = enemy.boss ? 0 : Math.max(0, shield - (10 + enemy.hp * 2));
+          const leakDamage = 10 + Math.min(20, zone * 1.7) + (enemy.kind === 'armored' ? 5 : 0);
+          shield = enemy.boss ? 0 : Math.max(0, shield - leakDamage);
+          if (!enemy.boss) zoneLeaks += 1;
           shake = enemy.boss ? 14 : 7;
           flash = 0.22;
           burst(enemy.x, defenseY, '#FF496D', enemy.boss ? 36 : 18);
@@ -562,14 +597,18 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.textBaseline = 'middle';
       ctx.font = `900 ${english && rewardChoice ? 22 : 25}px system-ui, sans-serif`;
       const upgradeTitle = rewardChoice
-        ? text(`區域 ${choices.clearedZone} 突破`, `ZONE ${choices.clearedZone} CLEARED`)
+        ? perfectClear
+          ? text(`區域 ${choices.clearedZone} 完美突破`, `ZONE ${choices.clearedZone} PERFECT`)
+          : text(`區域 ${choices.clearedZone} 突破`, `ZONE ${choices.clearedZone} CLEARED`)
         : text('選擇一項強化', 'CHOOSE AN UPGRADE');
       ctx.fillText(upgradeTitle, W / 2, H * 0.29);
       ctx.font = '600 13px system-ui, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,.7)';
       ctx.fillText(
         rewardChoice
-          ? text(`防線修復 20%，選擇強化進入區域 ${zone}`, `Shield +20%. Choose an upgrade for Zone ${zone}`)
+          ? perfectClear
+            ? text(`防線修復 12%，無傷使下一區威脅提高`, `Shield +12%. Perfect defense raises the threat`)
+            : text(`防線修復 12%，選擇強化進入區域 ${zone}`, `Shield +12%. Choose an upgrade for Zone ${zone}`)
           : text('點左邊或右邊，戰鬥會立刻繼續', 'Tap left or right to continue'),
         W / 2,
         H * 0.335
@@ -731,6 +770,11 @@ window.GAMES = (window.GAMES || []).concat([
       bossSpawned = false;
       spawnedCount = 0;
       zone = 1;
+      zonePower = playerPower();
+      zoneLeaks = 0;
+      zoneStartShield = 100;
+      threatBonus = 0;
+      perfectClear = false;
       makeStars();
       raf = requestAnimationFrame(loop);
     }
