@@ -14,7 +14,7 @@ const DISLIKE_PREFIX = '__dislike__:';
 const FOLLOW_PREFIX = '__follow__:';
 const PROFILE_PREFIX = '__profile__:';
 const AVATAR_PREFIX = '__avatar__:';
-const OFFICIAL_GAME_VERSION = 'official-1.1.0';
+const OFFICIAL_GAME_VERSION = 'official-1.1.1';
 const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',

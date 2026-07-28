@@ -1432,7 +1432,7 @@ function originalCreateExpression(game) {
   return /^\s*(?:async\s+)?function\b/.test(source) ? source : `function ${source}`;
 }
 
-const OFFICIAL_GAME_VERSION = 'official-1.1.0';
+const OFFICIAL_GAME_VERSION = 'official-1.1.1';
 
 function officialSubmission(game) {
   const createExpression = originalCreateExpression(game);
@@ -1465,10 +1465,10 @@ function officialSubmission(game) {
   return {
     id: game.id,
     title: game.title,
-    description: game.tip,
+    description: game.description || game.tip,
     tip: game.tip,
-    tags: ['official'],
-    controls: ['tap'],
+    tags: game.tags || ['official'],
+    controls: game.controls || ['tap'],
     score: game.score || { label: '分數', order: 'higher' },
     remix_slots: game.remixSlots || [],
     script,
