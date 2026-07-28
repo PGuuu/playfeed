@@ -1321,7 +1321,7 @@ function captureBuiltInThumbnail(entry) {
       resolve(image);
     };
     const env = {
-      W, H, ctx, beep: () => {}, getSprite, sprite: drawSprite,
+      W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, getSprite, sprite: drawSprite,
       setScore: () => {}, over: () => setTimeout(finish, 30)
     };
     try {
@@ -2094,7 +2094,7 @@ function makePost(entry, opts) {
     ctx.setTransform(pixelWidth / W, 0, 0, pixelHeight / H, 0, 0);
   }
   const pvEnv = {
-    W, H, ctx, beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
+    W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
       if (!pv.on) return;
       clearTimeout(pv.restartT);
@@ -2143,7 +2143,7 @@ function makePost(entry, opts) {
   }
 
   const env = {
-    W, H, ctx, beep, getSprite, sprite: drawSprite,
+    W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep, getSprite, sprite: drawSprite,
     setScore(n) { scEl.textContent = n; },
     over(score) {
       state.running = false;

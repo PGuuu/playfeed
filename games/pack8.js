@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.0.0',
+  gameVersion: '1.1.0',
   id: 'neon-last-stand',
   title: '霓虹終線',
   author: '@playfeed 官方',
@@ -12,8 +12,8 @@ window.GAMES = (window.GAMES || []).concat([
   tags: ['defense', 'roguelike', 'shooter', 'neon'],
   controls: ['horizontal-drag', 'tap'],
   preview: 'demo',
-  duration: 52,
-  score: { label: '擊破', order: 'higher', decimals: 0 },
+  duration: 60,
+  score: { label: '擊破 / Kills', order: 'higher', decimals: 0 },
   remixSlots: [
     {
       key: 'defender',
@@ -36,13 +36,15 @@ window.GAMES = (window.GAMES || []).concat([
     const W = env.W;
     const H = env.H;
     const sprite = env.sprite || (() => false);
+    const english = String(env.locale || '').toLowerCase().startsWith('en');
+    const text = (zh, en) => english ? en : zh;
     const colors = ['#FF2E93', '#FF7A38', '#9B5CFF', '#37E6FF', '#F9D84A'];
     const upgrades = [
-      ['rapid', '極速砲管', '射擊速度 +35%', '⚡'],
-      ['power', '增幅彈頭', '每發傷害 +1', '✦'],
-      ['multi', '分裂射擊', '增加一條彈道', '⑶'],
-      ['shield', '量子護盾', '修復 40% 防線', '⬡'],
-      ['chain', '連鎖電弧', '命中時電擊鄰近敵人', 'ϟ']
+      ['rapid', '極速砲管', 'Rapid Barrel', '射擊速度 +35%', 'Fire rate +35%', '⚡'],
+      ['power', '增幅彈頭', 'Power Rounds', '每發傷害 +1', 'Damage +1', '✦'],
+      ['multi', '分裂射擊', 'Split Shot', '增加一條彈道', 'Add one firing lane', '⑶'],
+      ['shield', '量子護盾', 'Quantum Shield', '修復 40% 防線', 'Restore 40% shield', '⬡'],
+      ['chain', '連鎖電弧', 'Chain Arc', '命中時電擊鄰近敵人', 'Shock nearby enemies', 'ϟ']
     ];
 
     let alive = false;
@@ -73,6 +75,8 @@ window.GAMES = (window.GAMES || []).concat([
     let shake = 0;
     let flash = 0;
     let bossSpawned = false;
+    let spawnedCount = 0;
+    const regularTarget = 32;
 
     function clamp(value, low, high) {
       return Math.max(low, Math.min(high, value));
@@ -106,7 +110,7 @@ window.GAMES = (window.GAMES || []).concat([
     }
 
     function spawnEnemy(isBoss) {
-      const progress = battleTime / 52;
+      const progress = Math.min(1, spawnedCount / regularTarget);
       const size = isBoss ? Math.min(W * 0.46, 184) : 44 + Math.random() * 38;
       const hpBase = 2 + Math.floor(progress * 4) + Math.floor(Math.random() * 3);
       const hp = isBoss ? 38 + upgradeCount * 7 : hpBase;
@@ -123,6 +127,7 @@ window.GAMES = (window.GAMES || []).concat([
         hit: 0,
         phase: Math.random() * Math.PI * 2
       });
+      if (!isBoss) spawnedCount += 1;
     }
 
     function burst(x, y, color, amount) {
@@ -179,6 +184,11 @@ window.GAMES = (window.GAMES || []).concat([
       flash = Math.max(flash, enemy.boss ? 0.3 : 0.08);
       burst(enemy.x, enemy.y, enemy.color, enemy.boss ? 42 : 16);
       env.setScore(score);
+      if (enemy.boss) {
+        alive = false;
+        env.over(score);
+        return;
+      }
       if (energy >= nextEnergy && upgradeCount < 3 && !choices) showUpgrade();
     }
 
@@ -255,12 +265,12 @@ window.GAMES = (window.GAMES || []).concat([
       }
 
       spawnClock -= dt;
-      const spawnEvery = Math.max(0.42, 0.9 - battleTime * 0.008);
-      if (spawnClock <= 0) {
+      const spawnEvery = Math.max(0.42, 0.88 - spawnedCount * 0.012);
+      if (spawnClock <= 0 && spawnedCount < regularTarget) {
         spawnEnemy(false);
         spawnClock = spawnEvery;
       }
-      if (!bossSpawned && battleTime >= 39) {
+      if (!bossSpawned && spawnedCount >= regularTarget && enemies.length === 0) {
         bossSpawned = true;
         spawnEnemy(true);
       }
@@ -288,6 +298,7 @@ window.GAMES = (window.GAMES || []).concat([
           bullets.splice(i, 1);
         }
       }
+      if (!alive) return;
 
       const defenseY = H - 102;
       for (let i = enemies.length - 1; i >= 0; i--) {
@@ -298,7 +309,7 @@ window.GAMES = (window.GAMES || []).concat([
         if (enemy.hp <= 0) {
           enemies.splice(i, 1);
         } else if (enemy.y + enemy.h / 2 >= defenseY) {
-          shield = Math.max(0, shield - (enemy.boss ? 35 : 10 + enemy.hp * 2));
+          shield = enemy.boss ? 0 : Math.max(0, shield - (10 + enemy.hp * 2));
           shake = enemy.boss ? 14 : 7;
           flash = 0.22;
           burst(enemy.x, defenseY, '#FF496D', enemy.boss ? 36 : 18);
@@ -306,7 +317,7 @@ window.GAMES = (window.GAMES || []).concat([
         }
       }
 
-      if (shield <= 0 || battleTime >= 52) {
+      if (shield <= 0) {
         alive = false;
         env.over(score);
       }
@@ -440,9 +451,13 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.font = '800 18px system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`擊破 ${score}`, 34, 42);
+      ctx.fillText(`${text('擊破', 'Kills')} ${score}`, 34, 42);
       ctx.textAlign = 'right';
-      ctx.fillText(`${Math.max(0, Math.ceil(52 - battleTime))}s`, W - 34, 42);
+      ctx.fillText(
+        bossSpawned ? text('最終核心', 'FINAL CORE') : `${text('核心', 'Cores')} ${Math.min(spawnedCount, regularTarget)}/${regularTarget}`,
+        W - 34,
+        42
+      );
 
       const shieldW = W - 68;
       ctx.fillStyle = 'rgba(255,255,255,.15)';
@@ -455,7 +470,7 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fillStyle = '#FFFFFF';
       ctx.font = '700 12px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`防線 ${Math.ceil(shield)}%`, W / 2, H - 50);
+      ctx.fillText(`${text('防線', 'Shield')} ${Math.ceil(shield)}%`, W / 2, H - 50);
 
       const meterW = Math.min(150, W * 0.38);
       const meterX = (W - meterW) / 2;
@@ -467,7 +482,7 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,.72)';
       ctx.font = '600 11px system-ui, sans-serif';
-      ctx.fillText('強化充能', W / 2, 98);
+      ctx.fillText(text('強化充能', 'UPGRADE CHARGE'), W / 2, 98);
     }
 
     function drawUpgrade() {
@@ -478,10 +493,10 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = '900 25px system-ui, sans-serif';
-      ctx.fillText('選擇一項強化', W / 2, H * 0.29);
+      ctx.fillText(text('選擇一項強化', 'CHOOSE AN UPGRADE'), W / 2, H * 0.29);
       ctx.font = '600 13px system-ui, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,.7)';
-      ctx.fillText('點左邊或右邊，戰鬥會立刻繼續', W / 2, H * 0.335);
+      ctx.fillText(text('點左邊或右邊，戰鬥會立刻繼續', 'Tap left or right to continue'), W / 2, H * 0.335);
 
       const gap = 14;
       const cardW = (W - 46 - gap) / 2;
@@ -502,13 +517,13 @@ window.GAMES = (window.GAMES || []).concat([
         ctx.shadowBlur = 0;
         ctx.fillStyle = color;
         ctx.font = '900 43px system-ui, sans-serif';
-        ctx.fillText(choice[3], x + cardW / 2, cardY + 48);
+        ctx.fillText(choice[5], x + cardW / 2, cardY + 48);
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '800 17px system-ui, sans-serif';
-        ctx.fillText(choice[1], x + cardW / 2, cardY + 102);
+        ctx.font = `800 ${english ? 15 : 17}px system-ui, sans-serif`;
+        ctx.fillText(english ? choice[2] : choice[1], x + cardW / 2, cardY + 102);
         ctx.fillStyle = 'rgba(255,255,255,.72)';
-        ctx.font = '600 13px system-ui, sans-serif';
-        ctx.fillText(choice[2], x + cardW / 2, cardY + 136);
+        ctx.font = `600 ${english ? 12 : 13}px system-ui, sans-serif`;
+        ctx.fillText(english ? choice[4] : choice[3], x + cardW / 2, cardY + 136);
       }
     }
 
@@ -523,10 +538,10 @@ window.GAMES = (window.GAMES || []).concat([
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = '900 20px system-ui, sans-serif';
-      ctx.fillText('左右拖曳，自動射擊', W / 2, H * 0.52 - 12);
+      ctx.fillText(text('左右拖曳，自動射擊', 'DRAG LEFT OR RIGHT'), W / 2, H * 0.52 - 12);
       ctx.font = '600 14px system-ui, sans-serif';
       ctx.fillStyle = '#A9FAFF';
-      ctx.fillText('別讓霓虹核心突破防線', W / 2, H * 0.52 + 19);
+      ctx.fillText(text('別讓霓虹核心突破防線', 'Stop every core before it breaks through'), W / 2, H * 0.52 + 19);
       ctx.globalAlpha = 1;
     }
 
@@ -635,6 +650,7 @@ window.GAMES = (window.GAMES || []).concat([
       shake = 0;
       flash = 0;
       bossSpawned = false;
+      spawnedCount = 0;
       makeStars();
       raf = requestAnimationFrame(loop);
     }

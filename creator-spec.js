@@ -73,6 +73,7 @@ metadata 規則：
 - 平台會依裝置像素密度清晰縮放：直式裝置填滿可用畫面；橫式螢幕則讓完整直式遊戲以畫面高度置中顯示。
 - 所有位置與大小都應由 env.W / env.H 推算。不要使用固定 CSS 尺寸，也不要假設手機的實際長寬比。
 - env.ctx：Canvas 2D context，所有畫面都畫在這裡。
+- env.locale：目前系統語言，值為 zh-Hant 或 en。若遊戲有文字，請至少提供繁體中文與英文，並依此切換。
 - env.setScore(number)：更新當局分數。
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
@@ -236,6 +237,7 @@ Metadata rules:
 - PlayFeed scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
 - Derive positions and sizes from env.W / env.H. Do not use fixed CSS sizes or assume a physical phone aspect ratio.
 - env.ctx: Canvas 2D context. Draw the entire game here.
+- env.locale: the current interface language, either zh-Hant or en. If the game contains text, provide at least Traditional Chinese and English and switch with this value.
 - env.setScore(number): update the current score.
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
@@ -403,7 +405,7 @@ Core requirements:
 - apiVersion must be 1.
 - create(env) must directly return start(), stop(), and input(type,x,y).
 - input must handle up and cancel separately.
-- Use only env.W, env.H, env.ctx, env.setScore, env.over, env.beep, and env.sprite.
+- Use only env.W, env.H, env.ctx, env.locale, env.setScore, env.over, env.beep, and env.sprite.
 - No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
 - Vertical gestures remain available to the Feed.
 - At the beginning of start(), briefly draw the controls inside the canvas.
@@ -430,7 +432,7 @@ ${source}
 - apiVersion 必須是 1。
 - create(env) 必須直接回傳 start()、stop()、input(type,x,y)。
 - input 必須分開處理 up 與 cancel。
-- 只能使用 env.W、env.H、env.ctx、env.setScore、env.over、env.beep、env.sprite。
+- 只能使用 env.W、env.H、env.ctx、env.locale、env.setScore、env.over、env.beep、env.sprite。
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
 - 垂直手勢保留給 Feed。
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。

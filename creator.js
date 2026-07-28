@@ -300,7 +300,7 @@ function encodeSource(source) {
   return btoa(binary);
 }
 
-function sandboxDocument(channel, source, duration, spriteData = {}) {
+function sandboxDocument(channel, source, duration, spriteData = {}, locale = 'zh-Hant') {
   const encoded = encodeSource(source);
   const hardLimit = 600;
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -308,7 +308,7 @@ function sandboxDocument(channel, source, duration, spriteData = {}) {
 <style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}canvas{display:block;width:100%;height:100%}</style>
 </head><body><canvas width="400" height="700"></canvas><script>
 (()=>{'use strict';
-const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000};
+const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000}, LOCALE=${JSON.stringify(locale)};
 const SPRITE_SOURCES=${JSON.stringify(spriteData || {})},SPRITES={};
 const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3);
 const ctx=canvas.getContext('2d');
@@ -337,7 +337,7 @@ function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of
 function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();ended=true}
 function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+Math.min(2,Math.max(.01,finite(dur))))}catch(e){}}
 function sprite(key,cx,cy,size,flip){const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
-const env={W:400,H:700,ctx,beep,sprite,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
+const env={W:400,H:700,ctx,locale:LOCALE,beep,sprite,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
 function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function autoInput(){if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
@@ -354,7 +354,7 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
   frame.className = 'sandbox-frame';
   frame.setAttribute('sandbox', 'allow-scripts');
   frame.setAttribute('title', 'PlayFeed 沙盒遊戲');
-  frame.srcdoc = sandboxDocument(channel, source, duration, spriteData);
+  frame.srcdoc = sandboxDocument(channel, source, duration, spriteData, host.locale);
   container.appendChild(frame);
   let ready = false;
   const queue = [];

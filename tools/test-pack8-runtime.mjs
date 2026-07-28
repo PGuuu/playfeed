@@ -39,6 +39,7 @@ const instance = game.create({
   ctx,
   W: 400,
   H: 700,
+  locale: 'en',
   sprite: () => false,
   setScore() {},
   over(score) {
