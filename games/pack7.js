@@ -54,6 +54,26 @@ const answerBookSource = `playfeed 1
           "color": "#f0c66d",
           "glow": "#8ce8ff"
         },
+        "hold": {
+          "effect": "page-flip",
+          "minSeconds": 1.2,
+          "phraseSeconds": 0.42,
+          "label": "按住書本翻閱",
+          "activeLabel": "正在翻閱答案…",
+          "shortLabel": "再按久一點",
+          "buttonColor": "#fff0a6",
+          "phraseColor": "#3a304d",
+          "glow": "#8ce8ff",
+          "phrases": [
+            "先別急著決定",
+            "你真正害怕的是什麼？",
+            "答案正在靠近",
+            "有些門要輕輕推開",
+            "把最初的念頭留下",
+            "再聽一次心裡的聲音",
+            "現在，準備放開"
+          ]
+        },
         "on": {
           "release": [
             { "random": { "target": "answer", "from": "answers" } },
@@ -66,7 +86,6 @@ const answerBookSource = `playfeed 1
         "background": "#543b78",
         "backgroundEnd": "#14162f",
         "title": "書給你的回答",
-        "text": "「{{answer}}」",
         "hint": "答案不是命令，只是一面鏡子",
         "visual": {
           "remix": "book",
@@ -76,6 +95,18 @@ const answerBookSource = `playfeed 1
           "size": 230,
           "color": "#fff0b2",
           "glow": "#fff5b8"
+        },
+        "visualText": {
+          "text": "「{{answer}}」",
+          "x": 200,
+          "y": 390,
+          "width": 178,
+          "height": 114,
+          "size": 22,
+          "color": "#29223f",
+          "panelColor": "#fffbe8",
+          "borderColor": "#c8a96b",
+          "glow": "#fff3a6"
         },
         "choices": [
           {

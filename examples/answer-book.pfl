@@ -55,12 +55,12 @@ playfeed 1
         "hold": {
           "effect": "page-flip",
           "minSeconds": 1.2,
-          "phraseSeconds": 0.68,
+          "phraseSeconds": 0.42,
           "label": "按住書本翻閱",
           "activeLabel": "正在尋找你的答案…",
           "shortLabel": "再按久一點",
           "buttonColor": "#fff0a6",
-          "phraseColor": "#fff8cf",
+          "phraseColor": "#3a304d",
           "glow": "#8ce8ff",
           "phrases": [
             "先別急著決定",

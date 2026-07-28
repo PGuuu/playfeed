@@ -1432,11 +1432,13 @@ function originalCreateExpression(game) {
   return /^\s*(?:async\s+)?function\b/.test(source) ? source : `function ${source}`;
 }
 
+const OFFICIAL_GAME_VERSION = 'official-1.1.0';
+
 function officialSubmission(game) {
   const createExpression = originalCreateExpression(game);
   const metadata = {
     apiVersion: 1,
-    gameVersion: 'official-1.0.0',
+    gameVersion: OFFICIAL_GAME_VERSION,
     id: game.id,
     title: game.title,
     description: game.description || game.tip,
@@ -1475,9 +1477,17 @@ function officialSubmission(game) {
 
 async function syncOfficialGamesIfNeeded() {
   if (!publishedLoadComplete) return false;
-  const officialIds = new Set((window.GAMES || []).map(game => game.id));
-  const existing = new Set(publishedRows.filter(row => officialIds.has(row.slug)).map(row => row.slug));
-  if (existing.size === officialIds.size) return false;
+  const officialGames = window.GAMES || [];
+  const officialIds = new Set(officialGames.map(game => game.id));
+  const existing = new Map(
+    publishedRows
+      .filter(row => officialIds.has(row.slug))
+      .map(row => [row.slug, row])
+  );
+  const needsSync = officialGames.some(game =>
+    existing.get(game.id)?.game_version !== OFFICIAL_GAME_VERSION
+  );
+  if (!needsSync) return false;
   if (!host.user || !host.db || officialSyncPromise) return false;
   officialSyncPromise = (async () => {
     try {

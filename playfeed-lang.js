@@ -307,30 +307,49 @@ function flowEngine(env, spec) {
     ctx.scale(pulse, pulse);
     if (pageFlip) ctx.rotate(Math.sin(time * .28) * .025);
     ctx.translate(-x, -y);
-    if (visual.remix && env.sprite(visual.remix, x, y, size)) { ctx.restore(); return; }
+    const spriteDrawn = visual.remix && env.sprite(visual.remix, x, y, size);
     ctx.shadowColor = visual.glow || '#91f5ff'; ctx.shadowBlur = held ? 34 : 15;
-    if (pageFlip) {
-      const flip = (Math.sin(time * .42) + 1) / 2;
-      for (let page = 3; page >= 1; page--) {
-        const offset = page * 4 + flip * page * 2;
-        ctx.fillStyle = `rgba(255,248,218,${.16 + page * .09})`;
-        roundRect(
-          x - size * .42 + offset,
-          y - size * .3 - offset * .35,
-          size * .84,
-          size * .6,
-          18
-        );
-        ctx.fill();
+    const bookW = size * .92, bookH = size * .62, halfPage = bookW * .47;
+    if (!spriteDrawn && visual.shape === 'book') {
+      ctx.fillStyle = visual.color || '#f0c66d';
+      roundRect(x - bookW / 2 - 7, y - bookH / 2 - 7, bookW + 14, bookH + 14, 16); ctx.fill();
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#fff9df';
+      roundRect(x - halfPage, y - bookH / 2, halfPage - 2, bookH, 10); ctx.fill();
+      roundRect(x + 2, y - bookH / 2, halfPage - 2, bookH, 10); ctx.fill();
+      ctx.strokeStyle = 'rgba(91,67,40,.28)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y - bookH / 2 + 5); ctx.lineTo(x, y + bookH / 2 - 5); ctx.stroke();
+      ctx.strokeStyle = 'rgba(91,67,40,.16)'; ctx.lineWidth = 1;
+      for (let line = -2; line <= 2; line++) {
+        const lineY = y + line * bookH * .13;
+        ctx.beginPath(); ctx.moveTo(x - halfPage + 18, lineY); ctx.lineTo(x - 14, lineY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 14, lineY); ctx.lineTo(x + halfPage - 18, lineY); ctx.stroke();
+      }
+    } else if (!spriteDrawn) {
+      ctx.fillStyle = visual.color || '#f4d58d';
+      if (visual.shape === 'circle') {
+        ctx.beginPath(); ctx.arc(x, y, size / 2, 0, Math.PI * 2); ctx.fill();
+      } else {
+        roundRect(x - size * .42, y - size * .3, size * .84, size * .6, 18); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.42)';
+        roundRect(x - size * .34, y - size * .22, size * .68, size * .08, 4); ctx.fill();
       }
     }
-    ctx.fillStyle = visual.color || '#f4d58d';
-    if (visual.shape === 'circle') {
-      ctx.beginPath(); ctx.arc(x, y, size / 2, 0, Math.PI * 2); ctx.fill();
-    } else {
-      roundRect(x - size * .42, y - size * .3, size * .84, size * .6, 18); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.42)';
-      roundRect(x - size * .34, y - size * .22, size * .68, size * .08, 4); ctx.fill();
+    if (pageFlip) {
+      const phase = ((time - holdStarted) * .115) % 1;
+      const edge = Math.cos(phase * Math.PI) * halfPage;
+      const lift = Math.sin(phase * Math.PI) * 15;
+      const shade = .68 + Math.abs(edge / halfPage) * .28;
+      ctx.shadowColor = visual.glow || '#91f5ff'; ctx.shadowBlur = 12 + lift;
+      ctx.fillStyle = `rgba(255,250,226,${shade})`;
+      ctx.beginPath();
+      ctx.moveTo(x, y - bookH / 2 + 3);
+      ctx.quadraticCurveTo(x + edge * .55, y - bookH / 2 - lift, x + edge, y - bookH / 2 + 8);
+      ctx.lineTo(x + edge, y + bookH / 2 - 8);
+      ctx.quadraticCurveTo(x + edge * .55, y + bookH / 2 + lift, x, y + bookH / 2 - 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(91,67,40,.2)'; ctx.lineWidth = 1; ctx.stroke();
     }
     ctx.restore();
   }
@@ -339,19 +358,22 @@ function flowEngine(env, spec) {
     if (!hold || typeof hold !== 'object') return;
     const phrases = Array.isArray(hold.phrases) ? hold.phrases : [];
     if (held && phrases.length) {
-      const phraseFrames = Math.max(18, (Number(hold.phraseSeconds) || .72) * 60);
+      const phraseFrames = Math.max(12, (Number(hold.phraseSeconds) || .48) * 60);
       const cycle = time - holdStarted;
       const phrase = phrases[Math.floor(cycle / phraseFrames) % phrases.length];
       const phase = (cycle % phraseFrames) / phraseFrames;
-      const alpha = Math.max(0, Math.sin(Math.PI * phase)) * .72;
+      const alpha = Math.min(1, phase / .08) * Math.pow(1 - phase, 2) * .86;
+      const visual = scene.visual || {};
+      const phraseY = Number(visual.y) || H * .52;
+      const phraseWidth = Math.min(W - 90, (Number(visual.size) || 210) * .68);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = hold.phraseColor || '#fff8cf';
-      ctx.font = '700 16px sans-serif';
+      ctx.fillStyle = hold.phraseColor || '#3a304d';
+      ctx.font = '800 14px sans-serif';
       ctx.textAlign = 'center';
       ctx.shadowColor = hold.glow || '#8ce8ff';
-      ctx.shadowBlur = 16;
-      wrap(phrase, W / 2, 258 - Math.sin(Math.PI * phase) * 9, W - 72, 22, 2);
+      ctx.shadowBlur = 5;
+      wrap(phrase, W / 2, phraseY - 4 - phase * 7, phraseWidth, 19, 2);
       ctx.restore();
     }
 
