@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.0.0',
+  gameVersion: '1.1.0',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
@@ -51,6 +51,10 @@ window.GAMES = (window.GAMES || []).concat([
     let verticalSpeed = 27;
     let playerX = 0;
     let steer = 0;
+    let targetSteer = 0;
+    let braking = false;
+    let dragStartX = 0;
+    let dragStartSteer = 0;
     let wind = 2.4;
     let openAltitude = 120;
     let result = '';
@@ -290,6 +294,7 @@ window.GAMES = (window.GAMES || []).concat([
 
     const font = {
       A:['01110','10001','10001','11111','10001','10001','10001'],
+      B:['11110','10001','10001','11110','10001','10001','11110'],
       C:['01111','10000','10000','10000','10000','10000','01111'],
       D:['11110','10001','10001','10001','10001','10001','11110'],
       E:['11111','10000','10000','11110','10000','10000','11111'],
@@ -307,6 +312,7 @@ window.GAMES = (window.GAMES || []).concat([
       S:['01111','10000','10000','01110','00001','00001','11110'],
       T:['11111','00100','00100','00100','00100','00100','00100'],
       U:['10001','10001','10001','10001','10001','10001','01110'],
+      V:['10001','10001','10001','10001','10001','01010','00100'],
       W:['10001','10001','10001','10101','10101','11011','10001'],
       X:['10001','10001','01010','00100','01010','10001','10001'],
       Y:['10001','10001','01010','00100','00100','00100','00100'],
@@ -393,23 +399,26 @@ window.GAMES = (window.GAMES || []).concat([
 
       const playerZ = 3;
       const diverTexture = env.texture('skydiver');
-      if (!drawBillboard(diverTexture, model(playerX, altitude, playerZ, 3.2, 4.2, 1, 0, 0), viewProjection)) {
-        drawMesh(cube, model(playerX, altitude, playerZ, 1.15, 1.55, .8, steer * .18, -steer * .12), [.12,.2,.31,1], viewProjection);
-        drawMesh(cube, model(playerX, altitude + 1.28, playerZ, .85, .85, .85, 0, 0), [.97,.77,.55,1], viewProjection);
-        drawMesh(cube, model(playerX - .78, altitude + .1, playerZ, .35, 1.25, .35, 0, -.22), [.96,.43,.25,1], viewProjection);
-        drawMesh(cube, model(playerX + .78, altitude + .1, playerZ, .35, 1.25, .35, 0, .22), [.96,.43,.25,1], viewProjection);
+      if (!drawBillboard(diverTexture, model(playerX, altitude, playerZ, 4.4, 5.6, 1, 0, 0), viewProjection)) {
+        drawMesh(cube, model(playerX, altitude, playerZ - .18, 1.75, 2.2, 1.05, steer * .12, -steer * .1), [.05,.09,.16,1], viewProjection);
+        drawMesh(cube, model(playerX, altitude + .08, playerZ, 1.45, 1.9, .9, steer * .12, -steer * .1), [1,.35,.16,1], viewProjection);
+        drawMesh(cube, model(playerX, altitude + 1.62, playerZ, 1.12, 1.12, 1.08, 0, 0), [1,.86,.62,1], viewProjection);
+        drawMesh(cube, model(playerX - 1.02, altitude + .05, playerZ, .42, 1.55, .42, 0, -.32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(playerX + 1.02, altitude + .05, playerZ, .42, 1.55, .42, 0, .32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(playerX - .48, altitude - 1.65, playerZ, .48, 1.35, .5, 0, -.08), [.08,.15,.25,1], viewProjection);
+        drawMesh(cube, model(playerX + .48, altitude - 1.65, playerZ, .48, 1.35, .5, 0, .08), [.08,.15,.25,1], viewProjection);
       }
 
       if (deployed) {
         const chuteTexture = env.texture('parachute');
-        if (!drawBillboard(chuteTexture, model(playerX, altitude + 4.1, playerZ, 7.5, 3.3, 1, 0, -steer * .08), viewProjection)) {
+        if (!drawBillboard(chuteTexture, model(playerX, altitude + 5.5, playerZ, 10.2, 4.8, 1, 0, -steer * .08), viewProjection)) {
           const panelColors = [[1,.42,.3,1],[1,.86,.36,1],[.3,.83,.91,1]];
           for (let i = -3; i <= 3; i++) {
-            const arch = 4.4 - Math.abs(i) * .23;
-            drawMesh(cube, model(playerX + i * .92, altitude + arch, playerZ, .96, .48, 1.15, 0, i * -.045 - steer * .06), panelColors[(i + 6) % 3], viewProjection);
-            const length = 3.05 + (3 - Math.abs(i)) * .17;
+            const arch = (braking ? 5.65 : 5.25) - Math.abs(i) * .3;
+            drawMesh(cube, model(playerX + i * 1.18, altitude + arch, playerZ, 1.25, .72, 1.45, 0, i * -.052 - steer * .08), panelColors[(i + 6) % 3], viewProjection);
+            const length = 4.2 + (3 - Math.abs(i)) * .2;
             const angle = -i * .17;
-            drawMesh(cube, model(playerX + i * .44, altitude + 2.05, playerZ, .045, length, .045, 0, angle), [.88,.92,.95,1], viewProjection);
+            drawMesh(cube, model(playerX + i * .55, altitude + 2.55, playerZ, .055, length, .055, 0, angle), [.96,.98,1,1], viewProjection);
           }
         }
       } else if (started) {
@@ -429,6 +438,10 @@ window.GAMES = (window.GAMES || []).concat([
       const arrowX = wind > 0 ? W - 30 : W - 52;
       uiRect(arrowX, 64, 18, 5, [.1,.86,.96,1]);
       uiRect(wind > 0 ? arrowX + 13 : arrowX, 59, 5, 15, [.1,.86,.96,1]);
+      if (started && !result) {
+        uiRect(15, 67, 116, 32, [.02,.06,.12,.56]);
+        uiText(`V ${verticalSpeed.toFixed(1)}`, 27, 78, 2, braking ? [.45,1,.66,1] : [1,.82,.32,1], false);
+      }
 
       if (!started) {
         uiRect(67, 558, 266, 72, [.02,.06,.12,.72]);
@@ -440,8 +453,9 @@ window.GAMES = (window.GAMES || []).concat([
         uiRect(90, 625, 220, 8, [1,1,1,.18]);
         uiRect(90, 625, 220 * clamp(pull / .45, 0, 1), 8, [1,.78,.2,1]);
       } else if (deployed && !result) {
-        uiRect(68, 584, 264, 53, [.02,.06,.12,.68]);
-        uiText('DRAG LEFT RIGHT', W / 2, 601, 2, [1,1,1,1], true);
+        uiRect(58, 566, 284, 77, [.02,.06,.12,.72]);
+        uiText(braking ? 'BRAKING' : 'HOLD BRAKE', W / 2, 580, 3, braking ? [.45,1,.66,1] : [1,1,1,1], true);
+        uiText('DRAG TO STEER', W / 2, 620, 2, [.4,.94,1,1], true);
       }
 
       if (result) {
@@ -495,9 +509,11 @@ window.GAMES = (window.GAMES || []).concat([
         }
         playerX += wind * .13 * dt;
       } else {
-        verticalSpeed += (6.8 - verticalSpeed) * Math.min(1, dt * 1.75);
-        playerX += (wind * .46 + steer * 5.4) * dt;
-        steer *= Math.pow(.9, dt * 60);
+        const targetFallSpeed = braking ? 3.8 : 8.4;
+        verticalSpeed += (targetFallSpeed - verticalSpeed) * Math.min(1, dt * (braking ? 2.7 : 1.55));
+        steer += (targetSteer - steer) * Math.min(1, dt * 8.5);
+        playerX += (wind * .42 + steer * (braking ? 5.2 : 8.2)) * dt;
+        if (!dragging) targetSteer *= Math.pow(.965, dt * 60);
       }
       altitude -= verticalSpeed * dt;
       if (altitude <= 0) land();
@@ -510,9 +526,10 @@ window.GAMES = (window.GAMES || []).concat([
 
       const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
       const cameraX = playerX * .28;
-      const eye = [cameraX, altitude + 5.5, 17];
-      const center = [playerX * .38, Math.max(0, altitude - 31), 0];
-      const projection = perspective(Math.PI * .34, aspect, .2, 360);
+      const eye = [cameraX, altitude + 9, 27];
+      const centerDrop = started ? 7 : 17;
+      const center = [playerX * .5, Math.max(0, altitude - centerDrop), 1.5];
+      const projection = perspective(Math.PI * .42, aspect, .2, 360);
       const view = lookAt(eye, center, [0, 1, 0]);
       const viewProjection = multiply(projection, view);
       drawWorld(viewProjection);
@@ -537,6 +554,7 @@ window.GAMES = (window.GAMES || []).concat([
       started = env.mode === 'play' || env.mode === 'demo';
       pulling = false;
       dragging = false;
+      braking = false;
       pull = 0;
       deployed = false;
       altitude = 120;
@@ -544,6 +562,9 @@ window.GAMES = (window.GAMES || []).concat([
       wind = (Math.random() < .5 ? -1 : 1) * (1.3 + Math.random() * 2.7);
       playerX = -wind * 1.3;
       steer = 0;
+      targetSteer = 0;
+      dragStartX = 0;
+      dragStartSteer = 0;
       openAltitude = 120;
       result = '';
       resultTime = 0;
@@ -557,6 +578,7 @@ window.GAMES = (window.GAMES || []).concat([
       alive = false;
       pulling = false;
       dragging = false;
+      braking = false;
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     }
@@ -566,7 +588,9 @@ window.GAMES = (window.GAMES || []).concat([
       if (type === 'cancel') {
         pulling = false;
         dragging = false;
+        braking = false;
         steer = 0;
+        targetSteer = 0;
         return;
       }
       if (type === 'down') {
@@ -575,13 +599,16 @@ window.GAMES = (window.GAMES || []).concat([
           pulling = true;
         } else {
           dragging = true;
-          steer = clamp((x - W / 2) / (W * .32), -1, 1);
+          braking = true;
+          dragStartX = x;
+          dragStartSteer = targetSteer;
         }
       } else if (type === 'move' && deployed && dragging) {
-        steer = clamp((x - W / 2) / (W * .32), -1, 1);
+        targetSteer = clamp(dragStartSteer + (x - dragStartX) / (W * .18), -1, 1);
       } else if (type === 'up') {
         pulling = false;
         dragging = false;
+        braking = false;
       }
     }
 
