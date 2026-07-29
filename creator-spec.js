@@ -13,6 +13,7 @@ window.GAMES = (window.GAMES || []).concat([
   {
     apiVersion: 1,
     gameVersion: '1.0.0',
+    renderer: '2d',
     id: 'readable-id-suggestion',
     title: '遊戲名稱',
     description: '一句話介紹',
@@ -72,12 +73,16 @@ metadata 規則：
 - 使用 env.W / env.H 作為邏輯畫布尺寸（目前是 400 × 700 設計單位），不要自行讀取螢幕像素。
 - 平台會依裝置像素密度清晰縮放：直式裝置填滿可用畫面；橫式螢幕則讓完整直式遊戲以畫面高度置中顯示。
 - 所有位置與大小都應由 env.W / env.H 推算。不要使用固定 CSS 尺寸，也不要假設手機的實際長寬比。
-- env.ctx：Canvas 2D context，所有畫面都畫在這裡。
+- renderer 預設為 '2d'。一般遊戲使用 env.ctx；真正需要 3D 時可設為 '3d' 並使用 env.gl。
+- env.ctx：renderer 為 '2d' 時提供 Canvas 2D context。
+- env.gl：renderer 為 '3d' 時提供 WebGL2 或 WebGL context。不得載入外部模型、貼圖或引擎。
+- env.mode：'preview'、'play' 或 'demo'。cover 預覽不可替玩家做出決定。
 - env.locale：目前系統語言，值為 zh-Hant 或 en。若遊戲有文字，請至少提供繁體中文與英文，並依此切換。
 - env.setScore(number)：更新當局分數。
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
 - env.sprite(key, centerX, centerY, size, flip?)：請平台畫出 Remix 素材；有素材時回傳 true，否則回傳 false。
+- env.texture(key)：3D 遊戲取得 Remix 素材的 WebGLTexture；尚未載入或沒有素材時回傳 null。
 - 公開投稿不提供 env.getSprite。
 
 GameInstance 必須包含：
@@ -177,6 +182,7 @@ window.GAMES = (window.GAMES || []).concat([
   {
     apiVersion: 1,
     gameVersion: '1.0.0',
+    renderer: '2d',
     id: 'readable-id-suggestion',
     title: 'Game title',
     description: 'One-line description',
@@ -236,12 +242,16 @@ Metadata rules:
 - Use env.W / env.H as the logical canvas size (currently 400 × 700 design units). Do not read physical screen pixels.
 - PlayFeed scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
 - Derive positions and sizes from env.W / env.H. Do not use fixed CSS sizes or assume a physical phone aspect ratio.
-- env.ctx: Canvas 2D context. Draw the entire game here.
+- renderer defaults to '2d'. Use env.ctx for normal games. Set renderer to '3d' only when real 3D is essential, then use env.gl.
+- env.ctx: Canvas 2D context when renderer is '2d'.
+- env.gl: WebGL2 or WebGL context when renderer is '3d'. Do not load external models, textures, or engines.
+- env.mode: 'preview', 'play', or 'demo'. A cover preview must never make a choice for the player.
 - env.locale: the current interface language, either zh-Hant or en. If the game contains text, provide at least Traditional Chinese and English and switch with this value.
 - env.setScore(number): update the current score.
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
 - env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
+- env.texture(key): obtain Remix media as a WebGLTexture in a 3D game. Returns null while unavailable.
 - Public submissions do not receive env.getSprite.
 
 GameInstance must contain:

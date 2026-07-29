@@ -156,6 +156,7 @@ function validateScript(raw) {
     bg: read('bg'),
     tags: read('tags'),
     controls: read('controls'),
+    renderer: read('renderer') || '2d',
     preview: read('preview'),
     duration: read('duration'),
     score: read('score'),
@@ -174,6 +175,7 @@ function validateScript(raw) {
   if (metadata.tip?.length > 160) errors.push('tip 不可超過 160 個字元。');
   if (!/^#[0-9a-f]{3,8}$/i.test(metadata.bg || '')) errors.push('bg 必須是十六進位色碼。');
   if (!Array.isArray(metadata.tags) || metadata.tags.some(x => typeof x !== 'string')) errors.push('tags 必須是字串陣列。');
+  if (!['2d', '3d'].includes(metadata.renderer)) errors.push('renderer 必須是 2d 或 3d。');
   if (!Array.isArray(metadata.controls) || metadata.controls.length === 0 ||
       metadata.controls.some(x => typeof x !== 'string')) {
     errors.push('controls 必須是至少含一項的字串陣列。');
@@ -219,9 +221,9 @@ function validateScript(raw) {
         errors.push('remixSlots.shape 必須是 free、circle、wide 或 tall。');
       }
     }
-    const usesSprite = /\benv\s*\.\s*sprite\b/.test(source) ||
-      /(?:const|let|var)\s*\{[^}]*\bsprite\b[^}]*\}\s*=\s*env\b/s.test(source);
-    if (!usesSprite) errors.push('已提供 remixSlots，但程式沒有使用 env.sprite() 繪製換皮元素。');
+    const usesRemixMedia = /\benv\s*\.\s*(?:sprite|texture)\b/.test(source) ||
+      /(?:const|let|var)\s*\{[^}]*\b(?:sprite|texture)\b[^}]*\}\s*=\s*env\b/s.test(source);
+    if (!usesRemixMedia) errors.push('已提供 remixSlots，但程式沒有使用 env.sprite() 或 env.texture() 繪製換皮元素。');
   }
 
   const createProp = getProperty(game, 'create');
@@ -311,10 +313,9 @@ function sandboxDocument(channel, source, duration, spriteData = {}, locale = 'z
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000}, LOCALE=${JSON.stringify(locale)};
 const SPRITE_SOURCES=${JSON.stringify(spriteData || {})},SPRITES={};
 const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3);
-const ctx=canvas.getContext('2d');
+let ctx=null,gl=null,env=null,renderer='2d';
 for(const [key,url] of Object.entries(SPRITE_SOURCES)){const image=new Image();image.src=url;SPRITES[key]=image}
-function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),pw=Math.round(w*DPR),ph=Math.round(h*DPR);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;ctx.setTransform(pw/400,0,0,ph/700,0,0)}}
-fitCanvas();
+function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),scale=gl?Math.min(DPR,1.75):DPR,pw=Math.round(w*scale),ph=Math.round(h*scale);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;if(ctx)ctx.setTransform(pw/400,0,0,ph/700,0,0);if(gl)gl.viewport(0,0,pw,ph)}}
 let definition=null,game=null,ended=true,score=0,hardTimer=null,autoTimer=null;
 const timers=new Set(),intervals=new Set(),rafs=new Set();
 const real={
@@ -336,15 +337,18 @@ function finite(n){n=Number(n);return Number.isFinite(n)?Math.max(-1e9,Math.min(
 function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of intervals)real.clearInterval(id);for(const id of rafs)real.caf(id);timers.clear();intervals.clear();rafs.clear();if(hardTimer)real.clearTimeout(hardTimer);if(autoTimer)real.clearInterval(autoTimer);hardTimer=autoTimer=null}
 function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();ended=true}
 function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+Math.min(2,Math.max(.01,finite(dur))))}catch(e){}}
-function sprite(key,cx,cy,size,flip){const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
-const env={W:400,H:700,ctx,locale:LOCALE,beep,sprite,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}};
-function start(auto){stop();fitCanvas();ended=false;score=0;ctx.clearRect(0,0,400,700);try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(auto)startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
+const GL_TEXTURES={};
+function sprite(key,cx,cy,size,flip){if(!ctx)return false;const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
+function texture(key){if(!gl)return null;if(GL_TEXTURES[key])return GL_TEXTURES[key];const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return null;const value=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,value);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);GL_TEXTURES[key]=value;return value}
+function setupRenderer(){renderer=definition&&definition.renderer==='3d'?'3d':'2d';if(renderer==='3d'){gl=canvas.getContext('webgl2',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'})||canvas.getContext('webgl',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'});if(!gl)throw new Error('此裝置不支援 WebGL');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!ended)send('runtime-error',{message:'3D 圖形資源已被系統釋放'})})}else{ctx=canvas.getContext('2d');if(!ctx)throw new Error('無法建立 2D 畫布')}fitCanvas();env={W:400,H:700,ctx,gl,renderer,locale:LOCALE,beep,sprite,texture,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}}}
+function start(mode){stop();fitCanvas();ended=false;score=0;env.mode=mode;if(ctx)ctx.clearRect(0,0,400,700);if(gl){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(mode==='demo')startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function autoInput(){if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setTimeout(()=>{if(ended)return;autoInput();autoTimer=real.setInterval(autoInput,480+Math.random()*180)},1250)}
-addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start'||m.type==='preview')start(false);else if(m.type==='auto')start(true);else if(m.type==='stop')stop();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
+function dispose(){stop();if(gl){const ext=gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext()}}
+addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start('play');else if(m.type==='preview')start('preview');else if(m.type==='auto')start('demo');else if(m.type==='stop')stop();else if(m.type==='dispose')dispose();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
 addEventListener('error',e=>send('runtime-error',{message:String(e.message||'執行錯誤')}));
-try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];send('ready')}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
+try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];setupRenderer();send('ready')}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
 })();<\/script></body></html>`;
 }
 
@@ -377,8 +381,8 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
     },
     destroy() {
       window.removeEventListener('message', listener);
-      try { frame.contentWindow?.postMessage({ channel, type: 'stop' }, '*'); } catch (_) {}
-      frame.remove();
+      try { frame.contentWindow?.postMessage({ channel, type: 'dispose' }, '*'); } catch (_) {}
+      requestAnimationFrame(() => frame.remove());
     }
   };
 }
@@ -1397,6 +1401,7 @@ function officialSubmission(game) {
   const metadata = {
     apiVersion: 1,
     gameVersion: 'official-1.0.0',
+    renderer: game.renderer === '3d' ? '3d' : '2d',
     id: game.id,
     title: game.title,
     description: game.tip,
