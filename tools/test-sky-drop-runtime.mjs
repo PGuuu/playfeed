@@ -58,9 +58,13 @@ function simulate(verticalGesture) {
   Math.random = () => .5;
   game.start();
   Math.random = originalRandom;
-  const targetMatrix = gl.matrices[5];
+  const targetMatrix = gl.matrices[11];
+  const playerMatrix = gl.matrices[69];
   const targetScreenY = targetMatrix
     ? (1 - targetMatrix[13] / targetMatrix[15]) * 350
+    : NaN;
+  const playerScreenY = playerMatrix
+    ? (1 - playerMatrix[13] / playerMatrix[15]) * 350
     : NaN;
   const advance = milliseconds => {
     const end = elapsed + milliseconds;
@@ -94,7 +98,12 @@ function simulate(verticalGesture) {
   advance(60_000);
   game.stop();
   assert.notEqual(score, null, `${verticalGesture || 'neutral'} run should finish`);
-  return { elapsed, score, targetScreenY: Math.round(targetScreenY) };
+  return {
+    elapsed,
+    score,
+    targetScreenY: Math.round(targetScreenY),
+    playerScreenY: Math.round(playerScreenY)
+  };
 }
 
 const neutral = simulate('neutral');
@@ -110,4 +119,9 @@ assert(guided.score > 0, `a controlled approach should be able to reach the targ
 assert.equal(guidedDive.score, 0, 'continuous forward acceleration should overshoot the target');
 assert(guided.targetScreenY > 100 && guided.targetScreenY < 520,
   `the landing target should stay above the lower instruction panel (${guided.targetScreenY})`);
+assert(guided.playerScreenY > 80 && guided.playerScreenY < 500,
+  `the skydiver should remain visible (${guided.playerScreenY})`);
+assert(guided.playerScreenY < guided.targetScreenY - 60,
+  `the skydiver and landing prediction should share a readable spatial relationship ` +
+  `(${guided.playerScreenY} < ${guided.targetScreenY})`);
 console.log('sky-drop vertical controls passed', { neutral, dive, brake, guided, guidedDive });

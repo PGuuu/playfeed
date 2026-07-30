@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.3.1',
+  gameVersion: '1.3.2',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
@@ -420,40 +420,49 @@ window.GAMES = (window.GAMES || []).concat([
         const predictedZ = playerZ - forwardSpeed * remaining;
         drawMesh(disc, model(predictedX, -.035, predictedZ, 1.15, 1, 1.15, 0, 0), [.15,.95,1,.92], viewProjection);
         drawMesh(disc, model(predictedX, -.025, predictedZ, .55, 1, .55, 0, 0), [.04,.16,.22,1], viewProjection);
+        for (let i = 1; i <= 7; i++) {
+          const t = i / 8;
+          const arcY = altitude * (1 - t) + Math.sin(t * Math.PI) * 4;
+          const arcX = playerX + (predictedX - playerX) * t;
+          const arcZ = playerZ + (predictedZ - playerZ) * t;
+          drawMesh(cube, model(arcX, arcY, arcZ, .32, .32, .32, 0, 0), [.35,.95,1,.62], viewProjection);
+        }
       }
 
+      const framingDistance = Math.hypot(playerX, altitude, playerZ);
+      drawPilot(viewProjection, playerX, altitude, playerZ, clamp(framingDistance / 75, 1, 3.6));
     }
 
-    function drawPilot(viewProjection) {
-      const poseX = steer * .7;
-      const poseY = deployed ? -1.8 : 0;
+    function drawPilot(viewProjection, baseX, baseY, baseZ, scale) {
+      const poseX = baseX + steer * .7 * scale;
+      const poseY = baseY + (deployed ? -1.8 : 0) * scale;
       const diverTexture = env.texture('skydiver');
-      if (!drawBillboard(diverTexture, model(poseX, poseY, 0, 4.8, 6.1, 1, 0, -steer * .1), viewProjection)) {
-        drawMesh(cube, model(poseX, poseY, -.18, 1.75, 2.2, 1.05, steer * .12, -steer * .1), [.05,.09,.16,1], viewProjection);
-        drawMesh(cube, model(poseX, poseY + .08, 0, 1.45, 1.9, .9, steer * .12, -steer * .1), [1,.35,.16,1], viewProjection);
-        drawMesh(cube, model(poseX, poseY + 1.62, 0, 1.12, 1.12, 1.08, 0, 0), [1,.86,.62,1], viewProjection);
-        drawMesh(cube, model(poseX - 1.02, poseY + .05, 0, .42, 1.55, .42, 0, -.32), [.1,.86,.96,1], viewProjection);
-        drawMesh(cube, model(poseX + 1.02, poseY + .05, 0, .42, 1.55, .42, 0, .32), [.1,.86,.96,1], viewProjection);
-        drawMesh(cube, model(poseX - .48, poseY - 1.65, 0, .48, 1.35, .5, 0, -.08), [.08,.15,.25,1], viewProjection);
-        drawMesh(cube, model(poseX + .48, poseY - 1.65, 0, .48, 1.35, .5, 0, .08), [.08,.15,.25,1], viewProjection);
+      if (!drawBillboard(diverTexture, model(poseX, poseY, baseZ, 4.8 * scale, 6.1 * scale, 1, 0, -steer * .1), viewProjection)) {
+        drawMesh(cube, model(poseX, poseY, baseZ - .18 * scale, 1.75 * scale, 2.2 * scale, 1.05 * scale, steer * .12, -steer * .1), [.05,.09,.16,1], viewProjection);
+        drawMesh(cube, model(poseX, poseY + .08 * scale, baseZ, 1.45 * scale, 1.9 * scale, .9 * scale, steer * .12, -steer * .1), [1,.35,.16,1], viewProjection);
+        drawMesh(cube, model(poseX, poseY + 1.62 * scale, baseZ, 1.12 * scale, 1.12 * scale, 1.08 * scale, 0, 0), [1,.86,.62,1], viewProjection);
+        drawMesh(cube, model(poseX - 1.02 * scale, poseY + .05 * scale, baseZ, .42 * scale, 1.55 * scale, .42 * scale, 0, -.32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(poseX + 1.02 * scale, poseY + .05 * scale, baseZ, .42 * scale, 1.55 * scale, .42 * scale, 0, .32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(poseX - .48 * scale, poseY - 1.65 * scale, baseZ, .48 * scale, 1.35 * scale, .5 * scale, 0, -.08), [.08,.15,.25,1], viewProjection);
+        drawMesh(cube, model(poseX + .48 * scale, poseY - 1.65 * scale, baseZ, .48 * scale, 1.35 * scale, .5 * scale, 0, .08), [.08,.15,.25,1], viewProjection);
       }
 
       if (deployed) {
         const chuteTexture = env.texture('parachute');
-        if (!drawBillboard(chuteTexture, model(poseX, poseY + 7.4, 0, 11.2, 5.3, 1, 0, -steer * .08), viewProjection)) {
+        if (!drawBillboard(chuteTexture, model(poseX, poseY + 7.4 * scale, baseZ, 11.2 * scale, 5.3 * scale, 1, 0, -steer * .08), viewProjection)) {
           const panelColors = [[1,.42,.3,1],[1,.86,.36,1],[.3,.83,.91,1]];
           for (let i = -3; i <= 3; i++) {
-            const arch = (braking ? 7.55 : 7.15) - Math.abs(i) * .3;
-            drawMesh(cube, model(poseX + i * 1.28, poseY + arch, 0, 1.37, .78, 1.45, 0, i * -.052 - steer * .08), panelColors[(i + 6) % 3], viewProjection);
-            const length = 5.8 + (3 - Math.abs(i)) * .2;
+            const arch = ((braking ? 7.55 : 7.15) - Math.abs(i) * .3) * scale;
+            drawMesh(cube, model(poseX + i * 1.28 * scale, poseY + arch, baseZ, 1.37 * scale, .78 * scale, 1.45 * scale, 0, i * -.052 - steer * .08), panelColors[(i + 6) % 3], viewProjection);
+            const length = (5.8 + (3 - Math.abs(i)) * .2) * scale;
             const angle = -i * .17;
-            drawMesh(cube, model(poseX + i * .6, poseY + 3.8, 0, .055, length, .055, 0, angle), [.96,.98,1,1], viewProjection);
+            drawMesh(cube, model(poseX + i * .6 * scale, poseY + 3.8 * scale, baseZ, .055 * scale, length, .055 * scale, 0, angle), [.96,.98,1,1], viewProjection);
           }
         }
       } else if (started) {
         for (let i = -3; i <= 3; i++) {
-          const streakX = poseX + i * 1.8 + Math.sin(elapsed * 3 + i) * .4;
-          drawMesh(cube, model(streakX, poseY + 3 + (i % 2) * 4, 1, .04, 1.8, .04, 0, 0), [.78,.95,1,.58], viewProjection);
+          const streakX = poseX + (i * 1.8 + Math.sin(elapsed * 3 + i) * .4) * scale;
+          drawMesh(cube, model(streakX, poseY + (3 + (i % 2) * 4) * scale, baseZ + scale, .04 * scale, 1.8 * scale, .04 * scale, 0, 0), [.78,.95,1,.58], viewProjection);
         }
       }
     }
@@ -599,17 +608,13 @@ window.GAMES = (window.GAMES || []).concat([
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
-      const cameraX = playerX * .28;
-      const eye = [cameraX, altitude + 16, playerZ + 34];
-      const center = [playerX * .3, Math.max(0, altitude * .2), playerZ * .2];
-      const projection = perspective(Math.PI * .42, aspect, .2, 360);
+      const span = Math.max(24, Math.hypot(playerX, altitude, playerZ));
+      const center = [playerX * .5, altitude * .5, playerZ * .5];
+      const eye = [center[0], center[1] + span * .1 + 8, center[2] + span * 1.55 + 40];
+      const projection = perspective(Math.PI * .42, aspect, .2, 1400);
       const view = lookAt(eye, center, [0, 1, 0]);
       const viewProjection = multiply(projection, view);
       drawWorld(viewProjection);
-      gl.clear(gl.DEPTH_BUFFER_BIT);
-      const pilotProjection = perspective(Math.PI * .38, aspect, .2, 100);
-      const pilotView = lookAt([0, 3.2, 29], [0, 2.5, 0], [0, 1, 0]);
-      drawPilot(multiply(pilotProjection, pilotView));
       drawUI();
     }
 
