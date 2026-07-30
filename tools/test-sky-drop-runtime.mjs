@@ -50,7 +50,10 @@ function simulate(verticalGesture) {
     beep: () => {}
   };
   const game = definition.create(env);
+  const originalRandom = Math.random;
+  Math.random = () => .5;
   game.start();
+  Math.random = originalRandom;
   const advance = milliseconds => {
     const end = elapsed + milliseconds;
     while (elapsed < end && score === null) {
@@ -66,7 +69,10 @@ function simulate(verticalGesture) {
   advance(520);
   game.input('up', 200, 350);
   advance(300);
-  if (verticalGesture === 'dive') {
+  if (verticalGesture === 'guided') {
+    game.input('down', 200, 350);
+    game.input('move', 189, 350);
+  } else if (verticalGesture === 'dive') {
     game.input('down', 200, 390);
     game.input('move', 200, 210);
     game.input('up', 200, 210);
@@ -84,8 +90,10 @@ function simulate(verticalGesture) {
 const neutral = simulate('neutral');
 const dive = simulate('dive');
 const brake = simulate('brake');
+const guided = simulate('guided');
 assert(dive.elapsed < neutral.elapsed - 250,
   `up swipe should accelerate descent (${dive.elapsed} < ${neutral.elapsed})`);
 assert(brake.elapsed > neutral.elapsed + 250,
   `down swipe should slow descent (${brake.elapsed} > ${neutral.elapsed})`);
-console.log('sky-drop vertical controls passed', { neutral, dive, brake });
+assert(guided.score > 0, `a controlled approach should be able to reach the target (${guided.score})`);
+console.log('sky-drop vertical controls passed', { neutral, dive, brake, guided });
