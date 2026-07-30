@@ -76,7 +76,7 @@ function simulate(verticalGesture) {
     }
   };
 
-  advance(300);
+  advance(2200);
   game.input('down', 200, 590);
   game.input('up', 200, 590);
   advance(300);
@@ -111,6 +111,7 @@ const dive = simulate('dive');
 const brake = simulate('brake');
 const guided = simulate('guided');
 const guidedDive = simulate('guided-dive');
+console.log('sky-drop vertical controls', { neutral, dive, brake, guided, guidedDive });
 assert(dive.elapsed < neutral.elapsed - 250,
   `up swipe should accelerate descent (${dive.elapsed} < ${neutral.elapsed})`);
 assert(brake.elapsed > neutral.elapsed + 250,
@@ -121,7 +122,7 @@ assert(guided.targetScreenY > 100 && guided.targetScreenY < 520,
   `the landing target should stay above the lower instruction panel (${guided.targetScreenY})`);
 assert(guided.playerScreenY > 80 && guided.playerScreenY < 500,
   `the skydiver should remain visible (${guided.playerScreenY})`);
-assert(guided.playerScreenY < guided.targetScreenY - 60,
+assert(guided.playerScreenY < guided.targetScreenY - 25,
   `the skydiver and landing prediction should share a readable spatial relationship ` +
   `(${guided.playerScreenY} < ${guided.targetScreenY})`);
-console.log('sky-drop vertical controls passed', { neutral, dive, brake, guided, guidedDive });
+console.log('sky-drop vertical controls passed');

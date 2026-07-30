@@ -415,7 +415,7 @@ async function syncOfficialGames(user, body) {
       game_version: id === 'neon-last-stand'
         ? 'official-1.3.0'
         : id === 'sky-drop-3d'
-          ? 'official-1.3.2'
+          ? 'official-1.4.0'
           : 'official-1.0.0',
       title: safeText(game.title, { name: 'title', max: 80 }),
       description: safeText(game.description || game.tip, { name: 'description', max: 240 }),

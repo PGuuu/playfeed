@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.3.2',
+  gameVersion: '1.4.0',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
@@ -52,7 +52,7 @@ window.GAMES = (window.GAMES || []).concat([
     let altitude = START_ALTITUDE;
     let verticalSpeed = 27;
     let playerX = 0;
-    let playerZ = 58;
+    let playerZ = 202;
     let steer = 0;
     let targetSteer = 0;
     let braking = false;
@@ -71,7 +71,7 @@ window.GAMES = (window.GAMES || []).concat([
     let windForward = 0;
     let gustPhaseX = 0;
     let gustPhaseZ = 0;
-    let forwardSpeed = 3;
+    let forwardSpeed = 7.4;
     let lateralSpeed = 0;
     let openAltitude = START_ALTITUDE;
     let result = '';
@@ -395,17 +395,17 @@ window.GAMES = (window.GAMES || []).concat([
       gl.enable(gl.DEPTH_TEST);
     }
 
-    function drawWorld(viewProjection) {
+    function drawWorld(viewProjection, visualAltitude) {
       drawMesh(plane, model(0, -.55, 0, 220, 1, 220, 0, 0), [.25,.67,.82,1], viewProjection);
-      drawMesh(disc, model(0, -.35, 0, 15, 1, 12, 0, 0), [.94,.81,.51,1], viewProjection);
-      drawMesh(disc, model(0, -.27, 0, 12.5, 1, 9.5, 0, 0), [.34,.72,.35,1], viewProjection);
-      drawMesh(cone, model(-5, -.18, -2, 4.5, 5.5, 4.5, 0, 0), [.24,.35,.28,1], viewProjection);
-      drawMesh(cone, model(-5, 3.8, -2, 3.2, 1.5, 3.2, 0, 0), [.18,.57,.29,1], viewProjection);
+      drawMesh(disc, model(0, -.35, 0, 24, 1, 19, 0, 0), [.94,.81,.51,1], viewProjection);
+      drawMesh(disc, model(0, -.27, 0, 20, 1, 15.5, 0, 0), [.34,.72,.35,1], viewProjection);
+      drawMesh(cone, model(-8, -.18, -3, 6.2, 7.2, 6.2, 0, 0), [.24,.35,.28,1], viewProjection);
+      drawMesh(cone, model(-8, 5.1, -3, 4.4, 2, 4.4, 0, 0), [.18,.57,.29,1], viewProjection);
 
-      drawMesh(disc, model(0, -.12, 0, 4.4, 1, 4.4, 0, 0), [.96,.96,.9,1], viewProjection);
-      drawMesh(disc, model(0, -.10, 0, 3.35, 1, 3.35, 0, 0), [.31,.63,.98,1], viewProjection);
-      drawMesh(disc, model(0, -.08, 0, 1.7, 1, 1.7, 0, 0), [1,.62,.24,1], viewProjection);
-      drawMesh(disc, model(0, -.06, 0, .65, 1, .65, 0, 0), [1,.96,.45,1], viewProjection);
+      drawMesh(disc, model(0, -.12, 0, 7.5, 1, 7.5, 0, 0), [.96,.96,.9,1], viewProjection);
+      drawMesh(disc, model(0, -.10, 0, 5.7, 1, 5.7, 0, 0), [.31,.63,.98,1], viewProjection);
+      drawMesh(disc, model(0, -.08, 0, 2.9, 1, 2.9, 0, 0), [1,.62,.24,1], viewProjection);
+      drawMesh(disc, model(0, -.06, 0, 1.1, 1, 1.1, 0, 0), [1,.96,.45,1], viewProjection);
 
       const trees = [[-9,-4],[-8,4],[-3,6],[5,5],[8,-4],[6,-7],[2,-7],[-10,0]];
       for (let i = 0; i < trees.length; i++) {
@@ -417,20 +417,19 @@ window.GAMES = (window.GAMES || []).concat([
       if (started && !result) {
         const remaining = altitude / Math.max(2.5, verticalSpeed);
         const predictedX = playerX + lateralSpeed * remaining;
-        const predictedZ = playerZ - forwardSpeed * remaining;
+        const predictedZ = playerZ + (-forwardSpeed + windForward * (deployed ? .3 : .12)) * remaining;
         drawMesh(disc, model(predictedX, -.035, predictedZ, 1.15, 1, 1.15, 0, 0), [.15,.95,1,.92], viewProjection);
         drawMesh(disc, model(predictedX, -.025, predictedZ, .55, 1, .55, 0, 0), [.04,.16,.22,1], viewProjection);
         for (let i = 1; i <= 7; i++) {
           const t = i / 8;
-          const arcY = altitude * (1 - t) + Math.sin(t * Math.PI) * 4;
+          const arcY = visualAltitude * (1 - t) + Math.sin(t * Math.PI) * 2.5;
           const arcX = playerX + (predictedX - playerX) * t;
           const arcZ = playerZ + (predictedZ - playerZ) * t;
           drawMesh(cube, model(arcX, arcY, arcZ, .32, .32, .32, 0, 0), [.35,.95,1,.62], viewProjection);
         }
       }
 
-      const framingDistance = Math.hypot(playerX, altitude, playerZ);
-      drawPilot(viewProjection, playerX, altitude, playerZ, clamp(framingDistance / 75, 1, 3.6));
+      drawPilot(viewProjection, playerX, visualAltitude, playerZ, 1.35);
     }
 
     function drawPilot(viewProjection, baseX, baseY, baseZ, scale) {
@@ -579,7 +578,7 @@ window.GAMES = (window.GAMES || []).concat([
         verticalSpeed += (targetFreefallSpeed - verticalSpeed) * Math.min(1, dt * 3.2);
         if (!dragging) freefallControl *= Math.pow(.985, dt * 60);
         lateralSpeed = wind * .13;
-        forwardSpeed = 3 + freefallControl * 4;
+        forwardSpeed = 7.4 + freefallControl * 4.5;
         playerX += lateralSpeed * dt;
         playerZ += (-forwardSpeed + windForward * .12) * dt;
       } else {
@@ -590,7 +589,7 @@ window.GAMES = (window.GAMES || []).concat([
         steer += (targetSteer - steer) * Math.min(1, dt * 8.5);
         const steerPower = 8.2 + diveAmount * 2.6 - brakeAmount * 2.8;
         lateralSpeed = wind * .42 + steer * steerPower;
-        forwardSpeed = 1.8 + diveAmount * 3 - brakeAmount * 1.1;
+        forwardSpeed = 7.2 + diveAmount * 4.2 - brakeAmount * 2.4;
         playerX += lateralSpeed * dt;
         playerZ += (-forwardSpeed + windForward * .3) * dt;
         if (!dragging) targetSteer *= Math.pow(.965, dt * 60);
@@ -608,13 +607,17 @@ window.GAMES = (window.GAMES || []).concat([
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
-      const span = Math.max(24, Math.hypot(playerX, altitude, playerZ));
-      const center = [playerX * .5, altitude * .5, playerZ * .5];
-      const eye = [center[0], center[1] + span * .1 + 8, center[2] + span * 1.55 + 40];
-      const projection = perspective(Math.PI * .42, aspect, .2, 1400);
+      const visualAltitude = altitude * .32;
+      const eye = [playerX - steer * 1.6, visualAltitude + 7.5, playerZ + 24];
+      const center = [
+        playerX + steer * 9,
+        Math.max(0, visualAltitude - 10),
+        playerZ - 58
+      ];
+      const projection = perspective(Math.PI * .4, aspect, .2, 650);
       const view = lookAt(eye, center, [0, 1, 0]);
       const viewProjection = multiply(projection, view);
-      drawWorld(viewProjection);
+      drawWorld(viewProjection, visualAltitude);
       drawUI();
     }
 
@@ -648,7 +651,7 @@ window.GAMES = (window.GAMES || []).concat([
       gustPhaseX = Math.random() * Math.PI * 2;
       gustPhaseZ = Math.random() * Math.PI * 2;
       playerX = -wind * 1.3;
-      playerZ = 58;
+      playerZ = 202;
       steer = 0;
       targetSteer = 0;
       dragStartX = 0;
@@ -659,7 +662,7 @@ window.GAMES = (window.GAMES || []).concat([
       pressStartX = 0;
       pressStartY = 0;
       gestureMoved = false;
-      forwardSpeed = 3;
+      forwardSpeed = 7.4;
       lateralSpeed = wind * .13;
       openAltitude = START_ALTITUDE;
       result = '';
