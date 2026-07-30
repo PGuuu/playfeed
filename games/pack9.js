@@ -2,16 +2,16 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.1.0',
+  gameVersion: '1.2.0',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
   author: '@playfeed 官方',
   description: '看準風向延後拉傘，再控制降落傘落在島嶼靶心。',
-  tip: '按住拉傘；開傘後按住並左右移動控制方向',
+  tip: '按住拉傘；上下滑控制快慢，左右拖曳控制方向',
   bg: '#A7D8EE',
   tags: ['3d', 'timing', 'physics', 'landing'],
-  controls: ['hold', 'horizontal-drag'],
+  controls: ['hold', 'horizontal-drag', 'vertical-drag', 'swipe-up', 'swipe-down'],
   preview: 'cover',
   duration: 25,
   score: { label: '降落分數', order: 'higher', decimals: 0 },
@@ -53,8 +53,14 @@ window.GAMES = (window.GAMES || []).concat([
     let steer = 0;
     let targetSteer = 0;
     let braking = false;
+    let diving = false;
+    let freefallControl = 0;
+    let descentControl = 0;
     let dragStartX = 0;
+    let dragStartY = 0;
     let dragStartSteer = 0;
+    let dragStartDescent = 0;
+    let dragStartFreefall = 0;
     let wind = 2.4;
     let openAltitude = 120;
     let result = '';
@@ -440,7 +446,8 @@ window.GAMES = (window.GAMES || []).concat([
       uiRect(wind > 0 ? arrowX + 13 : arrowX, 59, 5, 15, [.1,.86,.96,1]);
       if (started && !result) {
         uiRect(15, 67, 116, 32, [.02,.06,.12,.56]);
-        uiText(`V ${verticalSpeed.toFixed(1)}`, 27, 78, 2, braking ? [.45,1,.66,1] : [1,.82,.32,1], false);
+        const speedColor = braking ? [.45,1,.66,1] : diving ? [1,.42,.3,1] : [1,.82,.32,1];
+        uiText(`V ${verticalSpeed.toFixed(1)}`, 27, 78, 2, speedColor, false);
       }
 
       if (!started) {
@@ -448,14 +455,17 @@ window.GAMES = (window.GAMES || []).concat([
         uiText('SKY DROP', W / 2, 574, 4, [1,1,1,1], true);
         uiText('TAP TO DROP', W / 2, 613, 2, [.35,.95,1,1], true);
       } else if (!deployed && !result) {
-        uiRect(58, 570, 284, 76, [.02,.06,.12,.74]);
-        uiText('HOLD RIPCORD', W / 2, 586, 3, [1,1,1,1], true);
-        uiRect(90, 625, 220, 8, [1,1,1,.18]);
-        uiRect(90, 625, 220 * clamp(pull / .45, 0, 1), 8, [1,.78,.2,1]);
+        uiRect(42, 548, 316, 100, [.02,.06,.12,.76]);
+        uiText('HOLD RIPCORD', W / 2, 562, 3, [1,1,1,1], true);
+        uiText('UP DIVE  DOWN SLOW', W / 2, 594, 2, [.4,.94,1,1], true);
+        uiRect(90, 628, 220, 8, [1,1,1,.18]);
+        uiRect(90, 628, 220 * clamp(pull / .45, 0, 1), 8, [1,.78,.2,1]);
       } else if (deployed && !result) {
-        uiRect(58, 566, 284, 77, [.02,.06,.12,.72]);
-        uiText(braking ? 'BRAKING' : 'HOLD BRAKE', W / 2, 580, 3, braking ? [.45,1,.66,1] : [1,1,1,1], true);
-        uiText('DRAG TO STEER', W / 2, 620, 2, [.4,.94,1,1], true);
+        uiRect(42, 542, 316, 106, [.02,.06,.12,.74]);
+        uiText(braking ? 'BRAKING' : diving ? 'DIVING' : 'GLIDING', W / 2, 555, 3,
+          braking ? [.45,1,.66,1] : diving ? [1,.42,.3,1] : [1,1,1,1], true);
+        uiText('UP DIVE  DOWN BRAKE', W / 2, 591, 2, [.4,.94,1,1], true);
+        uiText('LEFT RIGHT STEER', W / 2, 619, 2, [1,1,1,.86], true);
       }
 
       if (result) {
@@ -505,15 +515,28 @@ window.GAMES = (window.GAMES || []).concat([
           deployed = true;
           openAltitude = altitude;
           pulling = false;
+          dragging = false;
+          freefallControl = 0;
+          braking = false;
+          diving = false;
           env.beep(190, 620, .22, .06, 'triangle');
         }
+        const targetFreefallSpeed = 27 + freefallControl * 8;
+        verticalSpeed += (targetFreefallSpeed - verticalSpeed) * Math.min(1, dt * 3.2);
+        if (!dragging) freefallControl *= Math.pow(.985, dt * 60);
         playerX += wind * .13 * dt;
       } else {
-        const targetFallSpeed = braking ? 3.8 : 8.4;
-        verticalSpeed += (targetFallSpeed - verticalSpeed) * Math.min(1, dt * (braking ? 2.7 : 1.55));
+        const brakeAmount = clamp(-descentControl, 0, 1);
+        const diveAmount = clamp(descentControl, 0, 1);
+        const targetFallSpeed = 7.4 + diveAmount * 6.2 - brakeAmount * 4.5;
+        verticalSpeed += (targetFallSpeed - verticalSpeed) * Math.min(1, dt * (braking ? 2.8 : 1.8));
         steer += (targetSteer - steer) * Math.min(1, dt * 8.5);
-        playerX += (wind * .42 + steer * (braking ? 5.2 : 8.2)) * dt;
+        const steerPower = 8.2 + diveAmount * 2.6 - brakeAmount * 2.8;
+        playerX += (wind * .42 + steer * steerPower) * dt;
         if (!dragging) targetSteer *= Math.pow(.965, dt * 60);
+        if (!dragging) descentControl *= Math.pow(.993, dt * 60);
+        braking = descentControl < -.18;
+        diving = descentControl > .18;
       }
       altitude -= verticalSpeed * dt;
       if (altitude <= 0) land();
@@ -555,6 +578,9 @@ window.GAMES = (window.GAMES || []).concat([
       pulling = false;
       dragging = false;
       braking = false;
+      diving = false;
+      freefallControl = 0;
+      descentControl = 0;
       pull = 0;
       deployed = false;
       altitude = 120;
@@ -564,7 +590,10 @@ window.GAMES = (window.GAMES || []).concat([
       steer = 0;
       targetSteer = 0;
       dragStartX = 0;
+      dragStartY = 0;
       dragStartSteer = 0;
+      dragStartDescent = 0;
+      dragStartFreefall = 0;
       openAltitude = 120;
       result = '';
       resultTime = 0;
@@ -579,16 +608,20 @@ window.GAMES = (window.GAMES || []).concat([
       pulling = false;
       dragging = false;
       braking = false;
+      diving = false;
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     }
 
-    function input(type, x) {
+    function input(type, x, y) {
       if (!alive || result) return;
       if (type === 'cancel') {
         pulling = false;
         dragging = false;
         braking = false;
+        diving = false;
+        freefallControl = 0;
+        descentControl = 0;
         steer = 0;
         targetSteer = 0;
         return;
@@ -597,18 +630,35 @@ window.GAMES = (window.GAMES || []).concat([
         if (!started) started = true;
         if (!deployed) {
           pulling = true;
+          dragging = true;
+          dragStartY = y;
+          dragStartFreefall = freefallControl;
         } else {
           dragging = true;
-          braking = true;
           dragStartX = x;
+          dragStartY = y;
           dragStartSteer = targetSteer;
+          dragStartDescent = descentControl;
         }
-      } else if (type === 'move' && deployed && dragging) {
-        targetSteer = clamp(dragStartSteer + (x - dragStartX) / (W * .18), -1, 1);
+      } else if (type === 'move' && dragging) {
+        const dy = y - dragStartY;
+        if (!deployed) {
+          if (Math.abs(dy) > 14) {
+            pulling = false;
+            pull = Math.max(0, pull - .08);
+            freefallControl = clamp(dragStartFreefall - dy / (H * .18), -1, 1);
+            braking = freefallControl < -.18;
+            diving = freefallControl > .18;
+          }
+        } else {
+          targetSteer = clamp(dragStartSteer + (x - dragStartX) / (W * .2), -1, 1);
+          descentControl = clamp(dragStartDescent - dy / (H * .16), -1, 1);
+          braking = descentControl < -.18;
+          diving = descentControl > .18;
+        }
       } else if (type === 'up') {
         pulling = false;
         dragging = false;
-        braking = false;
       }
     }
 

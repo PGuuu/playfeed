@@ -1051,26 +1051,28 @@ function previewModeFromScript(source) {
 
 function normalisePublished(row) {
   const officialBase = (window.GAMES || []).find(game => game.id === row.slug) || null;
+  const officialPayload = officialBase ? officialSubmission(officialBase) : null;
+  const currentVersion = officialPayload?.game_version || row.game_version || '1.0.0';
   const entry = {
     id: `game:${row.slug}`,
     databaseId: row.id,
     storageMode: row.storage_mode || 'user_games',
-    scoreKey: `game:${row.slug}@${row.game_version || '1.0.0'}`,
+    scoreKey: `game:${row.slug}@${currentVersion}`,
     slug: row.slug,
-    gameVersion: row.game_version || '1.0.0',
-    title: row.title,
-    description: row.description,
-    tip: row.tip,
-    bg: row.bg,
+    gameVersion: currentVersion,
+    title: officialBase?.title || row.title,
+    description: officialBase?.description || row.description,
+    tip: officialBase?.tip || row.tip,
+    bg: officialBase?.bg || row.bg,
     author: publishedAuthorText(row.author_id, row.author_name),
     authorId: row.author_id,
     authorName: row.author_name || '玩家',
-    duration: row.duration,
+    duration: officialBase?.duration || row.duration,
     preview: officialBase ? (officialBase.preview || 'demo') : (row.preview || previewModeFromScript(row.script)),
-    score: row.score || { label: '分數', order: 'higher' },
+    score: officialBase?.score || row.score || { label: '分數', order: 'higher' },
     remixSlots: row.remix_slots?.length ? row.remix_slots : (officialBase?.remixSlots || []),
     screenshot: row.screenshot || null,
-    script: row.script,
+    script: officialPayload?.script || row.script,
     base: officialBase,
     sprites: {},
     spriteData: {},
@@ -1451,9 +1453,10 @@ function originalCreateExpression(game) {
 
 function officialSubmission(game) {
   const createExpression = originalCreateExpression(game);
+  const officialVersion = `official-${game.gameVersion || '1.0.0'}`;
   const metadata = {
     apiVersion: 1,
-    gameVersion: 'official-1.0.0',
+    gameVersion: officialVersion,
     renderer: game.renderer === '3d' ? '3d' : '2d',
     id: game.id,
     title: game.title,
@@ -1462,7 +1465,7 @@ function officialSubmission(game) {
     tip: game.tip,
     bg: game.bg,
     tags: ['official'],
-    controls: ['tap'],
+    controls: game.controls || ['tap'],
     preview: game.preview || 'demo',
     score: game.score || { label: '分數', order: 'higher' },
     remixSlots: game.remixSlots || [],
@@ -1480,11 +1483,13 @@ function officialSubmission(game) {
     `  }]);`;
   return {
     id: game.id,
+    game_version: officialVersion,
     title: game.title,
-    description: game.tip,
+    description: game.description || game.tip,
     tip: game.tip,
     tags: ['official'],
-    controls: ['tap'],
+    controls: game.controls || ['tap'],
+    duration: game.duration,
     score: game.score || { label: '分數', order: 'higher' },
     remix_slots: game.remixSlots || [],
     script,
@@ -1493,9 +1498,15 @@ function officialSubmission(game) {
 
 async function syncOfficialGamesIfNeeded() {
   if (!publishedLoadComplete) return false;
-  const officialIds = new Set((window.GAMES || []).map(game => game.id));
-  const existing = new Set(publishedRows.filter(row => officialIds.has(row.slug)).map(row => row.slug));
-  if (existing.size === officialIds.size) return false;
+  const officialGames = window.GAMES || [];
+  const officialIds = new Set(officialGames.map(game => game.id));
+  const rowsBySlug = new Map(publishedRows
+    .filter(row => officialIds.has(row.slug))
+    .map(row => [row.slug, row]));
+  const synchronized = officialGames.every(game =>
+    rowsBySlug.get(game.id)?.game_version === `official-${game.gameVersion || '1.0.0'}`
+  );
+  if (synchronized) return false;
   if (!host.user || !host.db || officialSyncPromise) return false;
   officialSyncPromise = (async () => {
     try {
