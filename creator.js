@@ -1293,7 +1293,9 @@ function addSandboxPost(row, options = {}) {
   }
   stage.addEventListener('pointerdown', event => {
     const interactive = event.target instanceof Element && event.target.closest('.rail, .go');
-    const exitOwned = playing && event.clientY >= exitZone.getBoundingClientRect().top;
+    const exitRect = exitZone.getBoundingClientRect();
+    const exitOwned = playing && event.clientY >= exitRect.top - 23 &&
+      event.clientX >= exitRect.left && event.clientX <= exitRect.right;
     if (playing || options.standalone) {
       try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     }

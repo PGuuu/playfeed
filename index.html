@@ -116,18 +116,26 @@
     position: absolute; z-index: 9; left: 0; right: 0; bottom: 0;
     height: var(--play-exit-height); display: none; pointer-events: none;
     align-items: flex-start; justify-content: center;
-    padding-top: 9px; color: rgba(255,255,255,.86);
+    padding-top: 9px; color: rgba(255,255,255,.9);
     background: linear-gradient(to bottom, rgba(0,0,0,.72), #000 42%);
     font-size: 11px; font-weight: 700; letter-spacing: .02em;
   }
   .stage.playing .play-exit-zone { display: flex; }
-  .play-exit-zone::before {
-    content: ""; position: absolute; top: 7px; width: 42px; height: 4px;
-    border-radius: 99px; background: rgba(255,255,255,.82);
+  .play-exit-zone::after {
+    content: ""; position: absolute; z-index: 0; top: -23px;
+    width: 108px; height: 38px; border-radius: 56px 56px 0 0;
+    background: #000;
+    box-shadow: 0 -6px 18px rgba(0,0,0,.22);
     transform: translateY(var(--exit-lift, 0px));
     transition: transform .12s ease;
   }
-  .play-exit-zone span { margin-top: 11px; opacity: .78; }
+  .play-exit-zone::before {
+    content: ""; position: absolute; z-index: 1; top: -8px; width: 48px; height: 5px;
+    border-radius: 99px; background: rgba(255,255,255,.94);
+    transform: translateY(var(--exit-lift, 0px));
+    transition: transform .12s ease;
+  }
+  .play-exit-zone span { position: relative; z-index: 1; margin-top: 12px; opacity: .86; }
   body.game-active #feed { overflow-y: hidden; }
   body.game-active #mainNav { transform: translateY(100%); opacity: 0; pointer-events: none; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
@@ -2259,7 +2267,9 @@ function makePost(entry, opts) {
   let gest = null;
   stage.addEventListener('pointerdown', e => {
     const interactive = e.target instanceof Element && e.target.closest('.rail, .go');
-    const exitOwned = state.running && e.clientY >= exitZone.getBoundingClientRect().top;
+    const exitRect = exitZone.getBoundingClientRect();
+    const exitOwned = state.running && e.clientY >= exitRect.top - 23 &&
+      e.clientX >= exitRect.left && e.clientX <= exitRect.right;
     if (state.running || opts.standalone) {
       try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     }

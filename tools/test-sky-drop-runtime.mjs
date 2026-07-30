@@ -78,7 +78,7 @@ function simulate(verticalGesture) {
   advance(300);
   if (verticalGesture === 'guided') {
     game.input('down', 200, 350);
-    game.input('move', 189, 350);
+    game.input('move', 201, 350);
   } else if (verticalGesture === 'guided-dive') {
     game.input('down', 200, 390);
     game.input('move', 192, 210);

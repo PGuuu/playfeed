@@ -2,7 +2,7 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.3.0',
+  gameVersion: '1.3.1',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
@@ -68,6 +68,9 @@ window.GAMES = (window.GAMES || []).concat([
     let pressStartY = 0;
     let gestureMoved = false;
     let wind = 2.4;
+    let windForward = 0;
+    let gustPhaseX = 0;
+    let gustPhaseZ = 0;
     let forwardSpeed = 3;
     let lateralSpeed = 0;
     let openAltitude = START_ALTITUDE;
@@ -419,33 +422,38 @@ window.GAMES = (window.GAMES || []).concat([
         drawMesh(disc, model(predictedX, -.025, predictedZ, .55, 1, .55, 0, 0), [.04,.16,.22,1], viewProjection);
       }
 
+    }
+
+    function drawPilot(viewProjection) {
+      const poseX = steer * .7;
+      const poseY = deployed ? -1.8 : 0;
       const diverTexture = env.texture('skydiver');
-      if (!drawBillboard(diverTexture, model(playerX, altitude, playerZ, 4.4, 5.6, 1, 0, 0), viewProjection)) {
-        drawMesh(cube, model(playerX, altitude, playerZ - .18, 1.75, 2.2, 1.05, steer * .12, -steer * .1), [.05,.09,.16,1], viewProjection);
-        drawMesh(cube, model(playerX, altitude + .08, playerZ, 1.45, 1.9, .9, steer * .12, -steer * .1), [1,.35,.16,1], viewProjection);
-        drawMesh(cube, model(playerX, altitude + 1.62, playerZ, 1.12, 1.12, 1.08, 0, 0), [1,.86,.62,1], viewProjection);
-        drawMesh(cube, model(playerX - 1.02, altitude + .05, playerZ, .42, 1.55, .42, 0, -.32), [.1,.86,.96,1], viewProjection);
-        drawMesh(cube, model(playerX + 1.02, altitude + .05, playerZ, .42, 1.55, .42, 0, .32), [.1,.86,.96,1], viewProjection);
-        drawMesh(cube, model(playerX - .48, altitude - 1.65, playerZ, .48, 1.35, .5, 0, -.08), [.08,.15,.25,1], viewProjection);
-        drawMesh(cube, model(playerX + .48, altitude - 1.65, playerZ, .48, 1.35, .5, 0, .08), [.08,.15,.25,1], viewProjection);
+      if (!drawBillboard(diverTexture, model(poseX, poseY, 0, 4.8, 6.1, 1, 0, -steer * .1), viewProjection)) {
+        drawMesh(cube, model(poseX, poseY, -.18, 1.75, 2.2, 1.05, steer * .12, -steer * .1), [.05,.09,.16,1], viewProjection);
+        drawMesh(cube, model(poseX, poseY + .08, 0, 1.45, 1.9, .9, steer * .12, -steer * .1), [1,.35,.16,1], viewProjection);
+        drawMesh(cube, model(poseX, poseY + 1.62, 0, 1.12, 1.12, 1.08, 0, 0), [1,.86,.62,1], viewProjection);
+        drawMesh(cube, model(poseX - 1.02, poseY + .05, 0, .42, 1.55, .42, 0, -.32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(poseX + 1.02, poseY + .05, 0, .42, 1.55, .42, 0, .32), [.1,.86,.96,1], viewProjection);
+        drawMesh(cube, model(poseX - .48, poseY - 1.65, 0, .48, 1.35, .5, 0, -.08), [.08,.15,.25,1], viewProjection);
+        drawMesh(cube, model(poseX + .48, poseY - 1.65, 0, .48, 1.35, .5, 0, .08), [.08,.15,.25,1], viewProjection);
       }
 
       if (deployed) {
         const chuteTexture = env.texture('parachute');
-        if (!drawBillboard(chuteTexture, model(playerX, altitude + 5.5, playerZ, 10.2, 4.8, 1, 0, -steer * .08), viewProjection)) {
+        if (!drawBillboard(chuteTexture, model(poseX, poseY + 7.4, 0, 11.2, 5.3, 1, 0, -steer * .08), viewProjection)) {
           const panelColors = [[1,.42,.3,1],[1,.86,.36,1],[.3,.83,.91,1]];
           for (let i = -3; i <= 3; i++) {
-            const arch = (braking ? 5.65 : 5.25) - Math.abs(i) * .3;
-            drawMesh(cube, model(playerX + i * 1.18, altitude + arch, playerZ, 1.25, .72, 1.45, 0, i * -.052 - steer * .08), panelColors[(i + 6) % 3], viewProjection);
-            const length = 4.2 + (3 - Math.abs(i)) * .2;
+            const arch = (braking ? 7.55 : 7.15) - Math.abs(i) * .3;
+            drawMesh(cube, model(poseX + i * 1.28, poseY + arch, 0, 1.37, .78, 1.45, 0, i * -.052 - steer * .08), panelColors[(i + 6) % 3], viewProjection);
+            const length = 5.8 + (3 - Math.abs(i)) * .2;
             const angle = -i * .17;
-            drawMesh(cube, model(playerX + i * .55, altitude + 2.55, playerZ, .055, length, .055, 0, angle), [.96,.98,1,1], viewProjection);
+            drawMesh(cube, model(poseX + i * .6, poseY + 3.8, 0, .055, length, .055, 0, angle), [.96,.98,1,1], viewProjection);
           }
         }
       } else if (started) {
         for (let i = -3; i <= 3; i++) {
-          const streakX = playerX + i * 1.8 + Math.sin(elapsed * 3 + i) * .4;
-          drawMesh(cube, model(streakX, altitude + 3 + (i % 2) * 4, playerZ - 2, .04, 1.8, .04, 0, 0), [.78,.95,1,.58], viewProjection);
+          const streakX = poseX + i * 1.8 + Math.sin(elapsed * 3 + i) * .4;
+          drawMesh(cube, model(streakX, poseY + 3 + (i % 2) * 4, 1, .04, 1.8, .04, 0, 0), [.78,.95,1,.58], viewProjection);
         }
       }
     }
@@ -552,6 +560,11 @@ window.GAMES = (window.GAMES || []).concat([
       }
       if (!started) return;
 
+      wind = Math.sin(elapsed * .52 + gustPhaseX) * 3.1 +
+        Math.sin(elapsed * 1.23 + gustPhaseX * .47) * 1.15;
+      windForward = Math.sin(elapsed * .39 + gustPhaseZ) * 2.2 +
+        Math.sin(elapsed * .91 + gustPhaseZ * .61) * .85;
+
       if (!deployed) {
         const targetFreefallSpeed = 27 + freefallControl * 8;
         verticalSpeed += (targetFreefallSpeed - verticalSpeed) * Math.min(1, dt * 3.2);
@@ -559,7 +572,7 @@ window.GAMES = (window.GAMES || []).concat([
         lateralSpeed = wind * .13;
         forwardSpeed = 3 + freefallControl * 4;
         playerX += lateralSpeed * dt;
-        playerZ -= forwardSpeed * dt;
+        playerZ += (-forwardSpeed + windForward * .12) * dt;
       } else {
         const brakeAmount = clamp(-descentControl, 0, 1);
         const diveAmount = clamp(descentControl, 0, 1);
@@ -570,7 +583,7 @@ window.GAMES = (window.GAMES || []).concat([
         lateralSpeed = wind * .42 + steer * steerPower;
         forwardSpeed = 1.8 + diveAmount * 3 - brakeAmount * 1.1;
         playerX += lateralSpeed * dt;
-        playerZ -= forwardSpeed * dt;
+        playerZ += (-forwardSpeed + windForward * .3) * dt;
         if (!dragging) targetSteer *= Math.pow(.965, dt * 60);
         if (!dragging) descentControl *= Math.pow(.993, dt * 60);
         braking = descentControl < -.18;
@@ -593,6 +606,10 @@ window.GAMES = (window.GAMES || []).concat([
       const view = lookAt(eye, center, [0, 1, 0]);
       const viewProjection = multiply(projection, view);
       drawWorld(viewProjection);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      const pilotProjection = perspective(Math.PI * .38, aspect, .2, 100);
+      const pilotView = lookAt([0, 3.2, 29], [0, 2.5, 0], [0, 1, 0]);
+      drawPilot(multiply(pilotProjection, pilotView));
       drawUI();
     }
 
@@ -622,6 +639,9 @@ window.GAMES = (window.GAMES || []).concat([
       altitude = START_ALTITUDE;
       verticalSpeed = 27;
       wind = (Math.random() < .5 ? -1 : 1) * (1.3 + Math.random() * 2.7);
+      windForward = 0;
+      gustPhaseX = Math.random() * Math.PI * 2;
+      gustPhaseZ = Math.random() * Math.PI * 2;
       playerX = -wind * 1.3;
       playerZ = 58;
       steer = 0;
