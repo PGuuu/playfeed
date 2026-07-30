@@ -2,18 +2,18 @@
 window.GAMES = (window.GAMES || []).concat([
 {
   apiVersion: 1,
-  gameVersion: '1.2.1',
+  gameVersion: '1.3.0',
   renderer: '3d',
   id: 'sky-drop-3d',
   title: '極限拉傘 3D',
   author: '@playfeed 官方',
   description: '看準風向延後拉傘，再控制降落傘落在島嶼靶心。',
-  tip: '按住拉傘；上下滑控制快慢，左右拖曳控制方向',
+  tip: '點一下拉傘；上下滑控制快慢，左右拖曳控制方向',
   bg: '#A7D8EE',
   tags: ['3d', 'timing', 'physics', 'landing'],
-  controls: ['hold', 'horizontal-drag', 'vertical-drag', 'swipe-up', 'swipe-down'],
+  controls: ['tap', 'horizontal-drag', 'vertical-drag', 'swipe-up', 'swipe-down'],
   preview: 'cover',
-  duration: 25,
+  duration: 45,
   score: { label: '降落分數', order: 'higher', decimals: 0 },
   remixSlots: [
     {
@@ -36,6 +36,9 @@ window.GAMES = (window.GAMES || []).concat([
     const gl = env.gl;
     const W = env.W;
     const H = env.H;
+    const START_ALTITUDE = 260;
+    const OPEN_HIGH = 200;
+    const OPEN_LOW = 100;
     if (!gl) throw new Error('這款遊戲需要 WebGL');
 
     let alive = false;
@@ -45,12 +48,11 @@ window.GAMES = (window.GAMES || []).concat([
     let started = false;
     let pulling = false;
     let dragging = false;
-    let pull = 0;
     let deployed = false;
-    let altitude = 120;
+    let altitude = START_ALTITUDE;
     let verticalSpeed = 27;
     let playerX = 0;
-    let playerZ = 18;
+    let playerZ = 58;
     let steer = 0;
     let targetSteer = 0;
     let braking = false;
@@ -62,10 +64,13 @@ window.GAMES = (window.GAMES || []).concat([
     let dragStartSteer = 0;
     let dragStartDescent = 0;
     let dragStartFreefall = 0;
+    let pressStartX = 0;
+    let pressStartY = 0;
+    let gestureMoved = false;
     let wind = 2.4;
-    let forwardSpeed = .7;
+    let forwardSpeed = 3;
     let lateralSpeed = 0;
-    let openAltitude = 120;
+    let openAltitude = START_ALTITUDE;
     let result = '';
     let resultTime = 0;
     let finalScore = 0;
@@ -458,6 +463,18 @@ window.GAMES = (window.GAMES || []).concat([
         uiRect(15, 67, 116, 32, [.02,.06,.12,.56]);
         const speedColor = braking ? [.45,1,.66,1] : diving ? [1,.42,.3,1] : [1,.82,.32,1];
         uiText(`V ${verticalSpeed.toFixed(1)}`, 27, 78, 2, speedColor, false);
+
+        const barX = 17, barTop = 126, barHeight = 342, barWidth = 13;
+        const altitudeY = value => barTop + barHeight * (1 - clamp(value / START_ALTITUDE, 0, 1));
+        const safeTop = altitudeY(OPEN_HIGH);
+        const safeBottom = altitudeY(OPEN_LOW);
+        uiRect(barX, barTop, barWidth, barHeight, [.02,.06,.12,.62]);
+        uiRect(barX + 2, safeTop, barWidth - 4, safeBottom - safeTop, [.22,.9,.48,.72]);
+        const markerY = altitudeY(altitude);
+        uiRect(barX - 4, markerY - 2, barWidth + 8, 4, [1,1,1,1]);
+        if (!deployed) {
+          uiText('OPEN', 38, safeTop + (safeBottom - safeTop) / 2 - 7, 2, [.45,1,.66,1], false);
+        }
       }
 
       if (!started) {
@@ -465,11 +482,9 @@ window.GAMES = (window.GAMES || []).concat([
         uiText('SKY DROP', W / 2, 574, 4, [1,1,1,1], true);
         uiText('TAP TO DROP', W / 2, 613, 2, [.35,.95,1,1], true);
       } else if (!deployed && !result) {
-        uiRect(42, 548, 316, 100, [.02,.06,.12,.76]);
-        uiText('HOLD RIPCORD', W / 2, 562, 3, [1,1,1,1], true);
-        uiText('UP DIVE  DOWN SLOW', W / 2, 594, 2, [.4,.94,1,1], true);
-        uiRect(90, 628, 220, 8, [1,1,1,.18]);
-        uiRect(90, 628, 220 * clamp(pull / .45, 0, 1), 8, [1,.78,.2,1]);
+        uiRect(54, 555, 292, 86, pulling ? [.08,.3,.36,.84] : [.02,.06,.12,.72]);
+        uiText('TAP RIPCORD', W / 2, 570, 3, [1,1,1,1], true);
+        uiText('UP DIVE  DOWN SLOW', W / 2, 610, 2, [.4,.94,1,1], true);
       } else if (deployed && !result) {
         uiRect(42, 542, 316, 106, [.02,.06,.12,.74]);
         uiText(braking ? 'BRAKING' : diving ? 'DIVING' : 'GLIDING', W / 2, 555, 3,
@@ -493,7 +508,12 @@ window.GAMES = (window.GAMES || []).concat([
       const distance = Math.hypot(playerX, playerZ);
       const accuracy = clamp(1 - distance / 7, 0, 1);
       const softness = clamp(1 - Math.max(0, verticalSpeed - 7) / 13, 0, 1);
-      const late = 1 + clamp((120 - openAltitude) / 100, 0, 1) * 1.5;
+      const openingQuality = openAltitude > OPEN_HIGH
+        ? clamp(1 - (openAltitude - OPEN_HIGH) / 180, .55, 1)
+        : openAltitude < OPEN_LOW
+          ? clamp((openAltitude - 25) / (OPEN_LOW - 25), .25, 1)
+          : 1;
+      const late = (1 + clamp((START_ALTITUDE - openAltitude) / 210, 0, 1) * 1.25) * openingQuality;
       const windBonus = 1 + Math.abs(wind) * .12;
       const safe = deployed && distance < 7 && verticalSpeed < 18;
       finalScore = safe ? Math.round(1000 * accuracy * accuracy * softness * late * windBonus) : 0;
@@ -501,6 +521,23 @@ window.GAMES = (window.GAMES || []).concat([
       resultTime = 0;
       env.setScore(finalScore);
       env.beep(safe ? 520 : 150, safe ? 920 : 70, .25, .08, safe ? 'sine' : 'sawtooth');
+    }
+
+    function deployParachute() {
+      if (deployed || result) return;
+      if (altitude <= 25) {
+        land();
+        return;
+      }
+      deployed = true;
+      openAltitude = altitude;
+      pulling = false;
+      dragging = false;
+      freefallControl = 0;
+      braking = false;
+      diving = false;
+      verticalSpeed = Math.min(verticalSpeed, 27);
+      env.beep(190, 620, .22, .06, 'triangle');
     }
 
     function update(dt) {
@@ -516,26 +553,11 @@ window.GAMES = (window.GAMES || []).concat([
       if (!started) return;
 
       if (!deployed) {
-        pull = pulling ? Math.min(.45, pull + dt) : Math.max(0, pull - dt * 1.4);
-        if (pull >= .45) {
-          if (altitude <= 10) {
-            land();
-            return;
-          }
-          deployed = true;
-          openAltitude = altitude;
-          pulling = false;
-          dragging = false;
-          freefallControl = 0;
-          braking = false;
-          diving = false;
-          env.beep(190, 620, .22, .06, 'triangle');
-        }
         const targetFreefallSpeed = 27 + freefallControl * 8;
         verticalSpeed += (targetFreefallSpeed - verticalSpeed) * Math.min(1, dt * 3.2);
         if (!dragging) freefallControl *= Math.pow(.985, dt * 60);
         lateralSpeed = wind * .13;
-        forwardSpeed = .7 + freefallControl * .4;
+        forwardSpeed = 3 + freefallControl * 4;
         playerX += lateralSpeed * dt;
         playerZ -= forwardSpeed * dt;
       } else {
@@ -546,7 +568,7 @@ window.GAMES = (window.GAMES || []).concat([
         steer += (targetSteer - steer) * Math.min(1, dt * 8.5);
         const steerPower = 8.2 + diveAmount * 2.6 - brakeAmount * 2.8;
         lateralSpeed = wind * .42 + steer * steerPower;
-        forwardSpeed = 1.35 + diveAmount * 2.4 - brakeAmount * .85;
+        forwardSpeed = 1.8 + diveAmount * 3 - brakeAmount * 1.1;
         playerX += lateralSpeed * dt;
         playerZ -= forwardSpeed * dt;
         if (!dragging) targetSteer *= Math.pow(.965, dt * 60);
@@ -565,9 +587,8 @@ window.GAMES = (window.GAMES || []).concat([
 
       const aspect = gl.canvas.width / Math.max(1, gl.canvas.height);
       const cameraX = playerX * .28;
-      const eye = [cameraX, altitude + 9, playerZ + 24];
-      const centerDrop = started ? 7 : 17;
-      const center = [playerX * .5, Math.max(0, altitude - centerDrop), playerZ - 8];
+      const eye = [cameraX, altitude + 16, playerZ + 34];
+      const center = [playerX * .3, Math.max(0, altitude * .2), playerZ * .2];
       const projection = perspective(Math.PI * .42, aspect, .2, 360);
       const view = lookAt(eye, center, [0, 1, 0]);
       const viewProjection = multiply(projection, view);
@@ -597,13 +618,12 @@ window.GAMES = (window.GAMES || []).concat([
       diving = false;
       freefallControl = 0;
       descentControl = 0;
-      pull = 0;
       deployed = false;
-      altitude = 120;
+      altitude = START_ALTITUDE;
       verticalSpeed = 27;
       wind = (Math.random() < .5 ? -1 : 1) * (1.3 + Math.random() * 2.7);
       playerX = -wind * 1.3;
-      playerZ = 18;
+      playerZ = 58;
       steer = 0;
       targetSteer = 0;
       dragStartX = 0;
@@ -611,9 +631,12 @@ window.GAMES = (window.GAMES || []).concat([
       dragStartSteer = 0;
       dragStartDescent = 0;
       dragStartFreefall = 0;
-      forwardSpeed = .7;
+      pressStartX = 0;
+      pressStartY = 0;
+      gestureMoved = false;
+      forwardSpeed = 3;
       lateralSpeed = wind * .13;
-      openAltitude = 120;
+      openAltitude = START_ALTITUDE;
       result = '';
       resultTime = 0;
       finalScore = 0;
@@ -641,6 +664,7 @@ window.GAMES = (window.GAMES || []).concat([
         diving = false;
         freefallControl = 0;
         descentControl = 0;
+        gestureMoved = false;
         steer = 0;
         targetSteer = 0;
         return;
@@ -648,7 +672,10 @@ window.GAMES = (window.GAMES || []).concat([
       if (type === 'down') {
         if (!started) started = true;
         if (!deployed) {
-          pulling = true;
+          pressStartX = x;
+          pressStartY = y;
+          gestureMoved = false;
+          pulling = x >= 54 && x <= 346 && y >= 555 && y <= 641;
           dragging = true;
           dragStartY = y;
           dragStartFreefall = freefallControl;
@@ -662,9 +689,9 @@ window.GAMES = (window.GAMES || []).concat([
       } else if (type === 'move' && dragging) {
         const dy = y - dragStartY;
         if (!deployed) {
-          if (Math.abs(dy) > 14) {
+          if (Math.hypot(x - pressStartX, y - pressStartY) > 12) {
+            gestureMoved = true;
             pulling = false;
-            pull = Math.max(0, pull - .08);
             freefallControl = clamp(dragStartFreefall - dy / (H * .18), -1, 1);
             braking = freefallControl < -.18;
             diving = freefallControl > .18;
@@ -676,8 +703,13 @@ window.GAMES = (window.GAMES || []).concat([
           diving = descentControl > .18;
         }
       } else if (type === 'up') {
+        if (!deployed && pulling && !gestureMoved &&
+            Math.hypot(x - pressStartX, y - pressStartY) < 14) {
+          deployParachute();
+        }
         pulling = false;
         dragging = false;
+        gestureMoved = false;
       }
     }
 

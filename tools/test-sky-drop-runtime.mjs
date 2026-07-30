@@ -17,7 +17,9 @@ assert(definition, 'sky-drop-3d should be registered');
 function fakeGL() {
   const noop = () => {};
   const object = () => ({});
+  const matrices = [];
   return {
+    matrices,
     canvas: { width: 400, height: 700 },
     ARRAY_BUFFER: 1, BLEND: 2, COLOR_BUFFER_BIT: 4, COMPILE_STATUS: 5,
     DEPTH_BUFFER_BIT: 8, DEPTH_TEST: 9, DYNAMIC_DRAW: 10, FLOAT: 11,
@@ -32,7 +34,8 @@ function fakeGL() {
     getProgramInfoLog: () => '', getProgramParameter: () => true,
     getShaderInfoLog: () => '', getShaderParameter: () => true,
     getUniformLocation: object, linkProgram: noop, shaderSource: noop,
-    uniform1i: noop, uniform4fv: noop, uniformMatrix4fv: noop,
+    uniform1i: noop, uniform4fv: noop,
+    uniformMatrix4fv: (_location, _transpose, matrix) => matrices.push([...matrix]),
     useProgram: noop, vertexAttribPointer: noop, viewport: noop
   };
 }
@@ -42,8 +45,9 @@ function simulate(verticalGesture) {
   let score = null;
   let elapsed = 0;
   const origin = performance.now();
+  const gl = fakeGL();
   const env = {
-    W: 400, H: 700, gl: fakeGL(), mode: 'play',
+    W: 400, H: 700, gl, mode: 'play',
     texture: () => null,
     setScore: () => {},
     over: value => { score = value; },
@@ -54,6 +58,10 @@ function simulate(verticalGesture) {
   Math.random = () => .5;
   game.start();
   Math.random = originalRandom;
+  const targetMatrix = gl.matrices[5];
+  const targetScreenY = targetMatrix
+    ? (1 - targetMatrix[13] / targetMatrix[15]) * 350
+    : NaN;
   const advance = milliseconds => {
     const end = elapsed + milliseconds;
     while (elapsed < end && score === null) {
@@ -65,13 +73,15 @@ function simulate(verticalGesture) {
   };
 
   advance(300);
-  game.input('down', 200, 350);
-  advance(520);
-  game.input('up', 200, 350);
+  game.input('down', 200, 590);
+  game.input('up', 200, 590);
   advance(300);
   if (verticalGesture === 'guided') {
     game.input('down', 200, 350);
     game.input('move', 189, 350);
+  } else if (verticalGesture === 'guided-dive') {
+    game.input('down', 200, 390);
+    game.input('move', 192, 210);
   } else if (verticalGesture === 'dive') {
     game.input('down', 200, 390);
     game.input('move', 200, 210);
@@ -81,19 +91,23 @@ function simulate(verticalGesture) {
     game.input('move', 200, 470);
     game.input('up', 200, 470);
   }
-  advance(30_000);
+  advance(60_000);
   game.stop();
   assert.notEqual(score, null, `${verticalGesture || 'neutral'} run should finish`);
-  return { elapsed, score };
+  return { elapsed, score, targetScreenY: Math.round(targetScreenY) };
 }
 
 const neutral = simulate('neutral');
 const dive = simulate('dive');
 const brake = simulate('brake');
 const guided = simulate('guided');
+const guidedDive = simulate('guided-dive');
 assert(dive.elapsed < neutral.elapsed - 250,
   `up swipe should accelerate descent (${dive.elapsed} < ${neutral.elapsed})`);
 assert(brake.elapsed > neutral.elapsed + 250,
   `down swipe should slow descent (${brake.elapsed} > ${neutral.elapsed})`);
 assert(guided.score > 0, `a controlled approach should be able to reach the target (${guided.score})`);
-console.log('sky-drop vertical controls passed', { neutral, dive, brake, guided });
+assert.equal(guidedDive.score, 0, 'continuous forward acceleration should overshoot the target');
+assert(guided.targetScreenY > 100 && guided.targetScreenY < 520,
+  `the landing target should stay above the lower instruction panel (${guided.targetScreenY})`);
+console.log('sky-drop vertical controls passed', { neutral, dive, brake, guided, guidedDive });
