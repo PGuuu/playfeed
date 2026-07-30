@@ -46,6 +46,7 @@
     '切換這個分類的遊戲': 'Switch games in this section',
     '上一個遊戲': 'Previous game',
     '下一個遊戲': 'Next game',
+    '↑ 從底部上滑下一則': '↑ Swipe up from the bottom for next',
     '二創這個遊戲': 'Remix this game',
     '換皮': 'Reskin',
     '玩法不變，替換角色或物件的外觀。': 'Keep the gameplay and replace the look of characters or objects.',
@@ -131,6 +132,7 @@
     '正式作者與遊戲 ID 由平台建立，不採信 Script 裡的 author 與 id。': 'The platform assigns the official creator and game ID; author and id inside the Script are not trusted.',
     '試玩': 'Playtest',
     '驗證通過後，全螢幕試玩一次；往上滑或遊戲結束即可離開並發布。': 'After validation, playtest in full screen. Swipe up or finish the game to leave and publish.',
+    '驗證通過後，全螢幕試玩一次；從底部區域向上滑或遊戲結束即可離開並發布。': 'After validation, playtest in full screen. Swipe up from the bottom area or finish the game to leave and publish.',
     '尚未驗證遊戲': 'Game not validated yet',
     '完整創作規格已複製': 'Full creation spec copied',
     '玩法模板與創作規格已複製': 'Gameplay template and creation spec copied',
@@ -151,6 +153,7 @@
     '把玩法模板貼給自己的 AI，再告訴它想換成什麼主題。它最後應只輸出一個完整 JavaScript 程式碼區塊。': 'Paste the gameplay template into your AI and describe the new theme. It should output one complete JavaScript code block.',
     '複製玩法模板＋創作規格': 'Copy gameplay template + creation spec',
     '↑ 往上滑離開試玩': '↑ Swipe up to leave playtest',
+    '↑ 從底部上滑離開試玩': '↑ Swipe up from the bottom to leave',
     '試玩完成，可以發布': 'Playtest complete. Ready to publish.',
     '已離開試玩，可以發布': 'Playtest closed. Ready to publish.',
     '試玩有執行錯誤，請先修正': 'The playtest had a runtime error. Fix it first.',
@@ -216,7 +219,6 @@
     'bg 必須是十六進位色碼。': 'bg must be a hexadecimal color.',
     'tags 必須是字串陣列。': 'tags must be an array of strings.',
     'controls 必須是至少含一項的字串陣列。': 'controls must be a non-empty array of strings.',
-    'controls 包含垂直操作；垂直手勢必須保留給 Feed。': 'controls contains a vertical gesture; vertical gestures must remain available to the Feed.',
     'duration 只供平台估計；目前值無效，發布時會使用 45 秒。': 'duration is only an estimate. The current value is invalid, so 45 seconds will be used.',
     'score 必須包含 label，以及 higher 或 lower 的 order。': 'score must contain label and an order of higher or lower.',
     '每款遊戲都必須提供至少一個 remixSlots 換皮元素。': 'Every game must provide at least one remixSlots reskin element.',
@@ -255,6 +257,7 @@
     if ((match = text.match(/^(\d+) 天前$/))) return `${match[1]}d ago`;
     if ((match = text.match(/^遊戲結束 · (.+)$/))) return `Game over · ${match[1]}`;
     if ((match = text.match(/^執行錯誤：(.+) · 往上滑離開$/))) return `Runtime error: ${match[1]} · Swipe up to leave`;
+    if ((match = text.match(/^執行錯誤：(.+) · 從底部上滑離開$/))) return `Runtime error: ${match[1]} · Swipe up from the bottom to leave`;
     if ((match = text.match(/^發布失敗：(.+)$/))) return `Publish failed: ${match[1]}`;
     if ((match = text.match(/^發佈失敗：(.+)$/))) return `Publish failed: ${match[1]}`;
     if ((match = text.match(/^操作失敗：(.+)$/))) return `Action failed: ${match[1]}`;

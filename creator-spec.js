@@ -62,7 +62,7 @@ metadata 規則：
 - title、description、tip、bg、id 必須是可直接讀取的字串。
 - bg 必須是十六進位色碼。
 - tags 是字串陣列，可以為空。
-- controls 至少一項，可使用 tap、hold、horizontal-drag、left-right 或它們的組合。
+- controls 至少一項，可使用 tap、hold、horizontal-drag、vertical-drag、swipe-up、swipe-down、left-right 或它們的組合。
 - preview 決定尚未正式開始時的預覽方式：cover 或 demo。未填時預設為 cover。
 - duration 是選配的預估秒數，不是時間限制。可以省略，遊戲可依命數、目標、失敗條件或自己的規則結束。
 - score.order 使用 higher 或 lower；decimals 建議為 0。
@@ -117,7 +117,7 @@ PlayFeed 將輸入轉成：
 
 x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺寸。
 
-垂直滑動保留給 Feed 切換遊戲，因此遊戲不可把上下拖曳、大幅斜向拖曳或畫圈設為必要操作。點按、按住、放開、左右選擇與水平拖曳都可以。遊戲不可自行 addEventListener，只能透過 input() 接收操作。
+遊玩期間，除了平台保留的底部退出區以外，所有從遊戲畫面開始的手勢都屬於遊戲。遊戲可以使用上下拖曳、上滑、下滑、斜向拖曳或畫圈。不要把必要操作放在畫面最底部的保留區。遊戲不可自行 addEventListener，只能透過 input() 接收操作。
 
 ## 4. 自足與安全限制
 
@@ -160,7 +160,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 - 不會自行顯示開始按鈕或停在等待開始狀態。
 - remixSlots 至少一項，而且每個可換元素都實際透過 env.sprite() 繪製。
 - 沒有外部資源、網路、儲存或 DOM API。
-- 沒有垂直必要操作。
+- 所有必要手勢都能在平台保留的底部退出區以外完成。
 - 隨機收到合法輸入時不會卡死或報錯。
 
 請自由設計玩法。以上規格是執行契約，不是遊戲設計指南。
@@ -231,7 +231,7 @@ Metadata rules:
 - title, description, tip, bg, and id must be directly readable strings. They may use any language.
 - bg must be a hexadecimal color.
 - tags is an array of strings and may be empty.
-- controls must contain at least one value. Use tap, hold, horizontal-drag, left-right, or a combination.
+- controls must contain at least one value. Use tap, hold, horizontal-drag, vertical-drag, swipe-up, swipe-down, left-right, or a combination.
 - preview controls what appears before the player formally starts: cover or demo. It defaults to cover when omitted.
 - duration is an optional estimate, not a time limit. It may be omitted. A game may end through lives, goals, failure conditions, or its own rules.
 - score.order is higher or lower; decimals should normally be 0.
@@ -286,7 +286,7 @@ PlayFeed sends:
 
 x and y use the env.W × env.H logical coordinate space. PlayFeed converts physical screen coordinates.
 
-Vertical swipes belong to the Feed, so vertical dragging, large diagonal dragging, and drawing circles cannot be required controls. Taps, holds, releases, left/right choices, and horizontal dragging are allowed. Do not call addEventListener; receive input only through input().
+During play, every gesture that starts outside PlayFeed's reserved bottom exit area belongs to the game. Vertical dragging, swipe-up, swipe-down, diagonal dragging, and drawing are allowed. Do not place a required control inside the reserved bottom area. Do not call addEventListener; receive input only through input().
 
 ## 4. Self-contained and safety rules
 
@@ -329,7 +329,7 @@ Rules:
 - The Script does not show its own Start button or wait in a pre-start state.
 - At least one remix slot is present and every slotted element is drawn through env.sprite().
 - No external resources, network, storage, or DOM APIs.
-- No required vertical interaction.
+- Every required gesture remains usable outside the reserved bottom exit area.
 - Random valid input cannot freeze or crash the game.
 
 Design the gameplay freely. This is a runtime contract, not a game design guide.
@@ -417,7 +417,7 @@ Core requirements:
 - input must handle up and cancel separately.
 - Use only env.W, env.H, env.ctx, env.locale, env.setScore, env.over, env.beep, and env.sprite.
 - No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
-- Vertical gestures remain available to the Feed.
+- Required gestures remain usable outside PlayFeed's reserved bottom exit area.
 - At the beginning of start(), briefly draw the controls inside the canvas.
 - Use preview: 'cover' for hidden information or player decisions, and preview: 'demo' only when automatic input cannot spoil the game.
 - Do not build a Start button; PlayFeed handles previewing and tap-to-start.
@@ -444,7 +444,7 @@ ${source}
 - input 必須分開處理 up 與 cancel。
 - 只能使用 env.W、env.H、env.ctx、env.locale、env.setScore、env.over、env.beep、env.sprite。
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
-- 垂直手勢保留給 Feed。
+- 必要手勢都能在 PlayFeed 保留的底部退出區以外完成。
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
 - 隱藏資訊或需要玩家決定的遊戲使用 preview: 'cover'；只有不怕自動輸入劇透時才使用 preview: 'demo'。
 - 不可自行製作開始按鈕；平台會處理預覽與輕點開局。

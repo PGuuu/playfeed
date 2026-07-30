@@ -11,6 +11,7 @@
   :root {
     --main-nav-height: calc(70px + env(safe-area-inset-bottom));
     --game-top-height: calc(56px + env(safe-area-inset-top));
+    --play-exit-height: calc(64px + env(safe-area-inset-bottom));
   }
   html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none; }
@@ -63,21 +64,30 @@
   .standalone-post { touch-action: none; }
   .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
     margin-bottom: var(--main-nav-height); max-width: none; background: #000; }
+  .stage.playing { height: 100dvh; margin-bottom: 0; touch-action: none; }
   .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
   /* 首頁的垂直手勢交給原生 scroll-snap，水平手勢仍交給遊戲；
      個人頁開啟的單一遊戲則用互動式拖曳，以便即時顯示前後遊戲。 */
   canvas.game { width: 100%; height: calc(100% - var(--game-top-height)); margin-top: var(--game-top-height);
     display: block; touch-action: pan-y; }
+  .stage.playing canvas.game {
+    height: calc(100% - var(--game-top-height) - var(--play-exit-height));
+    touch-action: none;
+  }
   .standalone-post canvas.game { touch-action: none; }
   .sandbox-post .sandbox-frame-host,
   .sandbox-post .sandbox-input {
     position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
   }
   .sandbox-post .sandbox-input { touch-action: pan-y; }
+  .sandbox-post .stage.playing .sandbox-frame-host,
+  .sandbox-post .stage.playing .sandbox-input { bottom: var(--play-exit-height); }
+  .sandbox-post .stage.playing .sandbox-input { touch-action: none; }
   .sandbox-post.standalone-post .sandbox-input { touch-action: none; }
   @media (orientation: landscape) {
     .stage { width: min(100vw, calc((100dvh - var(--main-nav-height)) * 4 / 7));
       height: calc(100dvh - var(--main-nav-height)); }
+    .stage.playing { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
     .standalone-post .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
   }
 
@@ -102,6 +112,24 @@
     gap: clamp(4px, 1.2dvh, 14px); align-items: center; z-index: 5; transition: opacity 0.28s; }
   /* 遊戲進行中：淡出側邊鈕並停用點擊（防誤觸） */
   .stage.playing .rail { opacity: 0; pointer-events: none; }
+  .play-exit-zone {
+    position: absolute; z-index: 9; left: 0; right: 0; bottom: 0;
+    height: var(--play-exit-height); display: none; pointer-events: none;
+    align-items: flex-start; justify-content: center;
+    padding-top: 9px; color: rgba(255,255,255,.86);
+    background: linear-gradient(to bottom, rgba(0,0,0,.72), #000 42%);
+    font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  }
+  .stage.playing .play-exit-zone { display: flex; }
+  .play-exit-zone::before {
+    content: ""; position: absolute; top: 7px; width: 42px; height: 4px;
+    border-radius: 99px; background: rgba(255,255,255,.82);
+    transform: translateY(var(--exit-lift, 0px));
+    transition: transform .12s ease;
+  }
+  .play-exit-zone span { margin-top: 11px; opacity: .78; }
+  body.game-active #feed { overflow-y: hidden; }
+  body.game-active #mainNav { transform: translateY(100%); opacity: 0; pointer-events: none; }
   .rail button { background: none; border: none; color: #fff; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
   .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
@@ -748,6 +776,18 @@ function requireLogin(action) {
 /* ---------- 底部常駐導覽（IG 風格：首頁 / 我的） ---------- */
 const mainNav = document.getElementById('mainNav');
 function setNavVisible(v) { mainNav.classList.toggle('hide', !v); }
+function setGameActive(active) {
+  document.body.classList.toggle('game-active', !!active);
+  if (active) setNavVisible(false);
+  else restoreNavVisibility();
+}
+function advanceFeedFrom(post) {
+  const next = post?.nextElementSibling?.classList?.contains('post')
+    ? post.nextElementSibling
+    : null;
+  setGameActive(false);
+  if (next) requestAnimationFrame(() => next.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+}
 /* 關掉某個蓋在上面的面板（留言/登入/改造）後，導覽列該不該出現要看底下是首頁還是單一遊戲視圖 */
 function restoreNavVisibility() { setNavVisible(!document.getElementById('remixView').classList.contains('open')); }
 function setMainNavActive(tab) {
@@ -2049,6 +2089,7 @@ function makePost(entry, opts) {
         <button class="rmx"><span class="ic">${ICONS.remix}</span><span>二創</span></button>
       </div>
       <div class="tap-start-hint hidden">點一下開始</div>
+      <div class="play-exit-zone"><span>↑ 從底部上滑下一則</span></div>
       <div class="overlay hidden"></div>
     </div>`;
 
@@ -2058,6 +2099,8 @@ function makePost(entry, opts) {
   const stage = post.querySelector('.stage');
   const overlay = post.querySelector('.overlay');
   const tapHint = post.querySelector('.tap-start-hint');
+  const exitZone = post.querySelector('.play-exit-zone');
+  exitZone.querySelector('span').textContent = tr('↑ 從底部上滑下一則');
   const scEl = post.querySelector('.sc');
   const bestChip = post.querySelector('.best-chip');
   const bsEl = post.querySelector('.bs');
@@ -2127,9 +2170,9 @@ function makePost(entry, opts) {
     const x = W * (0.15 + Math.random() * 0.7), y = H * (0.25 + Math.random() * 0.55);
     pv.game.input('down', x, y);
     if (Math.random() < 0.45) {
-      /* 偶爾來一段「水平」滑動（上下滑保留給 feed，遊戲互動不用垂直手勢） */
+      /* 偶爾加入水平或垂直拖曳，讓不同操作的遊戲預覽都能展現玩法。 */
       let step = 0;
-      const dx = (Math.random() < 0.5 ? -1 : 1) * (80 + Math.random() * 160), dy = (Math.random() - 0.5) * 50;
+      const dx = (Math.random() - 0.5) * 240, dy = (Math.random() - 0.5) * 240;
       clearInterval(pv.swipeIv);
       pv.swipeIv = setInterval(() => {
         if (!pv.on) return clearInterval(pv.swipeIv);
@@ -2148,6 +2191,7 @@ function makePost(entry, opts) {
     over(score) {
       state.running = false;
       stage.classList.remove('playing');
+      setGameActive(false);
       const snap = canvas.toDataURL('image/png');   /* 先抓結算畫面，等下實況會蓋掉 */
       const prev = bests[gid] || 0;
       const isBest = score > prev;
@@ -2186,6 +2230,7 @@ function makePost(entry, opts) {
     scEl.textContent = '0';
     overlay.classList.add('hidden');
     stage.classList.add('playing');
+    setGameActive(true);
     state.running = true;
     tapHint.classList.add('hidden');
     state.game.start();
@@ -2200,6 +2245,7 @@ function makePost(entry, opts) {
       if (state.game && state.running) state.game.stop();
       state.running = false;
       stage.classList.remove('playing');
+      setGameActive(false);
       openAuthorProfile(entry.authorId, entry.authorName || entry.author);
     });
   }
@@ -2213,13 +2259,19 @@ function makePost(entry, opts) {
   let gest = null;
   stage.addEventListener('pointerdown', e => {
     const interactive = e.target instanceof Element && e.target.closest('.rail, .go');
-    if (opts.standalone) {
+    const exitOwned = state.running && e.clientY >= exitZone.getBoundingClientRect().top;
+    if (state.running || opts.standalone) {
       try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     }
     gest = {
       id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
-      claimed: false, gaveDown: false, ignoreTapStart: !!interactive, startedAt: e.timeStamp
+      claimed: false, gaveDown: false, exitOwned, platformDrag: false,
+      ignoreTapStart: !!interactive, startedAt: e.timeStamp
     };
+    if (exitOwned) {
+      e.preventDefault();
+      return;
+    }
     if (e.target === canvas && state.running && state.game) {
       const [x, y] = toLogical(e);
       state.game.input('down', x, y);
@@ -2230,6 +2282,23 @@ function makePost(entry, opts) {
     if (!gest || e.pointerId !== gest.id) return;
     const dx = e.clientX - gest.x0;
     const dy = e.clientY - gest.y0;
+    if (gest.exitOwned) {
+      e.preventDefault();
+      const vertical = dy < -8 && Math.abs(dy) > Math.abs(dx) * 1.15;
+      gest.platformDrag = gest.platformDrag || vertical;
+      exitZone.style.setProperty('--exit-lift', `${Math.max(-14, Math.min(0, dy * .12))}px`);
+      if (vertical && opts.standalone) {
+        opts.onStandaloneDrag?.('move', dy, e.timeStamp, gest.startedAt);
+      }
+      return;
+    }
+    if (state.running) {
+      if (gest.gaveDown && state.game && (e.buttons || e.pointerType === 'touch')) {
+        const [x, y] = toLogical(e);
+        state.game.input('move', x, y);
+      }
+      return;
+    }
     if (!gest.swiped && !gest.claimed) {
       if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) {
         gest.claimed = true;
@@ -2256,6 +2325,35 @@ function makePost(entry, opts) {
     const finished = gest;
     const dx = e.clientX - finished.x0;
     const dy = e.clientY - finished.y0;
+    if (finished.exitOwned) {
+      exitZone.style.removeProperty('--exit-lift');
+      const elapsed = Math.max(1, e.timeStamp - finished.startedAt);
+      const velocity = dy / elapsed;
+      const threshold = Math.max(72, stage.clientHeight * .2);
+      const commit = !cancelled && dy < 0 && Math.abs(dy) > Math.abs(dx) * 1.15 &&
+        (Math.abs(dy) >= threshold || (Math.abs(dy) >= 38 && velocity <= -.55));
+      if (commit) {
+        if (state.game) {
+          const [x, y] = toLogical(e);
+          state.game.input('cancel', x, y);
+          state.game.stop();
+        }
+        state.running = false;
+        stage.classList.remove('playing');
+        setGameActive(false);
+        if (opts.standalone) {
+          opts.onStandaloneDrag?.('end', dy, e.timeStamp, finished.startedAt);
+        } else {
+          advanceFeedFrom(post);
+        }
+      } else if (finished.platformDrag && opts.standalone) {
+        opts.onStandaloneDrag?.('cancel', dy, e.timeStamp, finished.startedAt);
+      }
+      gest = null;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     if (!cancelled && !state.running && overlay.classList.contains('hidden') &&
         !finished.ignoreTapStart && Math.hypot(dx, dy) < 12 &&
         e.timeStamp - finished.startedAt < 520) begin();
@@ -2302,7 +2400,7 @@ function makePost(entry, opts) {
     deactivate() {
       stopPreview();
       stage.classList.remove('playing');
-      if (state.game && state.running) { state.game.stop(); state.running = false; }
+      if (state.game && state.running) { state.game.stop(); state.running = false; setGameActive(false); }
       if (!overlay.classList.contains('hidden')) return;
       overlay.replaceChildren();
     }
@@ -2629,6 +2727,8 @@ window.PlayFeedHost = {
   secureWrite,
   toast,
   setNavVisible,
+  setGameActive,
+  advanceFeedFrom,
   setMainNavActive,
   closeProfile,
   closeSearch,

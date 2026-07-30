@@ -13,7 +13,6 @@ const FORBIDDEN_IDENTIFIERS = new Set([
   'Worker', 'SharedWorker', 'ServiceWorker', 'BroadcastChannel',
   'eval', 'Function', 'Audio', 'Image'
 ]);
-const VERTICAL_CONTROLS = /vertical|swipe[-_ ]?(up|down)|pan[-_ ]?y|drag[-_ ]?y|up[-_ ]?down/i;
 const publishedRows = [];
 const publishedPosts = [];
 const LEGACY_BASE_ID = '__playfeed_script_v1__';
@@ -179,8 +178,6 @@ function validateScript(raw) {
   if (!Array.isArray(metadata.controls) || metadata.controls.length === 0 ||
       metadata.controls.some(x => typeof x !== 'string')) {
     errors.push('controls 必須是至少含一項的字串陣列。');
-  } else if (metadata.controls.some(x => VERTICAL_CONTROLS.test(x))) {
-    errors.push('controls 包含垂直操作；垂直手勢必須保留給 Feed。');
   }
   if (metadata.preview === undefined) {
     metadata.preview = 'cover';
@@ -458,7 +455,7 @@ function buildCreatorUI() {
       <section class="creator-step" data-step="5">
         <span class="creator-step-no">5</span><div class="creator-step-content creator-result-content">
           <h2>試玩</h2>
-          <p>驗證通過後，全螢幕試玩一次；往上滑或遊戲結束即可離開並發布。</p>
+          <p>驗證通過後，全螢幕試玩一次；從底部區域向上滑或遊戲結束即可離開並發布。</p>
           <div id="creatorResult"><div class="creator-result-empty">尚未驗證遊戲</div></div>
         </div>
       </section>
@@ -656,7 +653,7 @@ function openPlaytest(result, onDone) {
     <div class="creator-playtest-stage">
       <div class="creator-playtest-frame"></div>
       <div class="creator-playtest-input"></div>
-      <div class="creator-playtest-exit">↑ 往上滑離開試玩</div>
+      <div class="creator-playtest-exit">↑ 從底部上滑離開試玩</div>
       <div class="creator-playtest-status"></div>
     </div>`;
   document.body.appendChild(root);
@@ -667,9 +664,10 @@ function openPlaytest(result, onDone) {
   const stage = root.querySelector('.creator-playtest-stage');
   const frameHost = root.querySelector('.creator-playtest-frame');
   const inputLayer = root.querySelector('.creator-playtest-input');
+  const exitLayer = root.querySelector('.creator-playtest-exit');
   const status = root.querySelector('.creator-playtest-status');
   const logical = event => {
-    const rect = stage.getBoundingClientRect();
+    const rect = inputLayer.getBoundingClientRect();
     return [
       (event.clientX - rect.left) / rect.width * 400,
       (event.clientY - rect.top) / rect.height * 700
@@ -685,16 +683,16 @@ function openPlaytest(result, onDone) {
     if (msg.type === 'runtime-error') {
       root.dataset.failed = 'true';
       playtestRuntime?.send('stop');
-      status.textContent = `執行錯誤：${msg.message} · 往上滑離開`;
+      status.textContent = `執行錯誤：${msg.message} · 從底部上滑離開`;
       status.classList.add('show', 'bad');
     }
   });
   playtestRuntime.send('start');
 
-  inputLayer.addEventListener('pointerdown', event => {
+  stage.addEventListener('pointerdown', event => {
     if (!playtestRuntime) return;
     event.preventDefault();
-    try { inputLayer.setPointerCapture(event.pointerId); } catch (_) {}
+    try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     const [x, y] = logical(event);
     playtestGesture = {
       id: event.pointerId,
@@ -702,11 +700,12 @@ function openPlaytest(result, onDone) {
       y0: event.clientY,
       x,
       y,
+      exitOwned: event.clientY >= exitLayer.getBoundingClientRect().top,
       exiting: false
     };
-    playtestRuntime.send('input', { inputType: 'down', x, y });
+    if (!playtestGesture.exitOwned) playtestRuntime.send('input', { inputType: 'down', x, y });
   });
-  inputLayer.addEventListener('pointermove', event => {
+  stage.addEventListener('pointermove', event => {
     if (!playtestGesture || playtestGesture.id !== event.pointerId || !playtestRuntime) return;
     event.preventDefault();
     const [x, y] = logical(event);
@@ -714,14 +713,15 @@ function openPlaytest(result, onDone) {
     playtestGesture.y = y;
     const dx = event.clientX - playtestGesture.x0;
     const dy = event.clientY - playtestGesture.y0;
-    if (!playtestGesture.exiting && dy < -52 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+    if (playtestGesture.exitOwned && !playtestGesture.exiting &&
+        dy < -64 && Math.abs(dy) > Math.abs(dx) * 1.15) {
       playtestGesture.exiting = true;
       playtestRuntime.send('input', { inputType: 'cancel', x, y });
       const passed = root.dataset.failed !== 'true';
       closePlaytest(passed, passed ? '已離開試玩，可以發布' : '試玩有執行錯誤，請先修正');
       return;
     }
-    if (!playtestGesture.exiting) {
+    if (!playtestGesture.exitOwned && !playtestGesture.exiting) {
       playtestRuntime.send('input', { inputType: 'move', x, y });
     }
   });
@@ -729,11 +729,13 @@ function openPlaytest(result, onDone) {
     if (!playtestGesture || playtestGesture.id !== event.pointerId || !playtestRuntime) return;
     event.preventDefault();
     const [x, y] = logical(event);
-    playtestRuntime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
+    if (!playtestGesture.exitOwned) {
+      playtestRuntime.send('input', { inputType: cancelled ? 'cancel' : 'up', x, y });
+    }
     playtestGesture = null;
   };
-  inputLayer.addEventListener('pointerup', event => end(event, false));
-  inputLayer.addEventListener('pointercancel', event => end(event, true));
+  stage.addEventListener('pointerup', event => end(event, false));
+  stage.addEventListener('pointercancel', event => end(event, true));
 }
 
 function renderValidation(result) {
@@ -1159,6 +1161,8 @@ function addSandboxPost(row, options = {}) {
   frameHost.style.setProperty('--sandbox-bg', entry.bg || '#fff');
   const inputLayer = el('div', 'sandbox-input');
   const tapHint = el('div', 'tap-start-hint hidden', '點一下開始');
+  const exitZone = el('div', 'play-exit-zone');
+  exitZone.append(el('span', '', host.t('↑ 從底部上滑下一則')));
   const hud = el('div', 'hud');
   const scoreChip = el('span', 'chip score-chip');
   scoreChip.append(document.createTextNode(`${entry.score.label || '分數'} `), el('b', 'sc', '0'));
@@ -1189,6 +1193,7 @@ function addSandboxPost(row, options = {}) {
     playing = false;
     previewing = false;
     stage.classList.remove('playing');
+    host.setGameActive(false);
     host.openRemix(entry);
   });
   rail.append(like, dislike, comment, save, share, remix);
@@ -1208,6 +1213,7 @@ function addSandboxPost(row, options = {}) {
       playing = false;
       previewing = false;
       stage.classList.remove('playing');
+      host.setGameActive(false);
       host.openAuthorProfile(entry.authorId, entry.authorName);
     });
     const scoreResult = el('div', 'final');
@@ -1227,7 +1233,7 @@ function addSandboxPost(row, options = {}) {
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, tapHint, overlay, errorBox);
+  stage.append(frameHost, inputLayer, hud, rail, tapHint, exitZone, overlay, errorBox);
   post.appendChild(stage);
   if (options.container) options.container.appendChild(post);
   else host.feed.prepend(post);
@@ -1244,6 +1250,7 @@ function addSandboxPost(row, options = {}) {
       if (msg.type === 'score') scoreChip.querySelector('b').textContent = String(msg.score);
       if (msg.type === 'over' && playing) {
         playing = false; stage.classList.remove('playing'); overlay.classList.remove('hidden');
+        host.setGameActive(false);
         resetOverlay(msg.score); submitPublishedScore(entry, msg.score, bestChip);
       } else if (msg.type === 'over' && previewing) {
         setTimeout(() => {
@@ -1253,6 +1260,7 @@ function addSandboxPost(row, options = {}) {
       if (msg.type === 'runtime-error') {
         errorBox.textContent = `遊戲執行錯誤：${msg.message}`; errorBox.style.display = 'block';
         playing = false; stage.classList.remove('playing');
+        host.setGameActive(false);
       }
     });
     runtime.send(mode);
@@ -1260,7 +1268,7 @@ function addSandboxPost(row, options = {}) {
   const begin = () => {
     playing = true; previewing = false; scoreChip.querySelector('b').textContent = '0';
     tapHint.classList.add('hidden');
-    overlay.classList.add('hidden'); stage.classList.add('playing'); spawn('start');
+    overlay.classList.add('hidden'); stage.classList.add('playing'); host.setGameActive(true); spawn('start');
   };
   const startPreview = () => {
     if (playing || previewing) return;
@@ -1270,7 +1278,9 @@ function addSandboxPost(row, options = {}) {
   };
   const stopAll = () => {
     if (gesture && runtime) runtime.send('input', { inputType: 'cancel', x: gesture.x, y: gesture.y });
+    const wasPlaying = playing;
     gesture = null; playing = false; previewing = false; stage.classList.remove('playing');
+    if (wasPlaying) host.setGameActive(false);
     tapHint.classList.add('hidden');
     destroyRuntime(); resetOverlay();
   };
@@ -1281,22 +1291,39 @@ function addSandboxPost(row, options = {}) {
   }
   stage.addEventListener('pointerdown', event => {
     const interactive = event.target instanceof Element && event.target.closest('.rail, .go');
-    if (options.standalone) {
+    const exitOwned = playing && event.clientY >= exitZone.getBoundingClientRect().top;
+    if (playing || options.standalone) {
       try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     }
     const [x, y] = logical(event);
-    const gaveDown = !!(event.target === inputLayer && playing && runtime);
+    const gaveDown = !!(!exitOwned && event.target === inputLayer && playing && runtime);
     gesture = {
       id: event.pointerId, x0: event.clientX, y0: event.clientY,
-      x, y, claimed: false, swiped: false, gaveDown, ignoreTapStart: !!interactive,
+      x, y, claimed: false, swiped: false, gaveDown, exitOwned, platformDrag: false,
+      ignoreTapStart: !!interactive,
       startedAt: event.timeStamp
     };
+    if (exitOwned) event.preventDefault();
     if (gaveDown) runtime.send('input', { inputType: 'down', x, y });
   }, true);
   stage.addEventListener('pointermove', event => {
     if (!gesture || gesture.id !== event.pointerId) return;
     const dx = event.clientX - gesture.x0, dy = event.clientY - gesture.y0;
     const [x, y] = logical(event); gesture.x = x; gesture.y = y;
+    if (gesture.exitOwned) {
+      event.preventDefault();
+      const vertical = dy < -8 && Math.abs(dy) > Math.abs(dx) * 1.15;
+      gesture.platformDrag = gesture.platformDrag || vertical;
+      exitZone.style.setProperty('--exit-lift', `${Math.max(-14, Math.min(0, dy * .12))}px`);
+      if (vertical && options.standalone) {
+        options.onDrag?.('move', dy, event.timeStamp, gesture.startedAt);
+      }
+      return;
+    }
+    if (playing) {
+      if (gesture.gaveDown && runtime) runtime.send('input', { inputType: 'move', x, y });
+      return;
+    }
     if (!gesture.claimed && !gesture.swiped) {
       if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) gesture.claimed = true;
       else if (options.standalone && Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx) * 1.15) {
@@ -1317,6 +1344,32 @@ function addSandboxPost(row, options = {}) {
     const finished = gesture;
     const dx = event.clientX - finished.x0;
     const dy = event.clientY - finished.y0;
+    if (finished.exitOwned) {
+      exitZone.style.removeProperty('--exit-lift');
+      const elapsed = Math.max(1, event.timeStamp - finished.startedAt);
+      const velocity = dy / elapsed;
+      const threshold = Math.max(72, stage.clientHeight * .2);
+      const commit = !cancelled && dy < 0 && Math.abs(dy) > Math.abs(dx) * 1.15 &&
+        (Math.abs(dy) >= threshold || (Math.abs(dy) >= 38 && velocity <= -.55));
+      if (commit) {
+        runtime?.send('input', { inputType: 'cancel', x, y });
+        runtime?.send('stop');
+        playing = false;
+        stage.classList.remove('playing');
+        host.setGameActive(false);
+        if (options.standalone) {
+          options.onDrag?.('end', dy, event.timeStamp, finished.startedAt);
+        } else {
+          host.advanceFeedFrom(post);
+        }
+      } else if (finished.platformDrag && options.standalone) {
+        options.onDrag?.('cancel', dy, event.timeStamp, finished.startedAt);
+      }
+      gesture = null;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (!cancelled && !playing && overlay.classList.contains('hidden') &&
         !finished.ignoreTapStart && Math.hypot(dx, dy) < 12 &&
         event.timeStamp - finished.startedAt < 520) begin();
