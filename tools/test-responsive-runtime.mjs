@@ -37,6 +37,9 @@ assert(!spec.includes('currently 400 × 700') && !spec.includes('目前是 400 �
 assert(importedSpec.FULL_SPEC.includes('Math.min(env.W, env.H)') &&
   importedSpec.FULL_SPEC_EN.includes('Math.min(env.W, env.H)'),
   'creator guidance module must load completely instead of ending at inline code');
+assert(importedSpec.FULL_SPEC.includes('左下角就必須持續顯示可點擊的音效圖示') &&
+  importedSpec.FULL_SPEC_EN.includes('tappable sound icon in the lower-left corner'),
+  'creator guidance must require a working sound toggle for games with audio');
 assert(!creatorStyles.includes('.creator-playtest-frame, .creator-playtest-frame iframe,'),
   'creator playtest iframe must not inherit height:auto from the play-area rule');
 assert(/\.creator-playtest-frame iframe\s*\{[^}]*height:\s*100%/s.test(creatorStyles),
