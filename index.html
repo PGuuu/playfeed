@@ -672,15 +672,17 @@ function beep(f1, f2, dur, vol, type) {
 function setAudioMuted(muted) {
   audioMuted = !!muted;
   try { localStorage.setItem('playfeed-muted', audioMuted ? '1' : '0'); } catch (_) {}
-  if (audioMuted) {
-    for (const voice of activeAudioVoices) {
-      try { voice.stop(); } catch (_) {}
-    }
-    activeAudioVoices.clear();
-  } else {
+  if (audioMuted) stopActiveAudio();
+  else {
     ensureAudio();
   }
   document.querySelectorAll('.sound-toggle').forEach(updateSoundToggle);
+}
+function stopActiveAudio() {
+  for (const voice of activeAudioVoices) {
+    try { voice.stop(); } catch (_) {}
+  }
+  activeAudioVoices.clear();
 }
 function sourceUsesSound(source) {
   return typeof source === 'string' && /\b(?:env\s*\.\s*)?beep\s*\(/.test(source);
@@ -1877,7 +1879,8 @@ function openMechanicCreator(entry) {
   const feedPost = posts.find(post => post.id === entry.id);
   if (feedPost) feedPost.deactivate();
   if (standalonePost && standalonePost.id === entry.id) standalonePost.deactivate();
-  closeRemix();
+  window.PlayFeedCreator?.pausePreview(entry.id);
+  closeRemix(false);
   window.PlayFeedCreator.openMechanic(template);
 }
 function mediaW(im) { return im.naturalWidth || im.width; }
@@ -1961,9 +1964,11 @@ function openRemix(entry) {
   remixSheet.classList.toggle('choosing', !!mechanicTemplate);
   remixSheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
   const p = posts.find(p => p.id === entry.id) || (standalonePost && standalonePost.id === entry.id ? standalonePost : null);
-  if (p) p.activate();   /* 讓上面的畫面在跑，才看得到即時預覽 */
+  if (p) p.deactivate();
+  window.PlayFeedCreator?.pausePreview(entry.id);
+  stopActiveAudio();
 }
-function closeRemix() {
+function closeRemix(resumePreview = true) {
   const resumeId = activeRemix?.entry?.id || null;
   if (activeRemix?.entry?.userScript) {
     const original = activeRemix.originalSpriteData || {};
@@ -1973,7 +1978,7 @@ function closeRemix() {
   remixSheet.classList.remove('open', 'choosing'); backdrop.classList.remove('open');
   restoreNavVisibility();
   activeRemix = null;
-  if (resumeId) {
+  if (resumePreview && resumeId) {
     const localPost = posts.find(post => post.id === resumeId) ||
       (standalonePost && standalonePost.id === resumeId ? standalonePost : null);
     if (localPost) setTimeout(() => localPost.activate(), 40);
@@ -2002,7 +2007,7 @@ function renderRemixVersions() {
   baseChip.className = 'verchip' + (activeRemix.entry.id === baseId ? ' cur' : '');
   baseChip.innerHTML = '<span class="sw" style="background:' + (baseEntry?.bg || '#efefef') + '"></span><span class="nm">原版</span>';
   baseChip.addEventListener('click', () => {
-    closeRemix(); closeStandalone();
+    closeRemix(false); closeStandalone();
     if (String(baseId).startsWith('game:')) {
       openStandalone(baseId);
     } else {
@@ -2018,7 +2023,7 @@ function renderRemixVersions() {
     const chip = document.createElement('div');
     chip.className = 'verchip' + (activeRemix.entry.id === id ? ' cur' : '');
     chip.innerHTML = '<span class="sw" style="background:' + entry.bg + '"></span><span class="nm">' + entry.title + '</span>';
-    chip.addEventListener('click', () => { closeRemix(); openStandalone(id); });
+    chip.addEventListener('click', () => { closeRemix(false); openStandalone(id); });
     row.appendChild(chip);
   }
   host.appendChild(row);
@@ -2733,7 +2738,7 @@ function navigateStandalone(direction) {
 function openStandalone(id, sequence = null, returnContext = null) {
   const entry = entryFor(id);
   if (!entry) { toast('找不到這個遊戲'); return; }
-  closeProfile(); closeSearch(); closeRemix(); closeSheet();
+  closeProfile(); closeSearch(); closeRemix(false); closeSheet();
   standaloneSequence = (sequence || [entry]).map(item =>
     typeof item === 'string' ? entryFor(item) : item
   ).filter(Boolean);

@@ -1662,6 +1662,10 @@ window.PlayFeedCreator = {
     const post = publishedPosts.find(item => item.entry.id === id);
     if (post) setTimeout(() => post.activate(), 40);
   },
+  pausePreview(id) {
+    const post = publishedPosts.find(item => item.entry.id === id);
+    post?.deactivate();
+  },
   mountStandalone(source, container, onDrag) {
     const sourceEntry = typeof source === 'string' ? null : source;
     const sourceId = sourceEntry?.sourceGameId || sourceEntry?.remixOf || sourceEntry?.id || source;

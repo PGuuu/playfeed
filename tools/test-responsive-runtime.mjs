@@ -53,6 +53,10 @@ assert(index.includes('if (!audioUnlocked || audioMuted) return;') &&
   index.includes("button.className = 'sound-toggle'") &&
   index.includes('setAudioMuted(!audioMuted)'),
   'the platform sound button must forcibly gate every host sound');
+assert(index.includes('window.PlayFeedCreator?.pausePreview(entry.id);') &&
+  index.includes('stopActiveAudio();') &&
+  creator.includes('pausePreview(id)'),
+  'opening Remix must stop the hidden feed preview and its active sounds');
 assert(creator.includes('host.createSoundToggle(host.sourceUsesSound(entry.script))') &&
   creator.includes('host.createSoundToggle(host.sourceUsesSound(result.source))'),
   'published games and creator playtests must receive the platform sound button');
