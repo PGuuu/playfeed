@@ -37,9 +37,9 @@ assert(!spec.includes('currently 400 × 700') && !spec.includes('目前是 400 �
 assert(importedSpec.FULL_SPEC.includes('Math.min(env.W, env.H)') &&
   importedSpec.FULL_SPEC_EN.includes('Math.min(env.W, env.H)'),
   'creator guidance module must load completely instead of ending at inline code');
-assert(importedSpec.FULL_SPEC.includes('左下角就必須持續顯示可點擊的音效圖示') &&
-  importedSpec.FULL_SPEC_EN.includes('tappable sound icon in the lower-left corner'),
-  'creator guidance must require a working sound toggle for games with audio');
+assert(importedSpec.FULL_SPEC.includes('PlayFeed 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕') &&
+  importedSpec.FULL_SPEC_EN.includes('PlayFeed automatically shows its standard speaker/mute button'),
+  'creator guidance must explain the platform-owned sound toggle');
 assert(!creatorStyles.includes('.creator-playtest-frame, .creator-playtest-frame iframe,'),
   'creator playtest iframe must not inherit height:auto from the play-area rule');
 assert(/\.creator-playtest-frame iframe\s*\{[^}]*height:\s*100%/s.test(creatorStyles),
@@ -48,6 +48,13 @@ assert(index.includes('beep, setScore: () => {}'),
   'built-in feed previews must receive the game sound API');
 assert(index.includes("window.addEventListener('pointerdown', unlockFeedAudio"),
   'feed audio must unlock after the first user gesture');
+assert(index.includes('if (!audioUnlocked || audioMuted) return;') &&
+  index.includes("button.className = 'sound-toggle'") &&
+  index.includes('setAudioMuted(!audioMuted)'),
+  'the platform sound button must forcibly gate every host sound');
+assert(creator.includes('host.createSoundToggle(host.sourceUsesSound(entry.script))') &&
+  creator.includes('host.createSoundToggle(host.sourceUsesSound(result.source))'),
+  'published games and creator playtests must receive the platform sound button');
 assert(creator.includes("m.type==='audio-on'") &&
   creator.includes("m.type==='audio-off'") &&
   creator.includes("runtime.send('audio-on')"),

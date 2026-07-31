@@ -148,6 +148,20 @@
   .rail button.disliked .ic { background: #d83e65; }
   .rail button.saved .ic { background: #d9a13b; }
   .rail button.rmx .ic { background: rgba(0,149,246,.58); }
+  .sound-toggle {
+    position: absolute; z-index: 8; left: 12px; bottom: 12px;
+    width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.32);
+    border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    color: #fff; background: rgba(0,0,0,.48); backdrop-filter: blur(7px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  }
+  .sound-toggle .ico { width: 23px; height: 23px; }
+  .sound-toggle.muted { background: rgba(0,0,0,.7); color: rgba(255,255,255,.76); }
+  .sound-toggle:active { transform: scale(.9); }
+  .stage.playing .sound-toggle { bottom: calc(var(--play-exit-height) + 12px); }
+  .creator-playtest-stage .sound-toggle {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px);
+  }
   @media (max-height: 700px) {
     .rail { top: calc(var(--game-top-height) + 6px); bottom: 8px; gap: 3px; }
     .rail button { gap: 1px; font-size: 10px; line-height: 1.1; }
@@ -619,6 +633,9 @@
 const W = 400, H = 700;
 let AC = null;
 let audioUnlocked = false;
+let audioMuted = false;
+try { audioMuted = localStorage.getItem('playfeed-muted') === '1'; } catch (_) {}
+const activeAudioVoices = new Set();
 function ensureAudio() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return;
@@ -633,7 +650,7 @@ function unlockFeedAudio() {
 }
 window.addEventListener('pointerdown', unlockFeedAudio, { capture: true, once: true });
 function beep(f1, f2, dur, vol, type) {
-  if (!audioUnlocked) return;
+  if (!audioUnlocked || audioMuted) return;
   ensureAudio();
   if (!AC) return;
   const seconds = Math.min(2, Math.max(.01, Number(dur) || .08));
@@ -645,7 +662,31 @@ function beep(f1, f2, dur, vol, type) {
   g.gain.setValueAtTime(volume, AC.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + seconds);
   o.connect(g); g.connect(AC.destination);
+  activeAudioVoices.add(o);
+  o.onended = () => activeAudioVoices.delete(o);
   o.start(); o.stop(AC.currentTime + seconds);
+}
+function setAudioMuted(muted) {
+  audioMuted = !!muted;
+  try { localStorage.setItem('playfeed-muted', audioMuted ? '1' : '0'); } catch (_) {}
+  if (audioMuted) {
+    for (const voice of activeAudioVoices) {
+      try { voice.stop(); } catch (_) {}
+    }
+    activeAudioVoices.clear();
+  } else {
+    ensureAudio();
+  }
+  document.querySelectorAll('.sound-toggle').forEach(updateSoundToggle);
+}
+function sourceUsesSound(source) {
+  return typeof source === 'string' && /\b(?:env\s*\.\s*)?beep\s*\(/.test(source);
+}
+function entryUsesSound(entry) {
+  if (typeof entry?.usesSound === 'boolean') return entry.usesSound;
+  if (sourceUsesSound(entry?.script)) return true;
+  try { return sourceUsesSound(Function.prototype.toString.call(entry?.base?.create)); }
+  catch (_) { return false; }
 }
 </script>
 
@@ -691,12 +732,34 @@ const ICONS = {
   share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
   bell:    '<svg class="ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
   search:  '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>',
+  sound:   '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.7 6.3a8 8 0 0 1 0 11.4"/></svg>',
+  muted:   '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path d="m16 10 5 5"/><path d="m21 10-5 5"/></svg>',
   home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
   user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
   create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>'
 };
 function injectIcons(root) { (root || document).querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = ICONS[el.dataset.ico] || ''; }); }
 injectIcons();   /* 填入靜態元素（底部導覽、個人頁分頁） */
+function updateSoundToggle(button) {
+  if (!button) return;
+  button.classList.toggle('muted', audioMuted);
+  button.setAttribute('aria-pressed', audioMuted ? 'true' : 'false');
+  button.setAttribute('aria-label', audioMuted ? tr('開啟音效') : tr('關閉音效'));
+  button.innerHTML = audioMuted ? ICONS.muted : ICONS.sound;
+}
+function createSoundToggle(visible) {
+  if (!visible) return null;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'sound-toggle';
+  updateSoundToggle(button);
+  button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    setAudioMuted(!audioMuted);
+  });
+  return button;
+}
 
 const authChip = document.getElementById('authChip');
 function displayName(u) {
@@ -2119,6 +2182,8 @@ function makePost(entry, opts) {
   const renderDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
   const ctx = canvas.getContext('2d');
   const stage = post.querySelector('.stage');
+  const soundToggle = createSoundToggle(entryUsesSound(entry));
+  if (soundToggle) stage.appendChild(soundToggle);
   const overlay = post.querySelector('.overlay');
   const tapHint = post.querySelector('.tap-start-hint');
   const exitZone = post.querySelector('.play-exit-zone');
@@ -2291,7 +2356,7 @@ function makePost(entry, opts) {
   /* 首頁交給瀏覽器原生 scroll-snap；單一遊戲視圖才使用互動式拖曳。 */
   let gest = null;
   stage.addEventListener('pointerdown', e => {
-    const interactive = e.target instanceof Element && e.target.closest('.rail, .go');
+    const interactive = e.target instanceof Element && e.target.closest('.rail, .go, .sound-toggle');
     const exitRect = exitZone.getBoundingClientRect();
     const exitOwned = state.running && e.clientY >= exitRect.top - 23 &&
       e.clientX >= exitRect.left && e.clientX <= exitRect.right;
@@ -2754,6 +2819,8 @@ window.PlayFeedHost = {
   get user() { return user; },
   get audioUnlocked() { return audioUnlocked; },
   beep,
+  sourceUsesSound,
+  createSoundToggle,
   feed,
   icons: ICONS,
   get locale() { return i18n?.locale || 'zh-Hant'; },

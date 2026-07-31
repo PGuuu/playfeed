@@ -30,6 +30,8 @@
     '改造': 'Remixed',
     '按讚': 'Like',
     '倒讚': 'Dislike',
+    '開啟音效': 'Turn sound on',
+    '關閉音效': 'Mute sound',
     '通知': 'Activity',
     '全部已讀': 'Mark all read',
     '搜尋': 'Search',

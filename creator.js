@@ -677,6 +677,8 @@ function openPlaytest(result, onDone) {
   const inputLayer = root.querySelector('.creator-playtest-input');
   const exitLayer = root.querySelector('.creator-playtest-exit');
   const status = root.querySelector('.creator-playtest-status');
+  const soundToggle = host.createSoundToggle(host.sourceUsesSound(result.source));
+  if (soundToggle) stage.appendChild(soundToggle);
   const logical = event => {
     const rect = inputLayer.getBoundingClientRect();
     return [
@@ -703,6 +705,7 @@ function openPlaytest(result, onDone) {
 
   stage.addEventListener('pointerdown', event => {
     if (!playtestRuntime) return;
+    if (event.target instanceof Element && event.target.closest('.sound-toggle')) return;
     event.preventDefault();
     try { stage.setPointerCapture(event.pointerId); } catch (_) {}
     const [x, y] = logical(event);
@@ -1247,7 +1250,10 @@ function addSandboxPost(row, options = {}) {
   };
   resetOverlay();
   const errorBox = el('div', 'sandbox-error');
-  stage.append(frameHost, inputLayer, hud, rail, tapHint, exitZone, overlay, errorBox);
+  const soundToggle = host.createSoundToggle(host.sourceUsesSound(entry.script));
+  stage.append(frameHost, inputLayer, hud, rail);
+  if (soundToggle) stage.append(soundToggle);
+  stage.append(tapHint, exitZone, overlay, errorBox);
   post.appendChild(stage);
   if (options.container) options.container.appendChild(post);
   else host.feed.prepend(post);
@@ -1311,7 +1317,7 @@ function addSandboxPost(row, options = {}) {
     ];
   }
   stage.addEventListener('pointerdown', event => {
-    const interactive = event.target instanceof Element && event.target.closest('.rail, .go');
+    const interactive = event.target instanceof Element && event.target.closest('.rail, .go, .sound-toggle');
     const exitRect = exitZone.getBoundingClientRect();
     const exitOwned = playing && event.clientY >= exitRect.top - 23 &&
       event.clientX >= exitRect.left && event.clientX <= exitRect.right;

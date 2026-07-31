@@ -83,8 +83,8 @@ metadata 規則：
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
 - 遊戲可自行設計音效：使用不同頻率、滑音、長度與波形，或組合多次 env.beep() 製作操作、得分、受傷與環境聲。Feed 瀏覽預覽也可能播放這些音效。
-- 只要遊戲使用任何音效，畫面左下角就必須持續顯示可點擊的音效圖示。玩家點擊後可切換「有聲／靜音」，圖示也要清楚切換成喇叭／劃線喇叭。靜音時不可呼叫 env.beep()。
-- 音效圖示必須畫在 canvas 內，保留安全邊距，並在 input('down', x, y) 中優先處理點擊，避免同一次點擊同時觸發遊戲動作。
+- 只要 Script 使用 env.beep()，PlayFeed 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕。遊戲不可自行繪製音效按鈕，也不需要處理它的點擊。
+- 所有聲音都必須透過 env.beep() 播放。玩家選擇靜音後，平台會強制攔截該遊戲的全部 env.beep() 音效。
 - env.sprite(key, centerX, centerY, size, flip?)：請平台畫出 Remix 素材；有素材時回傳 true，否則回傳 false。
 - env.texture(key)：3D 遊戲取得 Remix 素材的 WebGLTexture；尚未載入或沒有素材時回傳 null。
 - 公開投稿不提供 env.getSprite。
@@ -160,7 +160,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 - 遊戲會呼叫 env.setScore() 與 env.over()。
 - stop() 能停止全部動畫與 timer。
 - 每次開局會先在遊戲畫面中顯示簡短操作提示。
-- 如果遊戲使用音效，左下角會持續顯示可用的喇叭／靜音切換圖示，而且點擊圖示不會同時觸發遊戲動作。
+- 如果遊戲使用音效，全部音效都透過 env.beep() 播放，喇叭／靜音按鈕由 PlayFeed 統一提供。
 - preview 使用 cover 或 demo，並選擇不會劇透或替玩家做決定的模式。
 - 不會自行顯示開始按鈕或停在等待開始狀態。
 - remixSlots 至少一項，而且每個可換元素都實際透過 env.sprite() 繪製。
@@ -257,8 +257,8 @@ Metadata rules:
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
 - Games may design their own sound effects by varying pitch, sweep, duration, and waveform, or combining multiple env.beep() calls for actions, rewards, damage, and ambience. These sounds may also play while the game is previewed in the feed.
-- If a game uses any sound, it must continuously show a tappable sound icon in the lower-left corner. Tapping it switches between sound and mute, and the icon must visibly switch between a speaker and a crossed-out speaker. Do not call env.beep() while muted.
-- Draw the sound control inside the canvas with a safe margin. Handle its hit area first in input('down', x, y), so the same tap cannot also trigger a gameplay action.
+- When a Script uses env.beep(), PlayFeed automatically shows its standard speaker/mute button in the lower-left corner. Do not draw a sound button inside the game or handle that button in input().
+- Every sound must use env.beep(). After the player selects mute, the platform forcibly blocks every env.beep() sound from that game.
 - env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
 - env.texture(key): obtain Remix media as a WebGLTexture in a 3D game. Returns null while unavailable.
 - Public submissions do not receive env.getSprite.
@@ -334,7 +334,7 @@ Rules:
 - The game calls env.setScore() and env.over().
 - stop() stops all animations and timers.
 - Every run begins with a short in-canvas control instruction.
-- If the game uses sound, a working speaker/mute icon remains visible in the lower-left corner and tapping it does not also trigger gameplay.
+- If the game uses sound, every sound uses env.beep(); PlayFeed supplies the standard speaker/mute button.
 - preview is cover or demo and is chosen so the preview cannot spoil content or decide for the player.
 - The Script does not show its own Start button or wait in a pre-start state.
 - At least one remix slot is present and every slotted element is drawn through env.sprite().
@@ -431,7 +431,7 @@ Core requirements:
 - At the beginning of start(), briefly draw the controls inside the canvas.
 - Use preview: 'cover' for hidden information or player decisions, and preview: 'demo' only when automatic input cannot spoil the game.
 - Do not build a Start button; PlayFeed handles previewing and tap-to-start.
-- If the game uses sound, keep a working speaker/mute toggle visible in the lower-left corner and gate every env.beep() call with that setting.
+- If the game uses sound, remove any in-game sound toggle and route every sound through env.beep(); PlayFeed supplies and enforces the speaker/mute control.
 - Provide at least one remix slot. Every replaceable element must actually call env.sprite(), drawing its original appearance only when no replacement is available.
 - Technical repairs must not restrict or redesign the gameplay.
 - Output exactly one complete JavaScript code block with no other text.
@@ -459,7 +459,7 @@ ${source}
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
 - 隱藏資訊或需要玩家決定的遊戲使用 preview: 'cover'；只有不怕自動輸入劇透時才使用 preview: 'demo'。
 - 不可自行製作開始按鈕；平台會處理預覽與輕點開局。
-- 如果遊戲使用音效，左下角必須持續顯示可操作的喇叭／靜音切換圖示，所有 env.beep() 都必須受此設定控制。
+- 如果遊戲使用音效，移除遊戲自行繪製的音效開關，所有聲音都改用 env.beep()；喇叭／靜音控制由 PlayFeed 統一提供並強制執行。
 - remixSlots 至少一項；每個可換元素都要實際呼叫 env.sprite()，沒有素材時才畫原本外觀。
 - 技術修復不應限制或重新設計玩法。
 - 最後只輸出一個完整 JavaScript 程式碼區塊，不要加入其他文字。
