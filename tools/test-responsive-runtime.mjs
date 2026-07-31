@@ -49,6 +49,9 @@ assert(creator.includes("m.type==='audio-on'") &&
   creator.includes("m.type==='audio-off'") &&
   creator.includes("runtime.send('audio-on')"),
   'sandbox previews must enable sound only after the host unlocks audio');
+assert(creator.includes("send('sound',{f1:finite(f1)") &&
+  creator.includes("host.beep(msg.f1, msg.f2, msg.dur, msg.vol, msg.wave)"),
+  'sandbox sound must be played by the unlocked top-level PlayFeed audio context');
 assert(importedSpec.FULL_SPEC.includes('最後只輸出一個完整 JavaScript 程式碼區塊') &&
   importedSpec.FULL_SPEC_EN.includes('Finally, output exactly one complete JavaScript code block'),
   'both creator specifications must remain intact through their final instruction');

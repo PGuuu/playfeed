@@ -333,10 +333,10 @@ function send(type,data={}){parent.postMessage({playfeed:true,channel:CHANNEL,ty
 function finite(n){n=Number(n);return Number.isFinite(n)?Math.max(-1e9,Math.min(1e9,n)):0}
 function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of intervals)real.clearInterval(id);for(const id of rafs)real.caf(id);timers.clear();intervals.clear();rafs.clear();if(hardTimer)real.clearTimeout(hardTimer);if(autoTimer)real.clearInterval(autoTimer);hardTimer=autoTimer=null}
 function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();stopAudio();ended=true}
-let audioEnabled=false;const audioVoices=new Set();
-function stopAudio(){for(const voice of audioVoices)try{voice.stop()}catch(e){}audioVoices.clear()}
-function enableAudio(){audioEnabled=true;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A());if(ac.state==='suspended')ac.resume()}catch(e){}}
-function beep(f1,f2,dur,vol,type){if(!audioEnabled)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain(),seconds=Math.min(2,Math.max(.01,finite(dur)));o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+seconds);g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+seconds);o.connect(g);g.connect(ac.destination);audioVoices.add(o);o.onended=()=>audioVoices.delete(o);o.start();o.stop(ac.currentTime+seconds)}catch(e){}}
+let audioEnabled=false;
+function stopAudio(){}
+function enableAudio(){audioEnabled=true}
+function beep(f1,f2,dur,vol,type){if(!audioEnabled)return;send('sound',{f1:finite(f1),f2:finite(f2),dur:finite(dur),vol:finite(vol),wave:type||'sine'})}
 const GL_TEXTURES={},GL_TEXTURE_FAILED=new Set();
 function sprite(key,cx,cy,size,flip){if(!ctx)return false;const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
 function texture(key){if(!gl||GL_TEXTURE_FAILED.has(key))return null;if(GL_TEXTURES[key])return GL_TEXTURES[key];const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return null;let value=null;try{value=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,value);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);GL_TEXTURES[key]=value;return value}catch(e){if(value)try{gl.deleteTexture(value)}catch(_){}GL_TEXTURE_FAILED.add(key);return null}}
@@ -371,6 +371,9 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
       if (Number.isFinite(msg.H) && msg.H > 0) dimensions.H = msg.H;
       ready = true;
       while (queue.length) frame.contentWindow.postMessage(queue.shift(), '*');
+    }
+    if (msg.type === 'sound' && host.audioUnlocked) {
+      host.beep(msg.f1, msg.f2, msg.dur, msg.vol, msg.wave);
     }
     onMessage?.(msg);
   };
