@@ -159,12 +159,15 @@
   height: min(100dvh, calc(100vw * 700 / 400));
   max-width: 100vw; overflow: hidden; background: #09090d;
 }
-.creator-playtest-frame, .creator-playtest-frame iframe,
+.creator-playtest-frame,
 .creator-playtest-input {
   position: absolute; left: 0; right: 0; top: 0;
   bottom: calc(64px + env(safe-area-inset-bottom)); width: 100%; height: auto;
 }
-.creator-playtest-frame iframe { border: 0; pointer-events: none; }
+.creator-playtest-frame iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border: 0; display: block; pointer-events: none;
+}
 .creator-playtest-input { z-index: 3; touch-action: none; }
 .creator-playtest-exit {
   position: absolute; z-index: 4; left: 0; right: 0; bottom: 0;
