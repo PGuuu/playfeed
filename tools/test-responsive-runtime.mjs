@@ -41,6 +41,14 @@ assert(!creatorStyles.includes('.creator-playtest-frame, .creator-playtest-frame
   'creator playtest iframe must not inherit height:auto from the play-area rule');
 assert(/\.creator-playtest-frame iframe\s*\{[^}]*height:\s*100%/s.test(creatorStyles),
   'creator playtest iframe must explicitly fill the playtest frame');
+assert(index.includes('beep, setScore: () => {}'),
+  'built-in feed previews must receive the game sound API');
+assert(index.includes("window.addEventListener('pointerdown', unlockFeedAudio"),
+  'feed audio must unlock after the first user gesture');
+assert(creator.includes("m.type==='audio-on'") &&
+  creator.includes("m.type==='audio-off'") &&
+  creator.includes("runtime.send('audio-on')"),
+  'sandbox previews must enable sound only after the host unlocks audio');
 assert(importedSpec.FULL_SPEC.includes('最後只輸出一個完整 JavaScript 程式碼區塊') &&
   importedSpec.FULL_SPEC_EN.includes('Finally, output exactly one complete JavaScript code block'),
   'both creator specifications must remain intact through their final instruction');

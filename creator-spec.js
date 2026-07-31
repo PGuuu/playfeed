@@ -82,6 +82,7 @@ metadata 規則：
 - env.setScore(number)：更新當局分數。
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
+- 遊戲可自行設計音效：使用不同頻率、滑音、長度與波形，或組合多次 env.beep() 製作操作、得分、受傷與環境聲。Feed 瀏覽預覽也可能播放這些音效。
 - env.sprite(key, centerX, centerY, size, flip?)：請平台畫出 Remix 素材；有素材時回傳 true，否則回傳 false。
 - env.texture(key)：3D 遊戲取得 Remix 素材的 WebGLTexture；尚未載入或沒有素材時回傳 null。
 - 公開投稿不提供 env.getSprite。
@@ -252,6 +253,7 @@ Metadata rules:
 - env.setScore(number): update the current score.
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
+- Games may design their own sound effects by varying pitch, sweep, duration, and waveform, or combining multiple env.beep() calls for actions, rewards, damage, and ambience. These sounds may also play while the game is previewed in the feed.
 - env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
 - env.texture(key): obtain Remix media as a WebGLTexture in a 3D game. Returns null while unavailable.
 - Public submissions do not receive env.getSprite.

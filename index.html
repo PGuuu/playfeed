@@ -618,20 +618,34 @@
 /* ---------- 全域：畫布尺寸與音效（遊戲包會用到） ---------- */
 const W = 400, H = 700;
 let AC = null;
+let audioUnlocked = false;
 function ensureAudio() {
-  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  if (!AC) AC = new AudioContextClass();
   if (AC.state === 'suspended') AC.resume();
 }
+function unlockFeedAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  ensureAudio();
+  window.dispatchEvent(new CustomEvent('playfeed-audio-unlocked'));
+}
+window.addEventListener('pointerdown', unlockFeedAudio, { capture: true, once: true });
 function beep(f1, f2, dur, vol, type) {
+  if (!audioUnlocked) return;
+  ensureAudio();
   if (!AC) return;
+  const seconds = Math.min(2, Math.max(.01, Number(dur) || .08));
+  const volume = Math.min(.5, Math.max(.001, Number(vol) || .08));
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type || 'sine';
-  o.frequency.setValueAtTime(f1, AC.currentTime);
-  o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), AC.currentTime + dur);
-  g.gain.setValueAtTime(vol, AC.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  o.frequency.setValueAtTime(Math.max(20, Number(f1) || 220), AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, Number(f2) || 220), AC.currentTime + seconds);
+  g.gain.setValueAtTime(volume, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + seconds);
   o.connect(g); g.connect(AC.destination);
-  o.start(); o.stop(AC.currentTime + dur);
+  o.start(); o.stop(AC.currentTime + seconds);
 }
 </script>
 
@@ -2151,7 +2165,7 @@ function makePost(entry, opts) {
     pvEnv.H = env.H = viewport.H;
   }
   const pvEnv = {
-    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
+    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
       if (!pv.on) return;
       clearTimeout(pv.restartT);
@@ -2738,6 +2752,7 @@ loadRemixGames();
 window.PlayFeedHost = {
   get db() { return db; },
   get user() { return user; },
+  get audioUnlocked() { return audioUnlocked; },
   feed,
   icons: ICONS,
   get locale() { return i18n?.locale || 'zh-Hant'; },

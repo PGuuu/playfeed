@@ -332,8 +332,11 @@ window.cancelAnimationFrame=id=>{rafs.delete(id);real.caf(id)};
 function send(type,data={}){parent.postMessage({playfeed:true,channel:CHANNEL,type,...data},'*')}
 function finite(n){n=Number(n);return Number.isFinite(n)?Math.max(-1e9,Math.min(1e9,n)):0}
 function clearAll(){for(const id of timers)real.clearTimeout(id);for(const id of intervals)real.clearInterval(id);for(const id of rafs)real.caf(id);timers.clear();intervals.clear();rafs.clear();if(hardTimer)real.clearTimeout(hardTimer);if(autoTimer)real.clearInterval(autoTimer);hardTimer=autoTimer=null}
-function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();ended=true}
-function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+Math.min(2,Math.max(.01,finite(dur))));o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+Math.min(2,Math.max(.01,finite(dur))))}catch(e){}}
+function stop(){if(game&&game.stop)try{game.stop()}catch(e){}clearAll();stopAudio();ended=true}
+let audioEnabled=false;const audioVoices=new Set();
+function stopAudio(){for(const voice of audioVoices)try{voice.stop()}catch(e){}audioVoices.clear()}
+function enableAudio(){audioEnabled=true;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A());if(ac.state==='suspended')ac.resume()}catch(e){}}
+function beep(f1,f2,dur,vol,type){if(!audioEnabled)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=beep.ac||(beep.ac=new A()),o=ac.createOscillator(),g=ac.createGain(),seconds=Math.min(2,Math.max(.01,finite(dur)));o.type=type||'sine';o.frequency.setValueAtTime(Math.max(20,finite(f1)),ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(20,finite(f2)),ac.currentTime+seconds);g.gain.setValueAtTime(Math.min(.5,Math.max(.001,finite(vol))),ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+seconds);o.connect(g);g.connect(ac.destination);audioVoices.add(o);o.onended=()=>audioVoices.delete(o);o.start();o.stop(ac.currentTime+seconds)}catch(e){}}
 const GL_TEXTURES={},GL_TEXTURE_FAILED=new Set();
 function sprite(key,cx,cy,size,flip){if(!ctx)return false;const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
 function texture(key){if(!gl||GL_TEXTURE_FAILED.has(key))return null;if(GL_TEXTURES[key])return GL_TEXTURES[key];const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return null;let value=null;try{value=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,value);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);GL_TEXTURES[key]=value;return value}catch(e){if(value)try{gl.deleteTexture(value)}catch(_){}GL_TEXTURE_FAILED.add(key);return null}}
@@ -342,8 +345,8 @@ function start(mode){stop();fitCanvas();ended=false;score=0;env.mode=mode;if(ctx
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
 function autoInput(){if(ended)return;const x=env.W*(.15+Math.random()*.7),y=env.H*(.22+Math.random()*.58);input('down',x,y);if(Math.random()<.45){input('move',Math.max(env.W*.05,Math.min(env.W*.95,x+(Math.random()-.5)*env.W*.55)),y+(Math.random()-.5)*env.H*.06)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setTimeout(()=>{if(ended)return;autoInput();autoTimer=real.setInterval(autoInput,480+Math.random()*180)},1250)}
-function dispose(){stop();if(gl){const ext=gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext()}}
-addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start('play');else if(m.type==='preview')start('preview');else if(m.type==='auto')start('demo');else if(m.type==='stop')stop();else if(m.type==='dispose')dispose();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
+function dispose(){stop();stopAudio();if(gl){const ext=gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext()}}
+addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='audio-on')enableAudio();else if(m.type==='audio-off'){audioEnabled=false;stopAudio()}else if(m.type==='start')start('play');else if(m.type==='preview')start('preview');else if(m.type==='auto')start('demo');else if(m.type==='stop')stop();else if(m.type==='dispose')dispose();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
 addEventListener('error',e=>send('runtime-error',{message:String(e.message||'執行錯誤')}));
 try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];setupRenderer();send('ready',{W:env.W,H:env.H})}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
 })();<\/script></body></html>`;
@@ -692,6 +695,7 @@ function openPlaytest(result, onDone) {
       status.classList.add('show', 'bad');
     }
   });
+  if (host.audioUnlocked) playtestRuntime.send('audio-on');
   playtestRuntime.send('start');
 
   stage.addEventListener('pointerdown', event => {
@@ -1270,6 +1274,7 @@ function addSandboxPost(row, options = {}) {
         host.setGameActive(false);
       }
     }, entry.spriteData || {});
+    if (host.audioUnlocked) runtime.send('audio-on');
     runtime.send(mode);
   };
   const begin = () => {
@@ -1291,6 +1296,9 @@ function addSandboxPost(row, options = {}) {
     tapHint.classList.add('hidden');
     destroyRuntime(); resetOverlay();
   };
+  window.addEventListener('playfeed-audio-unlocked', () => {
+    if ((playing || previewing) && runtime) runtime.send('audio-on');
+  });
 
   function logical(event) {
     const r = inputLayer.getBoundingClientRect();
