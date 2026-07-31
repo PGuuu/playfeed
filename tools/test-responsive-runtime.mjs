@@ -49,6 +49,7 @@ assert(index.includes('beep, setScore: () => {}'),
 assert(index.includes("window.addEventListener('pointerdown', unlockFeedAudio"),
   'feed audio must unlock after the first user gesture');
 assert(index.includes('if (!audioUnlocked || audioMuted) return;') &&
+  index.includes('let audioMuted = true;') &&
   index.includes("button.className = 'sound-toggle'") &&
   index.includes('setAudioMuted(!audioMuted)'),
   'the platform sound button must forcibly gate every host sound');

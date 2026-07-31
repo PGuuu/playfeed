@@ -633,8 +633,11 @@
 const W = 400, H = 700;
 let AC = null;
 let audioUnlocked = false;
-let audioMuted = false;
-try { audioMuted = localStorage.getItem('playfeed-muted') === '1'; } catch (_) {}
+let audioMuted = true;
+try {
+  const savedAudioMuted = localStorage.getItem('playfeed-muted');
+  audioMuted = savedAudioMuted === null ? true : savedAudioMuted !== '0';
+} catch (_) {}
 const activeAudioVoices = new Set();
 function ensureAudio() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
