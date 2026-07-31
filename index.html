@@ -2134,18 +2134,24 @@ function makePost(entry, opts) {
 
   /* 預覽：cover 只顯示遊戲首頁；demo 才由平台送出隨機輸入示範玩法。 */
   const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
+  const viewport = { W, H };
   function fitCanvas() {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    const pixelWidth = Math.round(rect.width * renderDpr);
-    const pixelHeight = Math.round(rect.height * renderDpr);
-    if (canvas.width === pixelWidth && canvas.height === pixelHeight) return;
+    const pixelWidth = Math.max(1, Math.round(rect.width * renderDpr));
+    const pixelHeight = Math.max(1, Math.round(rect.height * renderDpr));
+    const wide = pixelWidth / pixelHeight >= W / H;
+    viewport.W = wide ? H * pixelWidth / pixelHeight : W;
+    viewport.H = wide ? H : W * pixelHeight / pixelWidth;
     canvas.width = pixelWidth;
     canvas.height = pixelHeight;
-    ctx.setTransform(pixelWidth / W, 0, 0, pixelHeight / H, 0, 0);
+    const unit = Math.min(pixelWidth / viewport.W, pixelHeight / viewport.H);
+    ctx.setTransform(unit, 0, 0, unit, 0, 0);
+    pvEnv.W = env.W = viewport.W;
+    pvEnv.H = env.H = viewport.H;
   }
   const pvEnv = {
-    W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
+    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
       if (!pv.on) return;
       clearTimeout(pv.restartT);
@@ -2175,12 +2181,14 @@ function makePost(entry, opts) {
     }, delay);
   }
   function pvDemoInput() {
-    const x = W * (0.15 + Math.random() * 0.7), y = H * (0.25 + Math.random() * 0.55);
+    const x = viewport.W * (0.15 + Math.random() * 0.7);
+    const y = viewport.H * (0.25 + Math.random() * 0.55);
     pv.game.input('down', x, y);
     if (Math.random() < 0.45) {
       /* 偶爾加入水平或垂直拖曳，讓不同操作的遊戲預覽都能展現玩法。 */
       let step = 0;
-      const dx = (Math.random() - 0.5) * 240, dy = (Math.random() - 0.5) * 240;
+      const dx = (Math.random() - 0.5) * viewport.W * .6;
+      const dy = (Math.random() - 0.5) * viewport.H * .34;
       clearInterval(pv.swipeIv);
       pv.swipeIv = setInterval(() => {
         if (!pv.on) return clearInterval(pv.swipeIv);
@@ -2194,7 +2202,7 @@ function makePost(entry, opts) {
   }
 
   const env = {
-    W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep, getSprite, sprite: drawSprite,
+    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep, getSprite, sprite: drawSprite,
     setScore(n) { scEl.textContent = n; },
     over(score) {
       state.running = false;
@@ -2261,7 +2269,10 @@ function makePost(entry, opts) {
 
   function toLogical(e) {
     const r = canvas.getBoundingClientRect();
-    return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
+    return [
+      (e.clientX - r.left) / r.width * viewport.W,
+      (e.clientY - r.top) / r.height * viewport.H
+    ];
   }
   /* 首頁交給瀏覽器原生 scroll-snap；單一遊戲視圖才使用互動式拖曳。 */
   let gest = null;

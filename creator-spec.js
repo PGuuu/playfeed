@@ -70,9 +70,10 @@ metadata 規則：
 
 ## 2. Runtime API
 
-- 使用 env.W / env.H 作為邏輯畫布尺寸（目前是 400 × 700 設計單位），不要自行讀取螢幕像素。
+- 使用 env.W / env.H 作為當前裝置的邏輯畫布尺寸；這兩個值會依實際遊戲區的長寬比改變，不可假設固定數字。
 - 平台會依裝置像素密度清晰縮放：直式裝置填滿可用畫面；橫式螢幕則讓完整直式遊戲以畫面高度置中顯示。
 - 所有位置與大小都應由 env.W / env.H 推算。不要使用固定 CSS 尺寸，也不要假設手機的實際長寬比。
+- 以畫面中心、邊緣、安全邊距及 `Math.min(env.W, env.H)` 排版；背景必須覆蓋 `0, 0, env.W, env.H`，圓形與文字不可因長寬比不同而變形。
 - renderer 預設為 '2d'。一般遊戲使用 env.ctx；真正需要 3D 時可設為 '3d' 並使用 env.gl。
 - env.ctx：renderer 為 '2d' 時提供 Canvas 2D context。
 - env.gl：renderer 為 '3d' 時提供 WebGL2 或 WebGL context。不得載入外部模型、貼圖或引擎。
@@ -239,9 +240,10 @@ Metadata rules:
 
 ## 2. Runtime API
 
-- Use env.W / env.H as the logical canvas size (currently 400 × 700 design units). Do not read physical screen pixels.
+- Use env.W / env.H as the current device's logical canvas size. These values change with the actual game-area aspect ratio; never assume fixed dimensions or read physical screen pixels.
 - PlayFeed scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
 - Derive positions and sizes from env.W / env.H. Do not use fixed CSS sizes or assume a physical phone aspect ratio.
+- Lay out from the center, edges, safe margins, and `Math.min(env.W, env.H)`. Cover the background from `0, 0` through `env.W, env.H`; circles and text must keep their proportions at every aspect ratio.
 - renderer defaults to '2d'. Use env.ctx for normal games. Set renderer to '3d' only when real 3D is essential, then use env.gl.
 - env.ctx: Canvas 2D context when renderer is '2d'.
 - env.gl: WebGL2 or WebGL context when renderer is '3d'. Do not load external models, textures, or engines.

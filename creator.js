@@ -309,10 +309,10 @@ function sandboxDocument(channel, source, duration, spriteData = {}, locale = 'z
 (()=>{'use strict';
 const CHANNEL=${JSON.stringify(channel)}, LIMIT=${hardLimit * 1000}, LOCALE=${JSON.stringify(locale)};
 const SPRITE_SOURCES=${JSON.stringify(spriteData || {})},SPRITES={};
-const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3);
-let ctx=null,gl=null,env=null,renderer='2d';
+const canvas=document.querySelector('canvas'),DPR=Math.min(Math.max(devicePixelRatio||1,1),3),BASE_W=400,BASE_H=700;
+let ctx=null,gl=null,env=null,renderer='2d',logicalW=BASE_W,logicalH=BASE_H;
 for(const [key,url] of Object.entries(SPRITE_SOURCES)){const image=new Image();image.src=url;SPRITES[key]=image}
-function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),scale=gl?Math.min(DPR,1.75):DPR,pw=Math.round(w*scale),ph=Math.round(h*scale);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;if(ctx)ctx.setTransform(pw/400,0,0,ph/700,0,0);if(gl)gl.viewport(0,0,pw,ph)}}
+function fitCanvas(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),scale=gl?Math.min(DPR,1.75):DPR,pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale)),wide=pw/ph>=BASE_W/BASE_H,nextW=wide?BASE_H*pw/ph:BASE_W,nextH=wide?BASE_H:BASE_W*ph/pw,changed=Math.abs(nextW-logicalW)>.5||Math.abs(nextH-logicalH)>.5||canvas.width!==pw||canvas.height!==ph;logicalW=nextW;logicalH=nextH;if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}if(ctx){const unit=Math.min(pw/logicalW,ph/logicalH);ctx.setTransform(unit,0,0,unit,0,0)}if(gl)gl.viewport(0,0,pw,ph);if(env){env.W=logicalW;env.H=logicalH}return changed}
 let definition=null,game=null,ended=true,score=0,hardTimer=null,autoTimer=null;
 const timers=new Set(),intervals=new Set(),rafs=new Set();
 const real={
@@ -337,15 +337,15 @@ function beep(f1,f2,dur,vol,type){try{const A=window.AudioContext||window.webkit
 const GL_TEXTURES={},GL_TEXTURE_FAILED=new Set();
 function sprite(key,cx,cy,size,flip){if(!ctx)return false;const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.min(size/image.naturalWidth,size/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.translate(cx,cy);if(flip)ctx.scale(-1,1);ctx.drawImage(image,-w/2,-h/2,w,h);ctx.restore();return true}
 function texture(key){if(!gl||GL_TEXTURE_FAILED.has(key))return null;if(GL_TEXTURES[key])return GL_TEXTURES[key];const image=SPRITES[key];if(!image||!image.complete||!image.naturalWidth)return null;let value=null;try{value=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,value);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);GL_TEXTURES[key]=value;return value}catch(e){if(value)try{gl.deleteTexture(value)}catch(_){}GL_TEXTURE_FAILED.add(key);return null}}
-function setupRenderer(){renderer=definition&&definition.renderer==='3d'?'3d':'2d';if(renderer==='3d'){gl=canvas.getContext('webgl2',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'})||canvas.getContext('webgl',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'});if(!gl)throw new Error('此裝置不支援 WebGL');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!ended)send('runtime-error',{message:'3D 圖形資源已被系統釋放'})})}else{ctx=canvas.getContext('2d');if(!ctx)throw new Error('無法建立 2D 畫布')}fitCanvas();env={W:400,H:700,ctx,gl,renderer,locale:LOCALE,beep,sprite,texture,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}}}
-function start(mode){stop();fitCanvas();ended=false;score=0;env.mode=mode;if(ctx)ctx.clearRect(0,0,400,700);if(gl){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(mode==='demo')startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
+function setupRenderer(){renderer=definition&&definition.renderer==='3d'?'3d':'2d';if(renderer==='3d'){gl=canvas.getContext('webgl2',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'})||canvas.getContext('webgl',{alpha:false,antialias:true,depth:true,powerPreference:'low-power'});if(!gl)throw new Error('此裝置不支援 WebGL');canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(!ended)send('runtime-error',{message:'3D 圖形資源已被系統釋放'})})}else{ctx=canvas.getContext('2d');if(!ctx)throw new Error('無法建立 2D 畫布')}fitCanvas();env={W:logicalW,H:logicalH,ctx,gl,renderer,locale:LOCALE,beep,sprite,texture,setScore(n){if(ended)return;score=finite(n);send('score',{score})},over(n){if(ended)return;score=finite(n);ended=true;clearAll();send('over',{score})}}}
+function start(mode){stop();fitCanvas();ended=false;score=0;env.mode=mode;if(ctx)ctx.clearRect(0,0,env.W,env.H);if(gl){gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}try{game=definition.create(env);game.start();send('score',{score:0});hardTimer=real.setTimeout(()=>{if(!ended)env.over(score)},LIMIT);if(mode==='demo')startAuto()}catch(e){ended=true;send('runtime-error',{message:String(e&&e.message||e)})}}
 function input(type,x,y){if(ended||!game||!game.input)return;try{game.input(type,finite(x),finite(y))}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}}
-function autoInput(){if(ended)return;const x=60+Math.random()*280,y=150+Math.random()*430;input('down',x,y);if(Math.random()<.45){input('move',Math.max(20,Math.min(380,x+(Math.random()-.5)*220)),y+(Math.random()-.5)*40)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
+function autoInput(){if(ended)return;const x=env.W*(.15+Math.random()*.7),y=env.H*(.22+Math.random()*.58);input('down',x,y);if(Math.random()<.45){input('move',Math.max(env.W*.05,Math.min(env.W*.95,x+(Math.random()-.5)*env.W*.55)),y+(Math.random()-.5)*env.H*.06)}real.setTimeout(()=>input('up',x,y),80+Math.random()*180)}
 function startAuto(){if(autoTimer)real.clearInterval(autoTimer);autoTimer=real.setTimeout(()=>{if(ended)return;autoInput();autoTimer=real.setInterval(autoInput,480+Math.random()*180)},1250)}
 function dispose(){stop();if(gl){const ext=gl.getExtension('WEBGL_lose_context');if(ext)ext.loseContext()}}
 addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.channel!==CHANNEL)return;const m=e.data;if(m.type==='start')start('play');else if(m.type==='preview')start('preview');else if(m.type==='auto')start('demo');else if(m.type==='stop')stop();else if(m.type==='dispose')dispose();else if(m.type==='input')input(m.inputType,m.x,m.y);else if(m.type==='capture'){let image=null;try{image=canvas.toDataURL('image/webp',.78)}catch(_){}send('capture',{image})}});
 addEventListener('error',e=>send('runtime-error',{message:String(e.message||'執行錯誤')}));
-try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];setupRenderer();send('ready')}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
+try{const binary=atob(${JSON.stringify(encoded)}),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),code=new TextDecoder().decode(bytes);window.GAMES=[];(new Function(code))();if(!Array.isArray(window.GAMES)||window.GAMES.length!==1)throw new Error('Script 沒有註冊恰好一款遊戲');definition=window.GAMES[0];setupRenderer();send('ready',{W:env.W,H:env.H})}catch(e){send('runtime-error',{message:String(e&&e.message||e)})}
 })();<\/script></body></html>`;
 }
 
@@ -359,10 +359,13 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
   container.appendChild(frame);
   let ready = false;
   const queue = [];
+  const dimensions = { W: 400, H: 700 };
   const listener = event => {
     const msg = event.data;
     if (event.source !== frame.contentWindow || !msg?.playfeed || msg.channel !== channel) return;
     if (msg.type === 'ready') {
+      if (Number.isFinite(msg.W) && msg.W > 0) dimensions.W = msg.W;
+      if (Number.isFinite(msg.H) && msg.H > 0) dimensions.H = msg.H;
       ready = true;
       while (queue.length) frame.contentWindow.postMessage(queue.shift(), '*');
     }
@@ -371,6 +374,8 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
   window.addEventListener('message', listener);
   return {
     frame,
+    get W() { return dimensions.W; },
+    get H() { return dimensions.H; },
     send(type, data = {}) {
       const message = { channel, type, ...data };
       if (!ready && type !== 'stop') queue.push(message);
@@ -669,8 +674,8 @@ function openPlaytest(result, onDone) {
   const logical = event => {
     const rect = inputLayer.getBoundingClientRect();
     return [
-      (event.clientX - rect.left) / rect.width * 400,
-      (event.clientY - rect.top) / rect.height * 700
+      (event.clientX - rect.left) / rect.width * (playtestRuntime?.W || 400),
+      (event.clientY - rect.top) / rect.height * (playtestRuntime?.H || 700)
     ];
   };
 
@@ -1289,7 +1294,10 @@ function addSandboxPost(row, options = {}) {
 
   function logical(event) {
     const r = inputLayer.getBoundingClientRect();
-    return [(event.clientX - r.left) / r.width * 400, (event.clientY - r.top) / r.height * 700];
+    return [
+      (event.clientX - r.left) / r.width * (runtime?.W || 400),
+      (event.clientY - r.top) / r.height * (runtime?.H || 700)
+    ];
   }
   stage.addEventListener('pointerdown', event => {
     const interactive = event.target instanceof Element && event.target.closest('.rail, .go');
