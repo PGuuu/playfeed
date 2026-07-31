@@ -44,15 +44,20 @@ assert(!creatorStyles.includes('.creator-playtest-frame, .creator-playtest-frame
   'creator playtest iframe must not inherit height:auto from the play-area rule');
 assert(/\.creator-playtest-frame iframe\s*\{[^}]*height:\s*100%/s.test(creatorStyles),
   'creator playtest iframe must explicitly fill the playtest frame');
-assert(index.includes('beep, setScore: () => {}'),
-  'built-in feed previews must receive the game sound API');
+assert(index.includes('beep: () => {}, setScore: () => {}'),
+  'built-in feed previews must always be silent');
 assert(index.includes("window.addEventListener('pointerdown', unlockFeedAudio"),
   'feed audio must unlock after the first user gesture');
-assert(index.includes('if (!audioUnlocked || audioMuted) return;') &&
+assert(index.includes('if (!audioUnlocked || audioMuted || !audioPlaybackActive) return;') &&
   index.includes('let audioMuted = true;') &&
   index.includes("button.className = 'sound-toggle'") &&
   index.includes('setAudioMuted(!audioMuted)'),
   'the platform sound button must forcibly gate every host sound');
+assert(index.includes('setAudioPlaybackActive(false);') &&
+  index.includes('beep: () => {}, setScore: () => {}') &&
+  creator.includes("host.audioUnlocked && mode === 'start'") &&
+  creator.includes('if (playing && runtime)'),
+  'sound must be limited to active play, never feed previews or other pages');
 assert(index.includes('window.PlayFeedCreator?.pausePreview(entry.id);') &&
   index.includes('stopActiveAudio();') &&
   creator.includes('pausePreview(id)'),
@@ -63,7 +68,7 @@ assert(creator.includes('host.createSoundToggle(host.sourceUsesSound(entry.scrip
 assert(creator.includes("m.type==='audio-on'") &&
   creator.includes("m.type==='audio-off'") &&
   creator.includes("runtime.send('audio-on')"),
-  'sandbox previews must enable sound only after the host unlocks audio');
+  'sandbox gameplay must enable sound only after the host unlocks audio');
 assert(creator.includes("send('sound',{f1:finite(f1)") &&
   creator.includes("host.beep(msg.f1, msg.f2, msg.dur, msg.vol, msg.wave)"),
   'sandbox sound must be played by the unlocked top-level PlayFeed audio context');

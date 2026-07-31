@@ -638,6 +638,7 @@ function setDraftMetadataFromEdits(card) {
 
 function closePlaytest(completed, message = '') {
   if (!playtestRoot) return;
+  host.setAudioPlaybackActive(false);
   if (playtestGesture && playtestRuntime) {
     playtestRuntime.send('input', {
       inputType: 'cancel',
@@ -671,6 +672,7 @@ function openPlaytest(result, onDone) {
   playtestRoot = root;
   playtestDone = onDone;
   host.setNavVisible(false);
+  host.setAudioPlaybackActive(true);
 
   const stage = root.querySelector('.creator-playtest-stage');
   const frameHost = root.querySelector('.creator-playtest-frame');
@@ -689,11 +691,13 @@ function openPlaytest(result, onDone) {
 
   playtestRuntime = createRuntime(frameHost, result.source, result.metadata.duration, msg => {
     if (msg.type === 'over' && root.dataset.failed !== 'true') {
+      host.setAudioPlaybackActive(false);
       status.textContent = `遊戲結束 · ${msg.score}`;
       status.classList.add('show');
       setTimeout(() => closePlaytest(true, '試玩完成，可以發布'), 520);
     }
     if (msg.type === 'runtime-error') {
+      host.setAudioPlaybackActive(false);
       root.dataset.failed = 'true';
       playtestRuntime?.send('stop');
       status.textContent = `執行錯誤：${msg.message} · 從底部上滑離開`;
@@ -1283,7 +1287,7 @@ function addSandboxPost(row, options = {}) {
         host.setGameActive(false);
       }
     }, entry.spriteData || {});
-    if (host.audioUnlocked) runtime.send('audio-on');
+    if (host.audioUnlocked && mode === 'start') runtime.send('audio-on');
     runtime.send(mode);
   };
   const begin = () => {
@@ -1306,7 +1310,7 @@ function addSandboxPost(row, options = {}) {
     destroyRuntime(); resetOverlay();
   };
   window.addEventListener('playfeed-audio-unlocked', () => {
-    if ((playing || previewing) && runtime) runtime.send('audio-on');
+    if (playing && runtime) runtime.send('audio-on');
   });
 
   function logical(event) {

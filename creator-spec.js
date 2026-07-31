@@ -82,8 +82,8 @@ metadata 規則：
 - env.setScore(number)：更新當局分數。
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
-- 遊戲可自行設計音效：使用不同頻率、滑音、長度與波形，或組合多次 env.beep() 製作操作、得分、受傷與環境聲。Feed 瀏覽預覽也可能播放這些音效。
-- 只要 Script 使用 env.beep()，PlayFeed 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕。Feed 預覽預設靜音，玩家可主動點擊開啟。遊戲不可自行繪製音效按鈕，也不需要處理它的點擊。
+- 遊戲可自行設計音效：使用不同頻率、滑音、長度與波形，或組合多次 env.beep() 製作操作、得分、受傷與環境聲。這些音效只會在玩家正式遊玩時播放。
+- 只要 Script 使用 env.beep()，PlayFeed 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕。聲音只會在玩家正式遊玩時播放；Feed 預覽、滑離遊戲及任何其他頁面一律無聲。遊戲不可自行繪製音效按鈕，也不需要處理它的點擊。
 - 所有聲音都必須透過 env.beep() 播放。玩家選擇靜音後，平台會強制攔截該遊戲的全部 env.beep() 音效。
 - env.sprite(key, centerX, centerY, size, flip?)：請平台畫出 Remix 素材；有素材時回傳 true，否則回傳 false。
 - env.texture(key)：3D 遊戲取得 Remix 素材的 WebGLTexture；尚未載入或沒有素材時回傳 null。
@@ -256,8 +256,8 @@ Metadata rules:
 - env.setScore(number): update the current score.
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
-- Games may design their own sound effects by varying pitch, sweep, duration, and waveform, or combining multiple env.beep() calls for actions, rewards, damage, and ambience. These sounds may also play while the game is previewed in the feed.
-- When a Script uses env.beep(), PlayFeed automatically shows its standard speaker/mute button in the lower-left corner. Feed previews are muted by default and players may opt in to sound. Do not draw a sound button inside the game or handle that button in input().
+- Games may design their own sound effects by varying pitch, sweep, duration, and waveform, or combining multiple env.beep() calls for actions, rewards, damage, and ambience. These sounds play only during active gameplay.
+- When a Script uses env.beep(), PlayFeed automatically shows its standard speaker/mute button in the lower-left corner. Sound is allowed only during active gameplay; feed previews, games that have been swiped away, and every other page are always silent. Do not draw a sound button inside the game or handle that button in input().
 - Every sound must use env.beep(). After the player selects mute, the platform forcibly blocks every env.beep() sound from that game.
 - env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
 - env.texture(key): obtain Remix media as a WebGLTexture in a 3D game. Returns null while unavailable.

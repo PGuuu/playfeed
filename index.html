@@ -633,6 +633,7 @@
 const W = 400, H = 700;
 let AC = null;
 let audioUnlocked = false;
+let audioPlaybackActive = false;
 let audioMuted = true;
 try {
   const savedAudioMuted = localStorage.getItem('playfeed-muted');
@@ -653,7 +654,7 @@ function unlockFeedAudio() {
 }
 window.addEventListener('pointerdown', unlockFeedAudio, { capture: true, once: true });
 function beep(f1, f2, dur, vol, type) {
-  if (!audioUnlocked || audioMuted) return;
+  if (!audioUnlocked || audioMuted || !audioPlaybackActive) return;
   ensureAudio();
   if (!AC) return;
   const seconds = Math.min(2, Math.max(.01, Number(dur) || .08));
@@ -683,6 +684,10 @@ function stopActiveAudio() {
     try { voice.stop(); } catch (_) {}
   }
   activeAudioVoices.clear();
+}
+function setAudioPlaybackActive(active) {
+  audioPlaybackActive = !!active;
+  if (!audioPlaybackActive) stopActiveAudio();
 }
 function sourceUsesSound(source) {
   return typeof source === 'string' && /\b(?:env\s*\.\s*)?beep\s*\(/.test(source);
@@ -867,6 +872,7 @@ function requireLogin(action) {
 const mainNav = document.getElementById('mainNav');
 function setNavVisible(v) { mainNav.classList.toggle('hide', !v); }
 function setGameActive(active) {
+  setAudioPlaybackActive(active);
   document.body.classList.toggle('game-active', !!active);
   if (active) setNavVisible(false);
   else restoreNavVisibility();
@@ -881,6 +887,7 @@ function advanceFeedFrom(post) {
 /* 關掉某個蓋在上面的面板（留言/登入/改造）後，導覽列該不該出現要看底下是首頁還是單一遊戲視圖 */
 function restoreNavVisibility() { setNavVisible(!document.getElementById('remixView').classList.contains('open')); }
 function setMainNavActive(tab) {
+  setAudioPlaybackActive(false);
   document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
   document.getElementById('navCreateMain').classList.toggle('active', tab === 'create');
   document.getElementById('navSearchMain').classList.toggle('active', tab === 'search');
@@ -2238,7 +2245,7 @@ function makePost(entry, opts) {
     pvEnv.H = env.H = viewport.H;
   }
   const pvEnv = {
-    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep, setScore: () => {}, getSprite, sprite: drawSprite,
+    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
     over() {
       if (!pv.on) return;
       clearTimeout(pv.restartT);
@@ -2827,6 +2834,7 @@ window.PlayFeedHost = {
   get user() { return user; },
   get audioUnlocked() { return audioUnlocked; },
   beep,
+  setAudioPlaybackActive,
   sourceUsesSound,
   createSoundToggle,
   feed,
