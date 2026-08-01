@@ -18,6 +18,7 @@ const OFFICIAL_GAME_IDS = [
   'dodge', 'boba', 'timing', 'bubble', 'stack', 'mole', 'redlight',
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
   'crossy-chicken', 'softserve', 'last-rain-bus', 'sand-canvas', 'neon-last-stand', 'sky-drop-3d',
+  'word-tides',
 ];
 const OFFICIAL_BACKGROUNDS = {
   dodge: '#65C7C4',
@@ -38,6 +39,7 @@ const OFFICIAL_BACKGROUNDS = {
   'sand-canvas': '#F6E2B8',
   'neon-last-stand': '#160C29',
   'sky-drop-3d': '#A7D8EE',
+  'word-tides': '#102D38',
 };
 const recentRequests = new Map();
 
@@ -412,7 +414,9 @@ async function syncOfficialGames(user, body) {
       slug: id,
       suggested_id: id,
       api_version: 1,
-      game_version: id === 'neon-last-stand'
+      game_version: id === 'word-tides'
+        ? 'official-1.0.0'
+        : id === 'neon-last-stand'
         ? 'official-1.3.0'
         : id === 'sky-drop-3d'
           ? 'official-1.4.0'
@@ -431,7 +435,9 @@ async function syncOfficialGames(user, body) {
       author_id: user.id,
       author_name: publicName(user),
       status: 'published',
-      created_at: id === 'sky-drop-3d'
+      created_at: id === 'word-tides'
+        ? new Date('2026-08-02T04:00:00.000Z').toISOString()
+        : id === 'sky-drop-3d'
         ? new Date('2026-07-29T02:00:00.000Z').toISOString()
         : id === 'neon-last-stand'
           ? new Date('2026-07-28T13:00:00.000Z').toISOString()
