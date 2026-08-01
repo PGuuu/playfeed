@@ -19,6 +19,7 @@ const OFFICIAL_GAME_IDS = [
   'slice', 'react', 'sheep', 'pixel-guess', 'potato-peel',
   'crossy-chicken', 'softserve', 'last-rain-bus', 'sand-canvas', 'neon-last-stand', 'sky-drop-3d',
   'word-tides',
+  'ink-creature',
 ];
 const OFFICIAL_BACKGROUNDS = {
   dodge: '#65C7C4',
@@ -40,6 +41,7 @@ const OFFICIAL_BACKGROUNDS = {
   'neon-last-stand': '#160C29',
   'sky-drop-3d': '#A7D8EE',
   'word-tides': '#102D38',
+  'ink-creature': '#030508',
 };
 const recentRequests = new Map();
 
@@ -435,7 +437,9 @@ async function syncOfficialGames(user, body) {
       author_id: user.id,
       author_name: publicName(user),
       status: 'published',
-      created_at: id === 'word-tides'
+      created_at: id === 'ink-creature'
+        ? new Date('2026-08-02T05:00:00.000Z').toISOString()
+        : id === 'word-tides'
         ? new Date('2026-08-02T04:00:00.000Z').toISOString()
         : id === 'sky-drop-3d'
         ? new Date('2026-07-29T02:00:00.000Z').toISOString()
