@@ -27,7 +27,7 @@ window.GAMES = (window.GAMES || []).concat([
       label: '觸碰核心',
       hint: '手指按住時浮現的發光核心',
       default: '✦',
-      shape: 'round'
+      shape: 'circle'
     }
   ],
 
