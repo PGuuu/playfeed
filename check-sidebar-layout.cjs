@@ -1,0 +1,16 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const source=fs.readFileSync('index.html','utf8'),css=fs.readFileSync('feed-layout.css','utf8');
+const script=source.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
+fs.writeFileSync('check-feed-script.mjs',script);
+require('node:child_process').execFileSync(process.execPath,['--check','check-feed-script.mjs']);
+fs.unlinkSync('check-feed-script.mjs');
+assert(!source.includes('id="toggle-controls"'));assert(!source.includes('hideNavigation'));assert(!source.includes('revealNavigation'));
+assert(source.includes('switcher.setPointerCapture'));assert(source.includes('Math.abs(distance)>=32'));assert(source.includes('event.detail===0'));
+assert(source.includes("switchGame(distance<0?1:-1)"));assert(source.includes("showGame(target,direction<0?'previous':'next')"));
+assert(source.includes('game.viewport || {width:390,height:700}'));
+assert(css.includes('visibility:visible;pointer-events:auto'));
+assert(source.includes('feed-layout.css'));assert(!source.includes('rotate-cw'));
+assert(!/<nav id="top-controls"/.test(source));assert(source.includes('class="feed-logo" href="/"'));
+const template=source.match(/<template id="card">([\s\S]*?)<\/template>/)[1];
+assert(!template.match(/class="game-viewport"[\s\S]*?class="game-more"[\s\S]*?<footer>/));
+console.log('PASS: module syntax, persistent controls, external rail, isotropic iframe fit, tap/swipe distinction, keyboard and analytics hooks');

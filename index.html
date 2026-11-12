@@ -145,6 +145,7 @@
   .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
+<link rel="stylesheet" href="/feed-layout.css">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PlayFeed">
@@ -164,7 +165,6 @@
 <link rel="canonical" href="https://playfeed-gilt.vercel.app/">
 </head>
 <body>
-<nav id="top-controls" class="feed-brand" inert aria-label="遊戲牆導覽"><a class="brand" href="/" aria-label="重新整理 PlayFeed">Play<span>Feed</span></a><div class="nav-actions"><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><a class="account-link" href="/account.html" aria-label="我的頁面">👤</a></div></nav>
 <dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。登入後可以留言及儲存遊戲。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
 <dialog class="search-dialog" aria-label="搜尋遊戲">
   <form method="dialog"><input type="search" id="game-search" aria-label="遊戲關鍵字" placeholder="搜尋遊戲、作者" autocomplete="off"><button aria-label="關閉搜尋">關閉</button></form>
@@ -193,12 +193,15 @@
   <div class="comments-content"><p class="comments-message" role="status"></p><ul class="comments-list"></ul></div>
   <form class="comments-form"><input name="comment" aria-label="新增留言" placeholder="登入後留言…" maxlength="1000" required autocomplete="off"><button type="submit">發送</button></form>
 </section>
-<main id="feed" aria-label="PlayFeed 遊戲牆"></main>
-<nav class="game-switcher" aria-label="切換遊戲">
-  <button id="previous-game" type="button" aria-label="上一款"><span class="triangle up" aria-hidden="true"></span></button>
-  <button id="toggle-controls" type="button" aria-label="顯示控制板" aria-expanded="false" aria-controls="top-controls"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <button id="next-game" type="button" aria-label="下一款"><span class="triangle down" aria-hidden="true"></span></button>
-</nav>
+<div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"></main>
+<aside class="feed-rail" aria-label="會員、搜尋與遊戲切換">
+ <nav class="rail-tools" aria-label="帳號與搜尋"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button></nav>
+ <nav class="game-switcher" aria-label="切換遊戲，可上下滑動">
+  <button id="previous-game" type="button" aria-label="上一款"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg><span class="switch-label">上一款</span></button>
+  <button id="next-game" type="button" aria-label="下一款"><span class="switch-label">下一款</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
+ </nav>
+ <a class="feed-logo" href="/" aria-label="PlayFeed，重新整理遊戲"><span>pf<span class="logo-dot">.</span></span></a>
+</aside></div>
 <div class="action-status" role="status" aria-live="polite"></div>
 <main id="creator" class="creator-page" aria-labelledby="creator-name" hidden>
   <header><span class="brand">Play<span>Feed</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
@@ -211,13 +214,14 @@
 <template id="card">
   <article>
 
-    <div class="game-viewport"><button class="game-more" type="button" aria-label="更多遊戲選項">⋯</button><div class="stage"><div class="empty">準備遊戲中</div></div></div>
+    <div class="game-viewport"><div class="stage"><div class="empty">準備遊戲中</div></div></div>
     <footer>
-      <a class="byline"></a>
+      <div class="game-info"><span class="game-title"></span><a class="byline"></a></div>
       <div class="actions">
-        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
-        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><span class="action-label">儲存</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
-        <button class="share" type="button" aria-label="分享">分享</button>
+        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
+        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">儲存</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
+        <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span></button>
+        <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
       </div>
     </footer>
   </article>
@@ -252,11 +256,13 @@
   const switcher = document.querySelector('.game-switcher');
   const previousButton = document.querySelector('#previous-game');
   const nextButton = document.querySelector('#next-game');
-  const feedBrand = document.querySelector('.feed-brand');
+  const shell = document.querySelector('.feed-shell');
+  const rail = document.querySelector('.feed-rail');
   let canDeleteGame=false, ownerCheckVersion=0;
   PlayFeedAuth.onChange(user => {
     const account = document.querySelector('.account-link');
-    account.textContent = user?.email ? user.email[0].toUpperCase() : '👤';
+    account.textContent = user?.email ? user.email[0].toUpperCase() : '';
+    account.classList.toggle('signed-in',Boolean(user));
     account.title = user?.email || '免密碼信箱登入';
     const version=++ownerCheckVersion;canDeleteGame=false;document.querySelector('#delete-game').hidden=true;
     if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame}).catch(()=>{});
@@ -269,40 +275,6 @@
       localStorage.setItem('playfeed:visitor-token', visitorToken);
     }
   } catch { visitorToken = crypto.randomUUID(); }
-  const controlsButton = document.querySelector('#toggle-controls');
-  let navigationTimer;
-  function revealNavigation(autoHide = false) {
-    clearTimeout(navigationTimer);
-    if (feed.hidden) return;
-    document.body.classList.add('controls-visible');
-    feedBrand.classList.add('visible');
-    feedBrand.inert = false;
-    controlsButton.setAttribute('aria-expanded', 'true');
-    controlsButton.setAttribute('aria-label', '隱藏控制板');
-    if (activeIndex >= 0) loadEngagement(games[activeIndex], cards[activeIndex]);
-    if (autoHide) navigationTimer = setTimeout(hideNavigation, 1000);
-  }
-  function hideNavigation() {
-    clearTimeout(navigationTimer);
-    if(!document.querySelector('#save-hint').hidden)return;
-    document.body.classList.remove('controls-visible');
-    feedBrand.classList.remove('visible');
-    feedBrand.inert = true;
-    controlsButton.setAttribute('aria-expanded', 'false');
-    controlsButton.setAttribute('aria-label', '顯示控制板');
-  }
-  controlsButton.addEventListener('click', () => {
-    if (controlsButton.getAttribute('aria-expanded') === 'true') hideNavigation();
-    else revealNavigation();
-  });
-  // Cross-origin iframe interactions move focus out of the parent document.
-  window.addEventListener('blur', () => setTimeout(() => {
-    if (document.activeElement?.tagName === 'IFRAME') hideNavigation();
-  }, 0));
-  window.addEventListener('message', event => {
-    const frame = document.querySelector('article:not([hidden]) iframe');
-    if (frame && event.source === frame.contentWindow && ['playfeed:start', 'game:start'].includes(event.data?.type)) hideNavigation();
-  });
   const searchDialog = document.querySelector('.search-dialog');
   const searchInput = document.querySelector('#game-search');
   const reportMenu = document.querySelector('#report-menu');
@@ -324,7 +296,7 @@
   document.querySelector('#save-hint-action').addEventListener('click',()=>{const save=pendingHintSave;closeSaveHint();if(PlayFeedAuth.user)location.assign('/account.html');else PlayFeedAuth.openLogin(save)});
   function showSaveHint(save){
     try{if(localStorage.getItem('playfeed:save-hint:v1'))return false;localStorage.setItem('playfeed:save-hint:v1','1')}catch{if(showSaveHint.shown)return false}showSaveHint.shown=true;
-    pendingHintSave=save;revealNavigation();saveHint.hidden=false;
+    pendingHintSave=save;saveHint.hidden=false;
     const account=document.querySelector('.account-link');account.classList.add('save-highlight');
     const rect=account.getBoundingClientRect();saveHint.style.top=(rect.bottom+18)+'px';saveHint.style.right=Math.max(16,innerWidth-rect.right+rect.width/2-26)+'px';
     document.querySelector('#save-hint-copy').textContent=PlayFeedAuth.user?'點右上角的會員頭像，就能查看你儲存的遊戲。':'加入會員即可儲存遊戲，再點右上角的頭像查看收藏。';
@@ -503,7 +475,9 @@
     card.querySelector('.comments-button').addEventListener('click', () => openComments(index));
     const byline = card.querySelector('.byline');
     byline.href = game.creator.hash;
-    byline.textContent = '原作';
+    card.querySelector('.game-title').textContent=game.title;
+    card.querySelector('.game-title').title=game.title;
+    byline.textContent = 'by '+game.creator.name;
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
       renderSaved(card, false);
@@ -533,8 +507,7 @@
         if (navigator.share) await navigator.share({ title: game.title, url: link.href });
         else {
           await navigator.clipboard.writeText(link.href);
-          share.textContent = '已複製';
-          setTimeout(() => { share.textContent = '分享'; }, 1800);
+          notifyAction('已複製分享連結');
         }
         window.PlayFeedAnalytics?.event('share_success',{game:game.id,title:game.title});
       } catch (error) {
@@ -558,6 +531,7 @@
     commentsSheet.style.removeProperty('--drag-y');
     document.body.classList.remove('comments-open');
     document.body.style.removeProperty('--comments-height');
+    layoutFeed();
     if (index >= 0) {
       cards[index].querySelector('.stage').removeAttribute('style');
       const button = cards[index].querySelector('.comments-button');
@@ -594,16 +568,12 @@
     closeComments(false);
     commentsIndex=index;
     commentsForm.reset(); commentsList.replaceChildren();
-    const stage = cards[index].querySelector('.stage');
-    const width=stage.offsetWidth, height=stage.offsetHeight;
     commentsSheet.hidden=false;
     document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');
     document.body.classList.add('comments-open');
-    const viewport=cards[index].querySelector('.game-viewport');
-    const scale=Math.min(viewport.clientWidth/width,viewport.clientHeight/height,1);
-    Object.assign(stage.style,{position:'absolute',width:width+'px',height:height+'px',left:'50%',top:'0',transformOrigin:'top center',transform:'translateX(-50%) scale('+scale+')'});
+    layoutFeed();
     cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');
-    hideNavigation();
+
     readComments(index);
   }
   document.querySelector('.comments-close').addEventListener('click',()=>closeComments());
@@ -652,6 +622,22 @@
   let gameLoadFrame;
   let gameLoadTimer;
   let gameLoadVersion = 0;
+  function layoutFeed(){
+    if(shell.hidden||activeIndex<0)return;
+    const style=getComputedStyle(shell);
+    const left=parseFloat(style.paddingLeft),right=parseFloat(style.paddingRight),top=parseFloat(style.paddingTop),bottom=parseFloat(style.paddingBottom);
+    const availableWidth=Math.min(document.documentElement.clientWidth,462);
+    const viewportHeight=Math.min(window.innerHeight,window.visualViewport?.height||window.innerHeight);
+    const sheet=document.body.classList.contains('comments-open')?commentsSheet.offsetHeight:0;
+    const availableHeight=Math.max(180,viewportHeight-sheet);
+    const gameHeight=Math.min(700,Math.max(60,availableHeight-top-bottom-78));
+    const gameWidth=Math.min(390,Math.max(1,availableWidth-left-right-52),gameHeight*390/700);
+    const width=Math.min(availableWidth,Math.max(Math.min(280,availableWidth),gameWidth+52+left+right));
+    const height=Math.min(availableHeight,gameWidth*700/390+78+top+bottom);
+    shell.style.width=width+'px';shell.style.height=height+'px';shell.style.top=Math.max(0,(availableHeight-height)/2)+'px';
+  }
+  window.addEventListener('resize',layoutFeed);
+  window.visualViewport?.addEventListener('resize',layoutFeed);
   function unmountGame() {
     window.PlayFeedAnalytics?.setGame(null);
     closeComments(false);
@@ -675,8 +661,9 @@
     if (activeIndex === index) return;
     unmountGame();
     activeIndex = index;
-    hideNavigation();
+
     cards[index].hidden = false;
+    layoutFeed();
     previousButton.disabled = index === 0;
     nextButton.disabled = index === games.length - 1;
     notifyAction('');
@@ -688,8 +675,8 @@
     frame.setAttribute('sandbox', game.external && (!game.recommended || game.allowStorage) ? 'allow-scripts allow-same-origin' : 'allow-scripts');
     frame.setAttribute('allow', 'fullscreen');
     const stage = cards[index].querySelector('.stage');
-    if (game.viewport) {
-      const { width, height, nativeSize } = game.viewport;
+    {
+      const { width, height, nativeSize } = game.viewport || {width:390,height:700};
       if (nativeSize) {
         stage.classList.add('native-viewport');
       } else {
@@ -731,7 +718,7 @@
     const profile = profiles.get(location.hash);
     feed.hidden = Boolean(profile);
     creatorPage.hidden = !profile;
-    switcher.hidden = Boolean(profile);
+    shell.hidden = Boolean(profile);
     if (profile) {
       backToFeed.href = '#' + (games[activeIndex]?.id ?? profile.games[0].id);
       renderProfile(profile);
@@ -756,22 +743,46 @@
     if (target < 0 || target >= games.length) return;
     window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
     showGame(target,direction<0?'previous':'next');
-    revealNavigation(true);
+
   }
-  for (const [button, direction] of [[previousButton, -1], [nextButton, 1]]) {
-    button.addEventListener('pointerdown', event => {
-      if (!event.isPrimary || event.button !== 0) return;
-      event.preventDefault();
-      button.focus({ preventScroll: true });
-      switchGame(direction);
-    });
-    button.addEventListener('click', event => {
-      if (event.detail === 0) switchGame(direction);
-    });
-  }
+  let gesture=null,suppressClickUntil=0;
+  switcher.addEventListener('pointerdown',event=>{
+    if(!event.isPrimary||event.button!==0)return;
+    const middle=switcher.getBoundingClientRect().top+switcher.clientHeight/2;
+    const button=event.target.closest('button')||(event.clientY<middle?previousButton:nextButton);
+    event.preventDefault();
+    button.focus({preventScroll:true});
+    gesture={id:event.pointerId,y:event.clientY,button,moved:false};
+    switcher.setPointerCapture(event.pointerId);
+  });
+  switcher.addEventListener('pointermove',event=>{
+    if(!gesture||gesture.id!==event.pointerId)return;
+    if(Math.abs(event.clientY-gesture.y)>10)gesture.moved=true;
+  });
+  switcher.addEventListener('pointerup',event=>{
+    if(!gesture||gesture.id!==event.pointerId)return;
+    const {y,button,moved}=gesture;gesture=null;
+    const distance=event.clientY-y;
+    suppressClickUntil=performance.now()+500;
+    if(switcher.hasPointerCapture(event.pointerId))switcher.releasePointerCapture(event.pointerId);
+    if(Math.abs(distance)>=32)switchGame(distance<0?1:-1);
+    else if(!moved)switchGame(button===previousButton?-1:1);
+  });
+  switcher.addEventListener('pointercancel',()=>gesture=null);
+  for(const [button,direction]of [[previousButton,-1],[nextButton,1]])button.addEventListener('click',event=>{
+    if(performance.now()<suppressClickUntil)return;
+    // Keyboard and assistive-technology activation emits a click without a pointer gesture.
+    if(event.detail===0)switchGame(direction);
+  });
+  let lastWheel=0;
+  switcher.addEventListener('wheel',event=>{
+    if(event.ctrlKey)return;event.preventDefault();
+    if(Math.abs(event.deltaY)<8||performance.now()-lastWheel<400)return;
+    lastWheel=performance.now();switchGame(event.deltaY>0?1:-1);
+  },{passive:false});
   document.addEventListener('gesturestart', event => event.preventDefault(), { passive: false });
   document.addEventListener('wheel', event => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
-  revealNavigation(true);
+
   PlayFeedAuth.onChange(() => {
     if (activeIndex >= 0) loadEngagement(games[activeIndex], cards[activeIndex]);
   });
