@@ -11,6 +11,17 @@ async function userFromRequest(request, required = true) {
   throw Object.assign(new Error(auth.error?.message || '登入已失效。'), { status: auth.error?.status || 401 });
 }
 
+async function publicCounts(game) {
+  const [saves, comments] = await Promise.all([
+    supabaseRest('playfeed_user_actions', { method: 'HEAD', query: `select=game_key&game_key=eq.${encoded(game)}&kind=eq.save`, prefer: 'count=exact' }),
+    supabaseRest('playfeed_game_comments', { method: 'HEAD', query: `select=id&game_key=eq.${encoded(game)}`, prefer: 'count=exact' }),
+  ]);
+  for (const result of [saves, comments]) {
+    if (!result.ok || !Number.isSafeInteger(result.count)) throw new Error('Could not load engagement counts.');
+  }
+  return { saveCount: saves.count, commentCount: comments.count };
+}
+
 async function stateFor(game, userId) {
   const [legacyLikes, accountLikes, saves] = await Promise.all([
     supabaseRest('playfeed_game_likes', { query: `select=game_key&game_key=eq.${encoded(game)}` }),
@@ -24,6 +35,7 @@ async function stateFor(game, userId) {
     count: (legacyLikes.data?.length || 0) + (allAccountLikes.data?.length || 0),
     liked: Boolean(userId && accountLikes.data?.some(row => row.kind === 'like')),
     saved: Boolean(userId && saves.data?.length),
+    ...await publicCounts(game),
   };
 }
 
@@ -32,6 +44,7 @@ module.exports = async function handler(request, response) {
   try {
     if (request.method === 'GET') {
       const action = String(request.query?.action || 'state');
+      if (action === 'counts') return sendJson(response, 200, await publicCounts(gameKey(request.query?.gameKey)));
       if (action === 'state') {
         const user = await userFromRequest(request, false);
         return sendJson(response, 200, await stateFor(gameKey(request.query?.gameKey), user?.id));
@@ -40,7 +53,7 @@ module.exports = async function handler(request, response) {
         const game = gameKey(request.query?.gameKey);
         const rows = await supabaseRest('playfeed_game_comments', { query: `select=id,body,display_name,created_at&game_key=eq.${encoded(game)}&order=created_at.asc,id.asc&limit=100` });
         if (!rows.ok) throw new Error(rows.error);
-        return sendJson(response, 200, { comments: rows.data || [] });
+        return sendJson(response, 200, { comments: rows.data || [], ...await publicCounts(game) });
       }
       const user = await userFromRequest(request);
       if (['me', 'collection', 'review'].includes(action)) return sendJson(response, 200, await community.get(user, action));
@@ -71,7 +84,7 @@ module.exports = async function handler(request, response) {
       const row = { id: crypto.randomUUID(), game_key: gameKey(body.gameKey), body: safeText(body.body, { name: '留言', max: 1000 }), display_name: (await community.profileFor(user)).display_name, user_id: user.id };
       const write = await supabaseRest('playfeed_game_comments', { method: 'POST', body: row, prefer: 'return=minimal' });
       if (!write.ok) throw new Error(write.error);
-      return sendJson(response, 201, { ok: true });
+      return sendJson(response, 201, { ok: true, ...await publicCounts(row.game_key) });
     }
 
 

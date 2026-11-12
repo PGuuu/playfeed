@@ -122,6 +122,9 @@
   .actions { flex-wrap: wrap; justify-content: flex-end; }
   .byline { flex-shrink: 0; }
   @media(max-width:420px) { article > footer { left: 10px; right: 10px; gap: 6px; padding: 8px; } .actions { gap: 4px; } .actions button,.actions a { padding: 8px 6px; font-size: 12px; } }
+  .comments-button, .reaction { position: relative; overflow: visible; }
+  .action-count { position: absolute; top: -7px; right: -5px; min-width: 17px; padding: 1px 4px; border: 1px solid #55545f; border-radius: 999px; background: #373640; color: #faf8f2; font-size: 10px; font-weight: 700; line-height: 14px; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .reaction[aria-pressed="true"] .action-count { background: #d6fb65; color: #101014; border-color: #d6fb65; }
 </style>
 </head>
 <body>
@@ -175,8 +178,8 @@
     <footer>
       <a class="byline"></a>
       <div class="actions">
-        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet">留言</button>
-        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false">儲存</button>
+        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
+        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><span class="action-label">儲存</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
         <button class="share" type="button" aria-label="分享">分享</button>
         <a class="source recommend" href="/submit.html">推薦新遊戲</a>
       </div>
@@ -233,6 +236,7 @@
     feedBrand.inert = false;
     controlsButton.setAttribute('aria-expanded', 'true');
     controlsButton.setAttribute('aria-label', '隱藏控制板');
+    if (activeIndex >= 0) loadEngagement(games[activeIndex], cards[activeIndex]);
     if (autoHide) navigationTimer = setTimeout(hideNavigation, 1000);
   }
   function hideNavigation() {
@@ -346,14 +350,45 @@
   function notifyAction(message) {
     document.querySelector('.action-status').textContent = message;
   }
-  async function loadLike(game, card) {
+  const engagementVersions = new WeakMap();
+  function invalidateEngagement(card) {
+    const version = (engagementVersions.get(card) || 0) + 1;
+    engagementVersions.set(card, version);
+    return version;
+  }
+  function renderSaved(card, active) {
+    const button = card.querySelector('[data-kind="saved"]');
+    button.setAttribute('aria-pressed', String(active));
+    button.querySelector('.action-label').textContent = active ? '已儲存' : '儲存';
+  }
+  function renderCounts(card, counts) {
+    for (const [field, selector, label] of [
+      ['commentCount', '.comments-button', '留言'],
+      ['saveCount', '[data-kind="saved"]', '儲存']
+    ]) {
+      const count = counts[field];
+      if (!Number.isSafeInteger(count) || count < 0) continue;
+      const button = card.querySelector(selector);
+      button.querySelector('.action-count').textContent = count.toLocaleString('zh-TW');
+      button.setAttribute('aria-label', label + '，共 ' + count + (field === 'commentCount' ? ' 則留言' : ' 人儲存'));
+    }
+  }
+  async function loadEngagement(game, card) {
+    const version = invalidateEngagement(card);
+    const key = encodeURIComponent(new URL(game.url, location.origin + '/').href);
     try {
-      const key = new URL(game.url, location.origin + '/').href;
-      const state = await PlayFeedAuth.api('/api/account?action=state&gameKey=' + encodeURIComponent(key));
-      const saved = card.querySelector('[data-kind="saved"]');
-      saved.setAttribute('aria-pressed', String(state.saved));
-      saved.textContent = state.saved ? '已儲存' : '儲存';
-    } catch {}
+      // Totals are public; checking login is unnecessary to read them.
+      const counts = await PlayFeedAuth.api('/api/account?action=counts&gameKey=' + key);
+      if (engagementVersions.get(card) !== version) return;
+      renderCounts(card, counts);
+      if (!PlayFeedAuth.user) { renderSaved(card, false); return; }
+      const state = await PlayFeedAuth.api('/api/account?action=state&gameKey=' + key);
+      if (engagementVersions.get(card) !== version) return;
+      renderSaved(card, state.saved);
+      renderCounts(card, state);
+    } catch {
+      // Keep unavailable counts as a dash, rather than reporting a false zero.
+    }
   }
   function renderProfile(profile) {
     document.querySelector('#creator-name').textContent = profile.name;
@@ -403,17 +438,15 @@
     byline.textContent = '原作';
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
-      function renderReaction(active) {
-        button.setAttribute('aria-pressed', String(active));
-        button.textContent = active ? '已儲存' : '儲存';
-      }
-      renderReaction(false);
+      renderSaved(card, false);
       button.addEventListener('click', () => PlayFeedAuth.requireLogin(async () => {
         const active = button.getAttribute('aria-pressed') !== 'true';
         button.disabled = true;
+        invalidateEngagement(card);
         try {
-          await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
-          renderReaction(active);
+          const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
+          renderSaved(card, state.saved);
+          renderCounts(card, state);
         } catch (error) { notifyAction(error.message); }
         finally { button.disabled = false; }
       }));
@@ -461,8 +494,9 @@
     commentsMessage.textContent = '載入留言中…';
     try {
       const key = new URL(games[index].url,location.origin + "/").href;
-      const { comments: rows } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key));
+      const { comments: rows, ...counts } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key));
       if (commentsIndex !== index || version !== commentsVersion) return;
+      renderCounts(cards[index], counts);
       commentsList.replaceChildren();
       for (const row of rows.reverse()) {
         const li = document.createElement('li');
@@ -507,7 +541,9 @@
     if(index<0||!body||button.disabled)return;
     button.disabled=true; commentsMessage.textContent='送出中…';
     try {
-      await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameKey:new URL(games[index].url,location.origin + "/").href,body})});
+      invalidateEngagement(cards[index]);
+      const counts = await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameKey:new URL(games[index].url,location.origin + "/").href,body})});
+      renderCounts(cards[index], counts);
       if(commentsIndex===index) { input.value=''; await readComments(index); }
     } catch { if(commentsIndex===index)commentsMessage.textContent='留言未送出，請再試一次。'; }
     finally {button.disabled=false;}
@@ -566,7 +602,7 @@
     nextButton.disabled = index === games.length - 1;
     notifyAction('');
     const game = games[index];
-    loadLike(game, cards[index]);
+    loadEngagement(game, cards[index]);
     const frame = document.createElement('iframe');
     frame.title = game.title;
     frame.setAttribute('sandbox', game.external && (!game.recommended || game.allowStorage) ? 'allow-scripts allow-same-origin' : 'allow-scripts');
@@ -650,6 +686,9 @@
   document.addEventListener('gesturestart', event => event.preventDefault(), { passive: false });
   document.addEventListener('wheel', event => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
   revealNavigation(true);
+  PlayFeedAuth.onChange(() => {
+    if (activeIndex >= 0) loadEngagement(games[activeIndex], cards[activeIndex]);
+  });
 </script>
 </body>
 </html>

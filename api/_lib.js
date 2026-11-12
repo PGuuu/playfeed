@@ -116,7 +116,9 @@ async function supabaseRest(table, { method = 'GET', query = '', body, prefer = 
   const text = await response.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text || null; }
+  const total = response.headers.get('content-range')?.split('/').pop();
   return {
+    count: /^\d+$/.test(total || '') ? Number(total) : null,
     ok: response.ok,
     status: response.status,
     data,

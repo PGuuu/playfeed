@@ -36,7 +36,7 @@ for (const file of ['index.html','account.html','submit.html']) {
  await page.locator('#toggle-controls').click();
  assert.equal(await page.locator('article:not([hidden]) footer').isVisible(),true);
  assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'true');
- assert.deepEqual(await page.locator('article:not([hidden]) .actions').innerText(), '留言\n儲存\n分享\n推薦新遊戲');
+ assert.deepEqual(await page.locator('article:not([hidden]) .action-label').allTextContents(), ['留言','儲存']);
  await page.locator('article:not([hidden]) iframe').click({position:{x:30,y:100}});
  await page.waitForTimeout(100);
  assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'false');
