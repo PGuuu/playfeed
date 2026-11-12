@@ -20,7 +20,10 @@ async function ensureDevice(id,info){
  await db('playfeed_analytics_devices',{method:'POST',query:'on_conflict=id',body:{id,family:info.family,browser:info.browser},prefer:'resolution=ignore-duplicates,return=minimal'});
 }
 async function owner(req){const result=await verifyPhuzeSession(req);if(!result.user||!OWNERS.has(result.user.email.toLowerCase()))throw Object.assign(Error('僅限網站擁有者查看統計。'),{status:403});return result.user;}
-async function markOwner(id,label){await db('playfeed_analytics_devices',{method:'PATCH',query:'id=eq.'+id,body:{is_owner:true,label:String(label||'我的裝置').slice(0,60),last_seen:new Date().toISOString()}});}
+async function markOwner(id,label,overwrite=true){
+ await db('playfeed_analytics_devices',{method:'PATCH',query:'id=eq.'+id,body:{is_owner:true,...(overwrite?{label:String(label||'我的裝置').slice(0,60)}:{}),last_seen:new Date().toISOString()}});
+ if(!overwrite)await db('playfeed_analytics_devices',{method:'PATCH',query:'id=eq.'+id+'&label=eq.',body:{label:String(label||'我的裝置').slice(0,60)}});
+}
 function text(v,max){return typeof v==='string'?v.slice(0,max):'';}
 module.exports=async(req,res)=>{
  if(!requestOriginAllowed(req))return sendJson(res,403,{error:'Origin not allowed'});
@@ -43,7 +46,7 @@ module.exports=async(req,res)=>{
   if(action==='init')return sendJson(res,200,{ok:true});
   if(action==='identify'){
    const verified=await verifyPhuzeSession(req);
-   if(verified.user&&OWNERS.has(verified.user.email.toLowerCase())){await markOwner(id,'我的 '+info.family+' · '+info.browser);return sendJson(res,200,{isOwner:true});}
+   if(verified.user&&OWNERS.has(verified.user.email.toLowerCase())){await markOwner(id,'我的 '+info.family+' · '+info.browser,false);return sendJson(res,200,{isOwner:true});}
    return sendJson(res,200,{isOwner:false});
   }
   if(action==='pair-link'){

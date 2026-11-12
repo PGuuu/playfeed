@@ -172,6 +172,7 @@
     } finally { delete form.dataset.sending; renderButton(); }
   }
   function openLogin(afterLogin) {
+    window.PlayFeedAnalytics?.event('login_open');
     pendingLogin = typeof afterLogin === 'function' ? afterLogin : null;
     const dialog = document.querySelector('#login-dialog');
     if (dialog && !dialog.open) dialog.showModal();

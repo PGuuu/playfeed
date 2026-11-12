@@ -513,7 +513,7 @@
         try {
           const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
           renderSaved(card, state.saved);
-          window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success');
+          window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
           renderCounts(card, state);
           if(state.saved)showSaveHint();
         } catch (error) { notifyAction(error.message); }
@@ -535,7 +535,7 @@
           share.textContent = '已複製';
           setTimeout(() => { share.textContent = '分享'; }, 1800);
         }
-        window.PlayFeedAnalytics?.event('share_success');
+        window.PlayFeedAnalytics?.event('share_success',{game:game.id,title:game.title});
       } catch (error) {
         if (error.name !== 'AbortError') window.prompt('複製遊戲連結', link.href);
       }
