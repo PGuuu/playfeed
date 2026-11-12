@@ -27,19 +27,19 @@ async function get(user, action) {
   return { requests: await db('playfeed_requests', { query: 'select=*&status=eq.pending&order=created_at.asc' }) };
  }
  if (action === 'collection') {
-  const [profile, admin, actions, requests, notifications] = await Promise.all([
+  const [profile, admin, actions, requests, notifications, recommendations] = await Promise.all([
    profileFor(user), isAdmin(user),
    db('playfeed_user_actions', { query: 'select=game_key,kind,created_at&user_id=eq.' + eq(user.id) + '&order=created_at.desc' }),
    db('playfeed_requests', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc' }),
-   db('playfeed_notifications', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc&limit=100' })
+   db('playfeed_notifications', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc&limit=100' }),
+   db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&submitted_by=eq.' + eq(user.id) + '&order=created_at.desc' })
   ]);
-  const recommendations = await db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&submitted_by=eq.' + eq(user.id) + '&order=created_at.desc' });
   const ids = requests.filter(r=>r.status==='approved'&&r.published_game_id).map(r=>r.published_game_id);
   if (ids.length) {
    const linked = await db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&id=in.(' + ids.join(',') + ')' });
    for (const row of linked) if (!recommendations.some(r=>r.id===row.id)) recommendations.push(row);
   }
-  return { profile, isAdmin: admin, actions, requests, notifications, recommendations };
+  return { user: { id: user.id, email: user.email }, profile, isAdmin: admin, actions, requests, notifications, recommendations };
  }
 }
 async function post(user, body) {

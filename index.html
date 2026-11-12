@@ -126,6 +126,7 @@
   .action-count { position: absolute; top: -7px; right: -5px; min-width: 17px; padding: 1px 4px; border: 1px solid #55545f; border-radius: 999px; background: #373640; color: #faf8f2; font-size: 10px; font-weight: 700; line-height: 14px; font-variant-numeric: tabular-nums; pointer-events: none; }
   .reaction[aria-pressed="true"] .action-count { background: #d6fb65; color: #101014; border-color: #d6fb65; }
 </style>
+<link rel="prefetch" href="/account.html" as="document">
 </head>
 <body>
 <nav id="top-controls" class="feed-brand" inert aria-label="遊戲牆導覽"><a class="brand" href="/" aria-label="重新整理 PlayFeed">Play<span>Feed</span></a><div class="nav-actions"><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><a class="account-link" href="/account.html" aria-label="我的頁面">👤</a></div></nav>
@@ -188,6 +189,7 @@
 </template>
 <script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script type="module">
   const games = await loadPlayfeedGames();
+  try { sessionStorage.setItem('playfeed:catalog:v1', JSON.stringify({ time: Date.now(), games })); } catch {}
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
   const creatorHashes = new Map();

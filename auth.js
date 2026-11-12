@@ -2,7 +2,7 @@
   // Phuze's documented custom login flow: /auth/magic-link + /sessions/pickup.
   const tokenKey = 'phuze_session';
   const pendingKey = 'playfeed:phuze-pending';
-  const state = { user: null, token: '', ready: false, pending: null, listeners: new Set() };
+  const state = { user: null, token: '', ready: false, pending: null, collection: null, listeners: new Set() };
   let initialized = false, pendingLogin = null, pickupTimer, pickupBusy = false, refreshBusy = null, revision = 0;
   let form, input, button, status, retryButton, cooldownTimer, cooldownUntil = 0;
 
@@ -83,9 +83,11 @@
   }
   async function acceptToken(token) {
     const turn = revision;
-    const data = await request('/api/auth', { headers: { Authorization: 'Bearer ' + token } });
+    const collectionBootstrap = !state.user && document.querySelector('meta[name="playfeed-auth-bootstrap"]')?.content === 'collection';
+    const data = await request(collectionBootstrap ? '/api/account?action=collection' : '/api/auth', { headers: { Authorization: 'Bearer ' + token } });
     if (turn !== revision || !data.user?.id) return;
     const changed = state.token !== token || state.user?.id !== data.user.id;
+    if (collectionBootstrap) state.collection = data;
     state.token = token;
     state.user = data.user;
     state.ready = true;
@@ -105,12 +107,12 @@
       try { await acceptToken(token); }
       catch (error) {
         if (error.status === 401) {
-          state.token = ''; state.user = null; write(tokenKey, null); emit();
+          state.token = ''; state.user = null; state.collection = null; write(tokenKey, null); emit();
         }
         message(errorMessage(error));
       }
     })();
-    try { await refreshBusy; } finally { refreshBusy = null; state.ready = true; }
+    try { await refreshBusy; } finally { refreshBusy = null; state.ready = true; if (!state.user) emit(); }
   }
   async function pickup() {
     clearTimeout(pickupTimer);
@@ -182,7 +184,7 @@
     try { return await request(path, { ...options, headers }); }
     catch (error) {
       if (error.status === 401 && state.user) {
-        revision++; state.user = null; state.token = ''; write(tokenKey, null); emit();
+        revision++; state.user = null; state.token = ''; state.collection = null; write(tokenKey, null); emit();
       }
       throw error;
     }
@@ -194,7 +196,7 @@
   async function logout() {
     const token = state.token || read(tokenKey);
     if (token) await phuze('/sessions/logout', { method: 'POST', headers: { 'X-Session-Token': token } });
-    revision++; state.token = ''; state.user = null; pendingLogin = null;
+    revision++; state.token = ''; state.user = null; state.collection = null; pendingLogin = null;
     clearPending(); write(tokenKey, null); message('已登出。'); emit();
   }
   function resume() {
@@ -230,13 +232,15 @@
     window.addEventListener('storage', event => {
       if (event.key !== tokenKey) return;
       revision++;
-      if (!event.newValue) { state.user = null; state.token = ''; emit(); }
+      if (!event.newValue) { state.user = null; state.token = ''; state.collection = null; emit(); }
       else refresh();
     });
   }
   window.PlayFeedAuth = {
     api, init, openLogin, requireLogin, logout,
     onChange(listener) { state.listeners.add(listener); listener(state.user); return () => state.listeners.delete(listener); },
+    takeCollection() { const data = state.collection; state.collection = null; return data; },
+    get checking() { return !state.ready && Boolean(read(tokenKey) || state.token); },
     get user() { return state.user; }, get token() { return state.token; }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

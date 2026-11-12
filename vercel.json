@@ -1,9 +1,17 @@
 {
-  "rewrites": [{ "source": "/g/:id", "destination": "/api/share?id=:id" }],
+  "rewrites": [
+    {
+      "source": "/g/:id",
+      "destination": "/api/share?id=:id"
+    }
+  ],
   "functions": {
     "api/share.js": {
       "includeFiles": "{catalog.js,share-card-ids.json,index.html}",
       "maxDuration": 15
     }
-  }
+  },
+  "regions": [
+    "hnd1"
+  ]
 }
