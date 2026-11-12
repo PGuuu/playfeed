@@ -28,13 +28,17 @@ function render(){
   if(!PlayFeedAuth.user){const p=document.createElement('p');p.className='empty';p.textContent='登入後，就能在這裡看到你儲存和推薦的遊戲。';grid.append(p);return;}
   if(!collection){const p=document.createElement('p');p.className='empty';p.textContent='正在載入…';grid.append(p);return;}
   let entries=[];
-  if(tab==='recommended') entries=collection.recommendations.map(row=>({title:row.title||new URL(row.url).hostname,url:row.url,id:row.id}));
+  if(tab==='recommended') {
+    entries=collection.requests.map(row=>({title:new URL(row.url).hostname,url:row.url,id:row.published_game_id||row.id,status:row.status}));
+    for(const row of collection.recommendations){const entry=entries.find(item=>item.url===row.url);if(entry)Object.assign(entry,{title:row.title,id:row.id,status:'approved'});else entries.push({...row,status:'approved'});}
+  }
   else {const keys=new Set(collection.actions.filter(row=>row.kind==='save').map(row=>row.game_key));entries=games.filter(game=>keys.has(new URL(game.url,location.origin+'/').href));}
   for(const game of entries){
     const a=document.createElement('a');a.className='tile';
     const match=games.find(entry=>new URL(entry.url,location.origin).href===new URL(game.url,location.origin).href);
     const preview=match||game;
-    a.href='/#'+encodeURIComponent(preview.id);
+    a.href=tab==='recommended'?game.url:'/#'+encodeURIComponent(preview.id);
+    if(tab==='recommended'){a.target='_blank';a.rel='noopener noreferrer';}
     a.setAttribute('aria-label',game.title);
     const img=document.createElement('img');
     img.alt='';img.loading='lazy';img.decoding='async';img.width=390;img.height=700;
@@ -46,7 +50,7 @@ function render(){
     let sourceIndex=0;
     img.addEventListener('error',()=>{sourceIndex++;if(sourceIndex<sources.length)img.src=sources[sourceIndex];else img.remove()});
     img.src=sources[0];a.append(img);
-    const span=document.createElement('span');span.textContent=game.title;a.append(span);grid.append(a);
+    const span=document.createElement('span');span.textContent=game.title+(game.status?' · '+({pending:'待審核',approved:'已上架',rejected:'暫不上架'}[game.status]||''): '');a.append(span);grid.append(a);
   }
   if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent='這裡還沒有遊戲。';grid.append(p)}
 }
@@ -96,10 +100,10 @@ async function loadReview(){
  for(const request of result.requests){
   const row=document.createElement('div');row.className='review-row';
   const a=document.createElement('a');a.href=request.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=request.url;row.append(a);
-  const input=document.createElement('input');input.placeholder='上架遊戲名稱';input.value=new URL(request.url).hostname;input.maxLength=300;input.setAttribute('aria-label','上架遊戲名稱');row.append(input);
-  for(const [decision,label]of[['approve','上架並通知'],['reject','不予上架']]){
+  const preview=document.createElement('a');preview.href='/submit.html?request='+encodeURIComponent(request.id)+'&game='+encodeURIComponent(request.url);preview.textContent='預覽試玩與審核';preview.className='button';row.append(preview);
+  for(const [decision,label]of[['reject','不予上架']]){
    const button=document.createElement('button');button.className='button';button.textContent=label;
-   button.addEventListener('click',async()=>{row.querySelectorAll('button').forEach(b=>b.disabled=true);try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'review',requestId:request.id,decision,title:input.value})});await loadCollection()}catch(error){input.setCustomValidity(error.message);input.reportValidity();row.querySelectorAll('button').forEach(b=>b.disabled=false)}});row.append(button)
+   button.addEventListener('click',async()=>{row.querySelectorAll('button').forEach(b=>b.disabled=true);try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'review',requestId:request.id,decision,title:input.value})});await loadCollection()}catch(error){const status=document.createElement('p');status.textContent=error.message;row.append(status);row.querySelectorAll('button').forEach(b=>b.disabled=false)}});row.append(button)
   }
   list.append(row)
  }
@@ -108,3 +112,4 @@ async function loadReview(){
 }
 </script>
 </html>
+
