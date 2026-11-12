@@ -7,8 +7,8 @@ function card(game, image) {
  const left=el('div',{display:'flex',flexDirection:'column',width:720,height:630,padding:'48px 52px',justifyContent:'space-between'},[
   el('div',{color:'#d6fb65',fontSize:32,fontWeight:700},'PlayFeed'),
   el('div',{display:'flex',flexDirection:'column',gap:24},[
-   el('div',{fontSize:title.length>36?44:56,fontWeight:700,lineHeight:1.25,wordBreak:'break-all',overflow:'hidden',maxHeight:300},title),
-   el('div',{fontSize:28,color:'#d6fb65',lineHeight:1.4,wordBreak:'break-all',maxHeight:80,overflow:'hidden'},'by '+author)
+   el('div',{fontSize:title.length>36?44:56,fontWeight:700,lineHeight:1.25,overflow:'hidden',maxHeight:300},title),
+   el('div',{fontSize:28,color:'#d6fb65',lineHeight:1.4,maxHeight:80,overflow:'hidden'},'by '+author)
   ]),
   el('div',{color:'#b2b2bf',fontSize:22},'playfeed-gilt.vercel.app')
  ]);

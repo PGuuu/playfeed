@@ -21,7 +21,7 @@
     if (!button) return;
     const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
     button.disabled = Boolean(form?.dataset.sending) || remaining > 0;
-    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '寄登入連結給我';
+    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '免密碼信箱登入';
     if (remaining) cooldownTimer = setTimeout(renderButton, 1000);
   }
   function cooldown(seconds) {
@@ -223,6 +223,13 @@
       input.style.cssText = 'display:block;box-sizing:border-box;width:100%;min-width:0;padding:12px;border:1px solid #555;border-radius:12px;background:#25252d;color:inherit;font:inherit;font-size:16px';
       button.style.cssText = 'width:100%;margin-top:12px;background:#d6fb65;color:#101014;padding:12px;border:0;border-radius:12px;font:inherit;white-space:normal';
       form.append(input, button); host.append(form, status, retryButton);
+      const credit = document.createElement('p');
+      credit.className = 'phuze-credit';
+      credit.style.cssText = 'margin:16px 0 0;font-size:12px;color:#aaa8b3;line-height:1.6;text-align:center';
+      const provider = document.createElement('a');
+      provider.href = 'https://phuze.edato.me/'; provider.target = '_blank'; provider.rel = 'noopener noreferrer';
+      provider.textContent = 'Phuze'; provider.style.cssText = 'color:inherit;text-decoration:underline;text-underline-offset:3px';
+      credit.append('採用 ', provider, ' 快速認證系統'); host.append(credit);
       form.addEventListener('submit', send); renderButton();
     }
     loadPending(); resume();

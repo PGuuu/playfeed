@@ -13,7 +13,7 @@
   <p><button id="edit-profile" class="button" hidden>編輯個人資料</button> <a href="/submit.html">推薦新遊戲</a></p><section id="notifications" aria-label="通知"></section><section id="review" hidden><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
   <section class="grid" aria-live="polite"><p class="empty">正在載入…</p></section>
 </main>
-<dialog id="login-dialog"><h2>登入 PlayFeed</h2><p>輸入 Email，點信裡的連結就完成登入。</p><div id="phuze-widget"></div><button class="cancel" type="button" data-close-login>取消</button></dialog>
+<dialog id="login-dialog"><h2>免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。</p><div id="phuze-widget"></div><button class="cancel" type="button" data-close-login>取消</button></dialog>
 <dialog id="profile-dialog"><form id="profile-form"><h2>編輯個人資料</h2><label>名稱<input name="displayName" required maxlength="40"></label><label>自介<textarea name="bio" maxlength="300" rows="4"></textarea></label><label>網址<input name="website" type="url" maxlength="500" placeholder="https://"></label><p id="profile-status" role="status"></p><button class="button" type="submit">儲存</button><button class="button" type="button" id="cancel-profile">取消</button></form></dialog><script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script>
 <script>
 let tab='saved', collection=null, games=[], loadVersion=0;
