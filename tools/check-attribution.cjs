@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {extractMetadata,publicAddress}=require('../api/_source-metadata');
+assert.equal(extractMetadata('<meta content="Actual Creator" name="author"><title>A Game</title>','https://game.example/').author,'Actual Creator');
+assert.equal(extractMetadata('<div>遊戲製作 BY Mr.BradeHu</div>','https://game.example/').author,'Mr.BradeHu');
+assert.equal(extractMetadata('<script type="application/ld+json">{"author":{"name":"Studio","url":"https://studio.example/"}}</script>','https://game.example/').creator_url,'https://studio.example/');
+assert.equal(extractMetadata('<title>No credits</title>','https://game.example/').author,'來源：game.example');
+for(const ip of ['127.0.0.1','10.0.0.1','169.254.169.254','172.16.1.1','192.168.0.1','100.64.0.1','::1'])assert.equal(publicAddress(ip),false);
+const lib=require.resolve('../api/_lib');let published;
+require.cache[lib]={id:lib,filename:lib,loaded:true,exports:{publicName:()=> 'Gulla',safeText:x=>x,supabaseRest:async(table,options)=>{if(table==='playfeed_admins')return {ok:true,data:[{}]};if(table==='playfeed_recommendations'&&options.method==='POST'){published=options.body;return {ok:true,data:[{id:'new'}]}}return {ok:true,data:[]}}}};
+const meta=require.resolve('../api/_source-metadata');require.cache[meta].exports.sourceMetadata=async()=>({title:'Actual Game',author:'Actual Creator',creator_url:'https://creator.example/'});
+const assets=require.resolve('../api/_share-assets');require.cache[assets]={id:assets,filename:assets,loaded:true,exports:{prepareAsset:async()=>{}}};
+(async()=>{await require('../api/_community').post({id:'recommender',email:'gulla@example.com'},{action:'publish',url:'https://game.example/',interactionConfirmed:true});assert.equal(published.author,'Actual Creator');assert.equal(published.submitted_by,'recommender');assert.equal(published.creator_url,'https://creator.example/');console.log('PASS: original author extraction, missing-credit fallback, private-address blocking, publisher and creator separation')})().catch(e=>{console.error(e);process.exit(1)});
