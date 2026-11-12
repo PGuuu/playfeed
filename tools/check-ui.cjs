@@ -50,7 +50,9 @@ for (const file of ['index.html','account.html','submit.html']) {
  assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'true');
  assert.equal((await page.locator('.game-switcher').boundingBox()).width,24);
  await page.goto('https://playfeed.test/account.html');
- await page.waitForSelector('.tile iframe');
+ await page.waitForSelector('.tile img');
+ assert.equal(await page.locator('.tile iframe').count(),0);
+ assert.deepEqual(await page.locator('[data-tab]').allTextContents(),['儲存','我推薦的']);
  const tile=await page.locator('.tile').boundingBox();
  assert.ok(Math.abs(tile.width/tile.height-390/700)<0.01);
  assert.equal(await page.locator('#edit-profile').isVisible(),true);

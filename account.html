@@ -5,43 +5,41 @@
 <title>我的 PlayFeed</title>
 <style>
   *{box-sizing:border-box}body{margin:0;background:#101014;color:#faf8f2;font:15px system-ui,sans-serif;min-height:100dvh}a{color:inherit}.shell{max-width:900px;margin:auto;padding:20px 18px 48px}.top{display:flex;justify-content:space-between;align-items:center}.brand{font-size:22px;font-weight:900;text-decoration:none}.brand span{color:#d6fb65}.profile{display:flex;align-items:center;gap:16px;margin:42px 0 30px}.avatar{width:76px;height:76px;border-radius:50%;background:#d6fb65;color:#101014;display:grid;place-items:center;font-size:30px;font-weight:900}.identity h1{margin:0 0 5px;font-size:22px}.identity p{margin:0;color:#aaa8b3}.button{border:0;border-radius:999px;padding:9px 16px;background:#2b2b33;color:inherit}.tabs{display:flex;gap:4px;border-bottom:1px solid #2d2d35}.tabs button{flex:1;border:0;background:none;color:#9997a3;padding:14px 6px}.tabs button.active{color:#fff;border-bottom:2px solid #d6fb65}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding-top:3px}.tile{position:relative;aspect-ratio:9/16;background:#202029;overflow:hidden;text-decoration:none;display:flex;align-items:flex-end;padding:12px}.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.tile::after{content:'';position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#000c)}.tile span{position:relative;z-index:1;font-weight:800;line-height:1.25}.empty{grid-column:1/-1;color:#9997a3;text-align:center;padding:70px 20px}dialog{width:min(360px,calc(100% - 32px));border:1px solid #3a3a43;border-radius:20px;padding:24px;color:#fff;background:#19191f;text-align:center}dialog::backdrop{background:#000b}#phuze-widget{min-height:54px;text-align:left;margin:18px 0}.cancel{border:0;background:none;color:#aaa8b3}@media(max-width:520px){.shell{padding-left:12px;padding-right:12px}.profile{margin-top:30px}.avatar{width:66px;height:66px}}
-.identity{min-width:0}.identity p{white-space:pre-wrap;overflow-wrap:anywhere}.profile-site{display:block;margin-top:10px;color:#d6fb65;overflow-wrap:anywhere}label{display:block;text-align:left;margin:14px 0}input,textarea{display:block;box-sizing:border-box;width:100%;margin-top:6px;padding:10px;border:1px solid #555;border-radius:8px;background:#25252d;color:inherit;font:inherit}.tile iframe{position:absolute;top:0;left:0;border:0;width:390px;height:700px;transform-origin:top left;pointer-events:none}.tile .preview-cover{position:absolute;inset:0}.tile{aspect-ratio:390/700}.tile:focus-visible,.button:focus-visible{outline:2px solid #d6fb65}#notifications a{display:block;padding:12px;border:1px solid #444;border-radius:10px;margin-bottom:8px}#notifications .unread{border-color:#d6fb65}.review-row{padding:12px;border-bottom:1px solid #444;overflow-wrap:anywhere}.review-row button{margin:8px 8px 0 0}</style>
+.identity{min-width:0}.identity p{white-space:pre-wrap;overflow-wrap:anywhere}.profile-site{display:block;margin-top:10px;color:#d6fb65;overflow-wrap:anywhere}label{display:block;text-align:left;margin:14px 0}input,textarea{display:block;box-sizing:border-box;width:100%;margin-top:6px;padding:10px;border:1px solid #555;border-radius:8px;background:#25252d;color:inherit;font:inherit}.tile{aspect-ratio:390/700}.tile:focus-visible,.button:focus-visible{outline:2px solid #d6fb65}#notifications a{display:block;padding:12px;border:1px solid #444;border-radius:10px;margin-bottom:8px}#notifications .unread{border-color:#d6fb65}.review-row{padding:12px;border-bottom:1px solid #444;overflow-wrap:anywhere}.review-row button{margin:8px 8px 0 0}</style>
 <main class="shell">
   <header class="top"><a class="brand" href="/">Play<span>Feed</span></a><button id="session-action" class="button" type="button">登入</button></header>
   <section class="profile"><div class="avatar">?</div><div class="identity"><h1>我的頁面</h1><p>登入後查看收藏與推薦</p></div></section>
-  <p><button id="edit-profile" class="button" hidden>編輯個人資料</button> <a href="/submit.html">推薦新遊戲</a></p><section id="notifications" aria-label="通知"></section><section id="review" hidden><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="liked">按讚</button><button data-tab="recommended">我推薦的</button></nav>
+  <p><button id="edit-profile" class="button" hidden>編輯個人資料</button> <a href="/submit.html">推薦新遊戲</a></p><section id="notifications" aria-label="通知"></section><section id="review" hidden><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
   <section class="grid" aria-live="polite"><p class="empty">正在載入…</p></section>
 </main>
 <dialog id="login-dialog"><h2>登入 PlayFeed</h2><p>輸入 Email，點信裡的連結就完成登入。</p><div id="phuze-widget"></div><button class="cancel" type="button" data-close-login>取消</button></dialog>
 <dialog id="profile-dialog"><form id="profile-form"><h2>編輯個人資料</h2><label>名稱<input name="displayName" required maxlength="40"></label><label>自介<textarea name="bio" maxlength="300" rows="4"></textarea></label><label>網址<input name="website" type="url" maxlength="500" placeholder="https://"></label><p id="profile-status" role="status"></p><button class="button" type="submit">儲存</button><button class="button" type="button" id="cancel-profile">取消</button></form></dialog><script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script>
 <script>
-let tab='saved', collection=null, games=[], previewCleanups=[], loadVersion=0;
+let tab='saved', collection=null, games=[], loadVersion=0;
 const grid=document.querySelector('.grid'), avatar=document.querySelector('.avatar'), title=document.querySelector('.identity h1'), subtitle=document.querySelector('.identity p'), sessionAction=document.querySelector('#session-action');
 function render(){
-  previewCleanups.forEach(cleanup=>cleanup());previewCleanups=[];
   grid.replaceChildren();
-  if(!PlayFeedAuth.user){const p=document.createElement('p');p.className='empty';p.textContent='登入後，就能在這裡看到你儲存和按讚的遊戲。';grid.append(p);return;}
+  if(!PlayFeedAuth.user){const p=document.createElement('p');p.className='empty';p.textContent='登入後，就能在這裡看到你儲存和推薦的遊戲。';grid.append(p);return;}
   if(!collection){const p=document.createElement('p');p.className='empty';p.textContent='正在載入…';grid.append(p);return;}
   let entries=[];
   if(tab==='recommended') entries=collection.recommendations.map(row=>({title:row.title||new URL(row.url).hostname,url:row.url,id:row.id}));
-  else {const keys=new Set(collection.actions.filter(row=>row.kind===(tab==='liked'?'like':'save')).map(row=>row.game_key));entries=games.filter(game=>keys.has(new URL(game.url,location.origin+'/').href));}
+  else {const keys=new Set(collection.actions.filter(row=>row.kind==='save').map(row=>row.game_key));entries=games.filter(game=>keys.has(new URL(game.url,location.origin+'/').href));}
   for(const game of entries){
     const a=document.createElement('a');a.className='tile';
     const match=games.find(entry=>new URL(entry.url,location.origin).href===new URL(game.url,location.origin).href);
     const preview=match||game;
     a.href='/#'+encodeURIComponent(preview.id);
     a.setAttribute('aria-label',game.title);
-    function livePreview(){
-      const holder=document.createElement('div');holder.className='preview-cover';
-      const frame=document.createElement('iframe');frame.title=game.title+' 預覽';
-      frame.setAttribute('sandbox','allow-scripts');frame.setAttribute('tabindex','-1');frame.setAttribute('aria-hidden','true');
-      holder.append(frame);a.prepend(holder);
-      const resize=new ResizeObserver(()=>{frame.style.transform='scale('+a.clientWidth/390+')'});resize.observe(a);
-      const visible=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){frame.src=preview.url;visible.disconnect();}}},{rootMargin:'100px'});
-      visible.observe(a);previewCleanups.push(()=>{resize.disconnect();visible.disconnect();frame.remove()});
-    }
-    if(preview.cover){const img=document.createElement('img');img.src=preview.cover;img.alt='';img.loading='lazy';img.addEventListener('error',()=>{img.remove();livePreview()},{once:true});a.append(img)}
-    else livePreview();
+    const img=document.createElement('img');
+    img.alt='';img.loading='lazy';img.decoding='async';img.width=390;img.height=700;
+    img.referrerPolicy='no-referrer';
+    // The thumbnail service returns a cached, non-animated screenshot.
+    // No game page or scripts are executed in this grid.
+    const screenshot='https://image.thum.io/get/noanimate/width/390/maxAge/168/?url='+encodeURIComponent(new URL(preview.url,location.origin).href);
+    const sources=[...new Set([preview.cover,preview.screenshot,screenshot,'/share-cards/'+encodeURIComponent(preview.id)+'.png','/share-cards/default.png'].filter(Boolean))];
+    let sourceIndex=0;
+    img.addEventListener('error',()=>{sourceIndex++;if(sourceIndex<sources.length)img.src=sources[sourceIndex];else img.remove()});
+    img.src=sources[0];a.append(img);
     const span=document.createElement('span');span.textContent=game.title;a.append(span);grid.append(a);
   }
   if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent='這裡還沒有遊戲。';grid.append(p)}
