@@ -6,7 +6,7 @@ function publicAddress(ip) {
 }
 function readPage(value, redirects=0) {
  const url=new URL(value);
- if(url.protocol!=='https:'||url.username||url.password||url.port||redirects>3) return Promise.reject(Error('Invalid metadata URL'));
+ if(url.protocol!=='https:'||url.username||url.password||url.port||!/^([a-z0-9-]+\.)+[a-z][a-z0-9-]+$/i.test(url.hostname)||redirects>3) return Promise.reject(Error('Invalid metadata URL'));
  return new Promise((resolve,reject)=>{
   const request=https.get(url,{headers:{'User-Agent':'PlayFeed metadata reader','Accept':'text/html','Accept-Encoding':'identity'},lookup(host,options,callback){dns.lookup(host,{family:4},(error,address)=>{
    if(error)return callback(error);
