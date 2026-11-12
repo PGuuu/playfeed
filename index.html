@@ -135,9 +135,9 @@
   .actions button{min-width:60px;min-height:48px;padding:12px 14px;border:0;background:var(--cream);color:var(--ink);font-size:16px;font-weight:700;flex:1}
   .actions .reaction[aria-pressed=true]{background:var(--ink);color:var(--cream)}
   .action-count{top:-8px;right:-4px;min-width:21px;font-size:11px;line-height:17px;background:var(--ink);color:var(--cream);border-color:var(--orange)}
-  .game-switcher{width:42px;border-radius:16px;border:1px solid #ffbc84;background:var(--orange);box-shadow:0 4px 18px #0004;backdrop-filter:none}
-  .game-switcher button{width:40px;height:52px;color:var(--ink)}.game-switcher button+button{border-color:#71350f30}.game-switcher button:active{background:var(--orange-light)}
-  .triangle{border-left-width:6px;border-right-width:6px}.triangle.up{border-bottom-width:9px}.triangle.down{border-top-width:9px}#toggle-controls svg{width:18px;height:18px}
+  .game-switcher{width:24px;border-radius:11px;border:1px solid #ffbc8460;background:#ff8b3d7a;box-shadow:0 4px 18px #0002;backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%)}
+  .game-switcher button{width:22px;height:52px;color:var(--ink)}.game-switcher button+button{border-color:#71350f30}.game-switcher button:active{background:#ffb46ca6}
+  .triangle{border-left-width:4px;border-right-width:4px}.triangle.up{border-bottom-width:7px}.triangle.down{border-top-width:7px}#toggle-controls svg{width:14px;height:14px}
   .game-more{width:42px;height:38px;font-size:28px}body.controls-visible .game-more{bottom:100px}#delete-game{margin-top:8px;background:#4c2025;color:#ffd4c8;border-color:#8b4345}
   .save-hint{position:fixed;z-index:8;right:20px;top:80px;width:min(300px,calc(100vw - 32px));padding:20px;background:var(--cream);color:var(--ink);border:1px solid #ffbd83;border-radius:18px;box-shadow:0 12px 36px #0007;touch-action:manipulation}
   .save-hint::before{content:'';position:absolute;top:-8px;right:18px;width:14px;height:14px;transform:rotate(45deg);background:var(--cream);border-left:1px solid #ffbd83;border-top:1px solid #ffbd83}
@@ -223,9 +223,10 @@
   </article>
 </template>
 <aside id="save-hint" class="save-hint" hidden aria-labelledby="save-hint-title"><button type="button" class="hint-close" aria-label="關閉儲存提示">×</button><h2 id="save-hint-title">儲存的遊戲在這裡</h2><p id="save-hint-copy"></p><button type="button" id="save-hint-action">免密碼信箱登入</button></aside>
-<script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script type="module">
+<script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
-  const games = await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
+  const games = orderPlayfeedGames(await loadPlayfeedGames().catch(()=>{catalogError=true;return[]}));
+  let ignoreGameLinkOnReload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   try { sessionStorage.setItem('playfeed:catalog:v1', JSON.stringify({ time: Date.now(), games })); } catch {}
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
@@ -729,7 +730,8 @@
       return;
     }
     if(!games.length){feed.replaceChildren();const empty=document.createElement('p');empty.className='empty';empty.textContent=catalogError?'遊戲清單暫時無法載入，請重新整理。':'目前沒有可遊玩的遊戲';feed.append(empty);return;}
-    const requestedId = location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id'));
+    const requestedId = ignoreGameLinkOnReload ? '' : (location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id')));
+    ignoreGameLinkOnReload=false;
     const index = games.findIndex(game => game.id === requestedId);
     const target = Math.max(index, 0);
     showGame(target);
