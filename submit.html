@@ -6,7 +6,7 @@
 <form id="recommend"><label>遊戲網址<input name="url" type="url" placeholder="https://" required maxlength="1000"></label><button type="submit">送出推薦</button></form>
 <p id="message" role="status" aria-live="polite"></p><p><a href="/account.html">查看我的推薦與通知</a></p>
 <dialog id="login-dialog"><h2>登入 PlayFeed</h2><p>登入後即可推薦遊戲。</p><div id="phuze-widget"></div><button type="button" data-close-login>取消</button></dialog>
-<script src="https://phuze.edato.me/phuze.js"></script><script src="/auth.js"></script>
+<script src="/auth.js"></script>
 <script>
 const form=document.querySelector('#recommend'),message=document.querySelector('#message'),button=form.querySelector('button');
 form.addEventListener('submit',event=>{

@@ -55,9 +55,12 @@ async function verifyPhuzeSession(request) {
   if (!token) return { error: { status: 401, message: 'Please sign in again.' } };
 
   let verifyResponse;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
   try {
     verifyResponse = await fetch('https://phuze.edato.me/api/v1/sessions/verify', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         Authorization: `Secret ${secret}`,
         'Content-Type': 'application/json',
@@ -66,10 +69,13 @@ async function verifyPhuzeSession(request) {
     });
   } catch {
     return { error: { status: 502, message: 'Could not verify the login session.' } };
-  }
+  } finally { clearTimeout(timer); }
 
   const result = await verifyResponse.json().catch(() => ({}));
-  if (!verifyResponse.ok || !result.valid) {
+  if (!verifyResponse.ok) {
+    return { error: { status: verifyResponse.status === 429 ? 429 : 502, message: '登入驗證服務暫時無法回應，請稍後再試。' } };
+  }
+  if (!result.valid) {
     return { error: { status: 401, message: 'The login session is invalid or expired.' } };
   }
 

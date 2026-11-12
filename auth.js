@@ -1,85 +1,239 @@
 (() => {
+  // Phuze's documented custom login flow: /auth/magic-link + /sessions/pickup.
   const publishableKey = 'pk_live_bzqxC3-qVXRR7AtDgMaTeXiapC-PMPVd';
-  const state = { user: null, token: '', ready: false, listeners: new Set(), pending: null };
+  const provider = 'https://phuze.edato.me/api/v1';
+  const tokenKey = 'phuze_session';
+  const pendingKey = 'playfeed:phuze-pending';
+  const state = { user: null, token: '', ready: false, pending: null, listeners: new Set() };
+  let initialized = false, pendingLogin = null, pickupTimer, pickupBusy = false, refreshBusy = null, revision = 0;
+  let form, input, button, status, retryButton, cooldownTimer, cooldownUntil = 0;
 
-  function tokenFrom(session) {
-    return String(session?.token || session?.sessionToken || session?.accessToken || localStorage.getItem('phuze_session') || '');
+  function read(key) { try { return localStorage.getItem(key); } catch { return null; } }
+  function write(key, value) {
+    try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); return true; }
+    catch { return false; }
   }
-
   function emit() {
-    for (const listener of state.listeners) listener(state.user);
+    for (const listener of state.listeners) {
+      try { listener(state.user); } catch (error) { console.error('PlayFeed login UI failed:', error?.name || 'Error'); }
+    }
   }
-
+  function message(text) { if (status) status.textContent = text; }
+  function renderButton() {
+    if (!button) return;
+    const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+    button.disabled = Boolean(form?.dataset.sending) || remaining > 0;
+    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '寄登入連結給我';
+    if (remaining) cooldownTimer = setTimeout(renderButton, 1000);
+  }
+  function cooldown(seconds) {
+    clearTimeout(cooldownTimer);
+    cooldownUntil = Date.now() + Math.max(1, seconds) * 1000;
+    renderButton();
+  }
+  function errorMessage(error) {
+    if (error.status === 429) {
+      if (error.code === 'quota_exceeded') return '登入服務今日寄信額度已滿，請稍後再試。';
+      return '寄信次數暫時受限，請等待 ' + (error.retryAfter || 60) + ' 秒再試。';
+    }
+    if (error.status === 403) return '登入服務拒絕這個網站的請求，請回報給管理者。';
+    if (error.status === 401) return '登入已失效，請重新寄送登入連結。';
+    if (error.name === 'AbortError') return '登入服務回應逾時，請稍後再試。';
+    return error.message || '無法連線登入服務，請稍後再試。';
+  }
+  async function request(url, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = data.error;
+        const error = new Error(typeof detail === 'string' ? detail : detail?.message || '登入服務暫時無法回應。');
+        error.status = response.status;
+        error.code = detail?.code;
+        error.retryAfter = Number(detail?.retry_after_seconds || data.retry_after_seconds || response.headers.get('Retry-After')) || 60;
+        throw error;
+      }
+      return data;
+    } finally { clearTimeout(timer); }
+  }
+  function phuze(path, options = {}) {
+    return request(provider + path, { ...options, headers: {
+      Authorization: 'Publishable ' + publishableKey,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers
+    } });
+  }
+  function clearPending() {
+    clearTimeout(pickupTimer);
+    state.pending = null;
+    write(pendingKey, null);
+  }
+  function loadPending() {
+    try {
+      const pending = JSON.parse(read(pendingKey) || 'null');
+      if (pending && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pending.id)
+          && Number.isFinite(pending.created) && Date.now() - pending.created < 600000) state.pending = pending;
+    } catch {}
+  }
+  async function acceptToken(token) {
+    const turn = revision;
+    const data = await request('/api/auth', { headers: { Authorization: 'Bearer ' + token } });
+    if (turn !== revision || !data.user?.id) return;
+    const changed = state.token !== token || state.user?.id !== data.user.id;
+    state.token = token;
+    state.user = data.user;
+    state.ready = true;
+    const persisted = write(tokenKey, token);
+    clearPending();
+    message(persisted ? '登入成功。' : '登入成功；此瀏覽器無法保存登入狀態，關閉分頁後可能需要重新登入。');
+    if (changed) emit();
+    document.querySelector('#login-dialog')?.close();
+    const action = pendingLogin; pendingLogin = null;
+    if (action) Promise.resolve().then(action).catch(error => message(errorMessage(error)));
+  }
+  async function refresh() {
+    if (refreshBusy) return refreshBusy;
+    refreshBusy = (async () => {
+      const token = read(tokenKey) || state.token;
+      if (!token) return;
+      try { await acceptToken(token); }
+      catch (error) {
+        if (error.status === 401) {
+          state.token = ''; state.user = null; write(tokenKey, null); emit();
+        }
+        message(errorMessage(error));
+      }
+    })();
+    try { await refreshBusy; } finally { refreshBusy = null; state.ready = true; }
+  }
+  async function pickup() {
+    clearTimeout(pickupTimer);
+    if (pickupBusy || !state.pending) return;
+    const pending = state.pending, turn = revision;
+    if (Date.now() - pending.created >= 600000) {
+      clearPending(); message('這次登入等待已逾時，請重新寄送連結。'); return;
+    }
+    pickupBusy = true;
+    let delay = 2200;
+    try {
+      const data = await phuze('/sessions/pickup?pending_id=' + encodeURIComponent(pending.id));
+      if (turn !== revision || state.pending?.id !== pending.id) return;
+      if (data.ready && typeof data.session_token === 'string' && data.session_token) {
+        // Pickup is one-time: preserve the token before verifying, even if that request fails.
+        revision++;
+        state.token = data.session_token; write(tokenKey, data.session_token);
+        clearPending();
+        try { await acceptToken(data.session_token); }
+        catch (error) { message(errorMessage(error)); pickupTimer = setTimeout(refresh, 5000); }
+        return;
+      }
+    } catch (error) {
+      if (turn !== revision || state.pending?.id !== pending.id) return;
+      message(errorMessage(error));
+      if (error.status === 429) delay = Math.max(2200, error.retryAfter * 1000);
+      else if (error.status === 403) { clearPending(); return; }
+      else delay = 5000;
+    } finally {
+      pickupBusy = false;
+      if (turn === revision && state.pending?.id === pending.id) pickupTimer = setTimeout(pickup, delay);
+    }
+  }
+  async function send(event) {
+    event.preventDefault();
+    if (button.disabled || !form.reportValidity()) return;
+    if (!crypto.randomUUID) { message('此瀏覽器不支援安全登入，請更新瀏覽器後再試。'); return; }
+    form.dataset.sending = 'true'; renderButton(); message('正在向 Phuze 請求登入信…');
+    const previous = state.pending;
+    const pending = { id: crypto.randomUUID(), created: Date.now() };
+    try {
+      // Keep the previous handoff usable until a new email has actually been accepted.
+      await phuze('/auth/magic-link', { method: 'POST', body: JSON.stringify({
+        email: input.value.trim(), pending_id: pending.id,
+        redirect_url: location.origin + '/account.html', locale: 'zh-TW'
+      }) });
+      state.pending = pending;
+      const persisted = write(pendingKey, JSON.stringify(pending));
+      message('登入信已送出，請去收信。點完連結後，回到這個遊戲分頁即可完成登入。'
+        + (persisted ? '' : '請保留此分頁，不要重新整理。'));
+      cooldown(60);
+      pickup();
+    } catch (error) {
+      state.pending = previous;
+      message(errorMessage(error));
+      if (error.status === 429) cooldown(error.retryAfter);
+    } finally { delete form.dataset.sending; renderButton(); }
+  }
   function openLogin(afterLogin) {
-    state.pending = typeof afterLogin === 'function' ? afterLogin : null;
+    pendingLogin = typeof afterLogin === 'function' ? afterLogin : null;
     const dialog = document.querySelector('#login-dialog');
     if (dialog && !dialog.open) dialog.showModal();
+    refresh().then(() => { if (!state.user && state.pending) pickup(); });
   }
-
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
-    if (state.token) headers.set('Authorization', `Bearer ${state.token}`);
+    if (state.token) headers.set('Authorization', 'Bearer ' + state.token);
     if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-    const response = await fetch(path, { ...options, headers });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      if (response.status === 401) {
-        state.user = null;
-        state.token = '';
-        emit();
+    try { return await request(path, { ...options, headers }); }
+    catch (error) {
+      if (error.status === 401 && state.user) {
+        revision++; state.user = null; state.token = ''; write(tokenKey, null); emit();
       }
-      throw new Error(data.error || '操作失敗，請稍後再試。');
+      throw error;
     }
-    return data;
   }
-
   function requireLogin(action) {
-    if (state.user && state.token) {
-      action?.();
-      return true;
-    }
-    openLogin(action);
-    return false;
+    if (state.user && state.token) { action?.(); return true; }
+    openLogin(action); return false;
   }
-
+  async function logout() {
+    const token = state.token || read(tokenKey);
+    if (token) await phuze('/sessions/logout', { method: 'POST', headers: { 'X-Session-Token': token } });
+    revision++; state.token = ''; state.user = null; pendingLogin = null;
+    clearPending(); write(tokenKey, null); message('已登出。'); emit();
+  }
+  function resume() {
+    if (document.visibilityState === 'hidden') return;
+    refresh().then(() => { if (!state.user) { if (!state.pending) loadPending(); if (state.pending) pickup(); } });
+  }
   function init() {
-    const dialog = document.querySelector('#login-dialog');
-    dialog?.querySelector('[data-close-login]')?.addEventListener('click', () => dialog.close());
-    if (!window.Phuze) {
-      state.ready = true;
-      emit();
-      return;
+    if (initialized) return;
+    initialized = true;
+    const dialog = document.querySelector('#login-dialog'), host = document.querySelector('#phuze-widget');
+    dialog?.querySelector('[data-close-login]')?.addEventListener('click', () => { pendingLogin = null; dialog.close(); });
+    if (host) {
+      host.replaceChildren();
+      form = document.createElement('form'); form.className = 'phuze-form';
+      input = document.createElement('input'); input.type = 'email'; input.required = true;
+      input.placeholder = 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
+      input.setAttribute('aria-label', '登入 Email'); input.className = 'phuze-input';
+      button = document.createElement('button'); button.type = 'submit'; button.className = 'phuze-btn';
+      status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+      status.style.cssText = 'white-space:normal;line-height:1.6;font-size:14px;overflow-wrap:anywhere';
+      retryButton = document.createElement('button'); retryButton.type = 'button'; retryButton.textContent = '已點認證連結，重新確認登入';
+      retryButton.style.cssText = 'margin-top:12px;white-space:normal';
+      retryButton.addEventListener('click', () => { message('正在確認登入…'); resume(); });
+      input.style.cssText = 'display:block;box-sizing:border-box;width:100%;min-width:0;padding:12px;border:1px solid #555;border-radius:12px;background:#25252d;color:inherit;font:inherit;font-size:16px';
+      button.style.cssText = 'width:100%;margin-top:12px;background:#d6fb65;color:#101014;padding:12px;border:0;border-radius:12px;font:inherit;white-space:normal';
+      form.append(input, button); host.append(form, status, retryButton);
+      form.addEventListener('submit', send); renderButton();
     }
-    Phuze.init({
-      publishableKey,
-      locale: document.documentElement.lang === 'en' ? 'en' : 'zh-TW',
-      text: {
-        button: '寄登入連結給我', buttonLoading: '寄送中…', buttonSignOut: '登出',
-        placeholder: 'name@example.com', sentTitle: '去收信！', sentSubtitle: '點信裡的連結，這個畫面會自動完成登入。'
-      },
-      theme: { accentColor: '#d6fb65', accentHoverColor: '#bde54f', accentTextColor: '#101014', borderRadius: '12px', borderColor: '#3c3c46' }
-    });
-    if (document.querySelector('#phuze-widget')) Phuze.mount('#phuze-widget');
-    Phuze.onSessionChange(session => {
-      state.token = session ? tokenFrom(session) : '';
-      state.user = session ? { id: String(session.uid || session.id || ''), email: String(session.email || '') } : null;
-      state.ready = true;
-      emit();
-      if (session) {
-        dialog?.close();
-        const pending = state.pending;
-        state.pending = null;
-        pending?.();
-      }
+    loadPending(); resume();
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('focus', resume);
+    window.addEventListener('pageshow', resume);
+    window.addEventListener('storage', event => {
+      if (event.key !== tokenKey) return;
+      revision++;
+      if (!event.newValue) { state.user = null; state.token = ''; emit(); }
+      else refresh();
     });
   }
-
   window.PlayFeedAuth = {
-    api, init, openLogin, requireLogin,
+    api, init, openLogin, requireLogin, logout,
     onChange(listener) { state.listeners.add(listener); listener(state.user); return () => state.listeners.delete(listener); },
-    get user() { return state.user; },
-    get token() { return state.token; },
-    async logout() { if (window.Phuze) await Phuze.logout(); }
+    get user() { return state.user; }, get token() { return state.token; }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
