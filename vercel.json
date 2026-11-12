@@ -9,6 +9,10 @@
     "api/share.js": {
       "includeFiles": "{catalog.js,share-card-ids.json,index.html}",
       "maxDuration": 15
+    },
+    "api/og.js": {
+      "includeFiles": "catalog.js",
+      "maxDuration": 30
     }
   },
   "regions": [
