@@ -80,6 +80,7 @@ async function post(user, body) {
   if (admin && body.action === 'recommend') return { status: 'preview', url: url.href };
   if (admin) {
    if (body.interactionConfirmed !== true) throw Object.assign(new Error('請先試玩並確認可以互動。'), { status: 400 });
+   await require('./_share-assets').prepareAsset({url:url.href,title:url.hostname,author:(await profileFor(user)).display_name});
    const published = await db('playfeed_recommendations', { method: 'POST', body: { url: url.href, title: url.hostname, submitted_by: user.id, author: (await profileFor(user)).display_name }, prefer: 'resolution=ignore-duplicates,return=representation' });
    const row = published[0] || (await db('playfeed_recommendations', { query: 'select=id&url=eq.' + eq(url.href) }))[0];
    return { id: row.id, status: 'published' };
@@ -99,6 +100,8 @@ async function post(user, body) {
   if (body.decision !== 'approve') throw Object.assign(new Error('審核操作無效。'), { status: 400 });
   if (body.interactionConfirmed !== true) throw Object.assign(new Error('請先試玩並確認可以互動。'), { status: 400 });
   const title = safeText(body.title || new URL(request.url).hostname, { max: 300 });
+  const existing=(await db('playfeed_recommendations',{query:'select=title,author,url&url=eq.'+eq(request.url)}))[0];
+  await require('./_share-assets').prepareAsset({url:request.url,title,author:existing?.author||new URL(request.url).hostname});
   const published = await db('playfeed_recommendations', { method: 'POST', body: { url: request.url, title, submitted_by: request.user_id }, prefer: 'resolution=ignore-duplicates,return=representation' });
   if (!published.length) {
    // Updating an existing listing also triggers matching recommendations and notifications.

@@ -7,15 +7,29 @@
   ],
   "functions": {
     "api/share.js": {
-      "includeFiles": "{catalog.js,share-card-ids.json,index.html}",
+      "includeFiles": "{catalog.js,share-assets.json,index.html}",
       "maxDuration": 15
     },
     "api/og.js": {
-      "includeFiles": "catalog.js",
+      "includeFiles": "{catalog.js,share-assets.json}",
       "maxDuration": 30
+    },
+    "api/account.js": {
+      "maxDuration": 60
     }
   },
   "regions": [
     "hnd1"
+  ],
+  "headers": [
+    {
+      "source": "/share-cards/v3/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
   ]
 }

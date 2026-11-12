@@ -1,2 +1,6 @@
 .phuze-secret
 .supabase-note
+node_modules/
+generation.log
+share-assets-status.json
+prepare-share-fix.cjs
