@@ -622,6 +622,7 @@
   let gameLoadFrame;
   let gameLoadTimer;
   let gameLoadVersion = 0;
+  const landscapeFeed = matchMedia('(orientation: landscape) and (max-height: 600px)');
   function layoutFeed(){
     if(shell.hidden||activeIndex<0)return;
     const style=getComputedStyle(shell);
@@ -630,6 +631,12 @@
     const viewportHeight=Math.min(window.innerHeight,window.visualViewport?.height||window.innerHeight);
     const sheet=document.body.classList.contains('comments-open')?commentsSheet.offsetHeight:0;
     const availableHeight=Math.max(180,viewportHeight-sheet);
+    if(landscapeFeed.matches){
+      shell.style.width=document.documentElement.clientWidth+'px';
+      shell.style.height=availableHeight+'px';
+      shell.style.top='0px';
+      return;
+    }
     const gameHeight=Math.min(700,Math.max(60,availableHeight-top-bottom-78));
     const gameWidth=Math.min(390,Math.max(1,availableWidth-left-right-52),gameHeight*390/700);
     const width=Math.min(availableWidth,Math.max(Math.min(280,availableWidth),gameWidth+52+left+right));
@@ -685,11 +692,16 @@
         frame.style.height = height + 'px';
       }
       const fit = () => {
-        const scale = Math.min(stage.clientWidth / width, stage.clientHeight / height, 1);
+        const landscape = landscapeFeed.matches;
+        const frameWidth = landscape ? Math.max(width,height) : width;
+        const frameHeight = landscape ? Math.min(width,height) : height;
+        const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, 1);
         if (nativeSize) {
-          frame.style.width = Math.floor(width * scale) + 'px';
-          frame.style.height = Math.floor(height * scale) + 'px';
+          frame.style.width = Math.floor(frameWidth * scale) + 'px';
+          frame.style.height = Math.floor(frameHeight * scale) + 'px';
         } else {
+          frame.style.width = frameWidth + 'px';
+          frame.style.height = frameHeight + 'px';
           frame.style.setProperty('--game-scale', scale);
         }
       };
