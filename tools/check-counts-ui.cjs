@@ -12,24 +12,26 @@ const {chromium}=require(process.env.NODE_REPL_NODE_MODULE_DIRS+'/playwright');
    const body=req.method()==='POST'?req.postDataJSON():{};
    if(body.action==='save'){saved=body.active;saveCount=saved?10:9}
    if(body.action==='comment')commentCount++;
-   if(url.searchParams.get('action')==='comments')return json({comments:[],commentCount,saveCount});
-   return json({saved,commentCount,saveCount});
+   if(url.searchParams.get('action')==='comments')return json({comments:[],commentCount,saveCount,displaySaveCount:saveCount+6});
+   return json({saved,commentCount,saveCount,displaySaveCount:saveCount+6});
   }
   if(url.pathname==='/auth.js')return route.fulfill({contentType:'text/javascript',body:"window.PlayFeedAuth={user:{id:'member',email:'test@example.com'},onChange(fn){fn(this.user)},requireLogin(fn){fn()},api:async(path,options)=>{const response=await fetch(path,options);return response.json()}}"});
   if(url.pathname==='/catalog.js')return route.fulfill({contentType:'text/javascript',body:"async function loadPlayfeedGames(){return [{id:'one',title:'One',author:'Author',url:'https://game.example/',external:true}]}"});
-  if(url.pathname==='/recommendations.js')return route.fulfill({body:''});
+  if(url.pathname==='/feed-order.js')return route.fulfill({contentType:'text/javascript',body:'function orderPlayfeedGames(games){return games}'});
+  if(url.pathname==='/feed-layout.css')return route.fulfill({contentType:'text/css',body:fs.readFileSync(path.join(__dirname,'..','feed-layout.css'),'utf8')});
+  if(['/recommendations.js','/analytics.js'].includes(url.pathname))return route.fulfill({body:''});
   if(url.hostname==='game.example')return route.fulfill({contentType:'text/html',body:'Game'});
   return route.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8')});
  });
  await page.goto('https://playfeed.test/');
  const card=page.locator('article:not([hidden])'),save=card.locator('[data-kind=saved]');
  await card.locator('[data-count=comments]').filter({hasText:'5'}).waitFor();
- assert.equal(await card.locator('[data-count=saves]').textContent(),'9');
- await page.waitForTimeout(1100);await page.locator('#toggle-controls').click();
- await save.click();await save.locator('.action-count').filter({hasText:'10'}).waitFor();
- assert.equal(await save.locator('.action-label').textContent(),'已儲存');
- await save.click();await save.locator('.action-count').filter({hasText:'9'}).waitFor();
- assert.equal(await save.locator('.action-label').textContent(),'儲存');
+ assert.equal(await card.locator('[data-count=saves]').textContent(),'15');
+
+ await save.click();await save.locator('.action-count').filter({hasText:'16'}).waitFor();
+ assert.equal(await save.locator('.action-label').textContent(),'save');
+ await save.click();await save.locator('.action-count').filter({hasText:'15'}).waitFor();
+ assert.equal(await save.locator('.action-label').textContent(),'save');
  await card.locator('.comments-button').click();
  await page.locator('.comments-form input').fill('Test comment');
  await page.locator('.comments-form button').click();

@@ -403,7 +403,7 @@
       ['commentCount', '.comments-button', '留言'],
       ['saveCount', '[data-kind="saved"]', '儲存']
     ]) {
-      const count = counts[field];
+      const count = field === 'saveCount' ? (counts.displaySaveCount ?? counts.saveCount) : counts[field];
       if (!Number.isSafeInteger(count) || count < 0) continue;
       const button = card.querySelector(selector);
       button.querySelector('.action-count').textContent = count.toLocaleString('zh-TW');

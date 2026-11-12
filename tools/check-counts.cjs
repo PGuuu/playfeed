@@ -32,7 +32,7 @@ async function call(method,action,body={}){
  assert.ok(status<300,JSON.stringify(payload));return payload;
 }
 (async()=>{
- assert.deepEqual(await call('GET','counts'),{saveCount:1400,commentCount:1110});
+ assert.deepEqual(await call('GET','counts'),{saveCount:1400,displaySaveCount:1400,commentCount:1110});
  assert.equal(verificationCalls,0,'Public counts must not require authentication');
  let result=await call('POST','save',{active:true});
  assert.equal(result.saveCount,1401);assert.equal(result.saved,true);

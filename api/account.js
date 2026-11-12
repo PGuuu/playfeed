@@ -1,3 +1,4 @@
+const { initialSaveCount } = require('./_save-counts');
 const community = require('./_community');
 const { publicName, readJson, requestOriginAllowed, safeText, sendJson, supabaseRest, verifyPhuzeSession } = require('./_lib');
 
@@ -19,7 +20,7 @@ async function publicCounts(game) {
   for (const result of [saves, comments]) {
     if (!result.ok || !Number.isSafeInteger(result.count)) throw new Error('Could not load engagement counts.');
   }
-  return { saveCount: saves.count, commentCount: comments.count };
+  return { saveCount: saves.count, displaySaveCount: saves.count + initialSaveCount(game), commentCount: comments.count };
 }
 
 async function stateFor(game, userId) {

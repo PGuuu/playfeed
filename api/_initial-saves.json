@@ -1,0 +1,510 @@
+{
+  "createdAt": "2026-11-13T00:00:00+08:00",
+  "basis": "One-time starter counts; higher targets follow 30-day external visitor play duration. Real saves stay in playfeed_user_actions.",
+  "games": [
+    {
+      "id": "luck-rolls",
+      "title": "好運捲捲來",
+      "url": "https://play.serenafoods.com.tw/luck/",
+      "initialCount": 2
+    },
+    {
+      "id": "taistorm",
+      "title": "台灣氣象戰 Taistorm",
+      "url": "https://nonightcream.github.io/Taistorm/",
+      "initialCount": 1
+    },
+    {
+      "id": "balcony-blanket",
+      "title": "陽台上的小被被",
+      "url": "https://sansword.github.io/balcony-blanket/",
+      "initialCount": 4
+    },
+    {
+      "id": "mt24hr",
+      "title": "MT24Hr 醫檢師的一天",
+      "url": "https://mt24hr.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "night-market-balloon",
+      "title": "夜市射氣球",
+      "url": "https://20daysmessage.github.io/balloon-game/",
+      "initialCount": 0
+    },
+    {
+      "id": "fu3dai",
+      "title": "富不過三代？清朝求生錄",
+      "url": "https://fu3dai.netlify.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "gold-miner",
+      "title": "黃金礦工",
+      "url": "https://arcade.hz.ax/gold-miner/",
+      "initialCount": 3
+    },
+    {
+      "id": "slowboot",
+      "title": "慢慢開機 Slow Boot",
+      "url": "https://misskatyw.github.io/slowboot/",
+      "initialCount": 1
+    },
+    {
+      "id": "footlife",
+      "title": "FootLife 足球人生模擬器",
+      "url": "https://footlife-eta.vercel.app/",
+      "initialCount": 2
+    },
+    {
+      "id": "hk-red-van",
+      "title": "紅van司機",
+      "url": "https://hkredvan.tickbreeze.com/",
+      "initialCount": 0
+    },
+    {
+      "id": "candle-clash",
+      "title": "Candle Clash K線對決",
+      "url": "https://pickthewheel.com/candle-clash/",
+      "initialCount": 0
+    },
+    {
+      "id": "fishing-fever",
+      "title": "Fishing Fever 釣魚狂熱",
+      "url": "https://pickthewheel.com/fishing-fever/",
+      "initialCount": 1
+    },
+    {
+      "id": "konbini-rush",
+      "title": "便利商店補貨狂熱",
+      "url": "https://pickthewheel.com/konbini-rush/",
+      "initialCount": 1
+    },
+    {
+      "id": "konbini-cashier",
+      "title": "便利商店收銀達人",
+      "url": "https://pickthewheel.com/konbini-cashier/",
+      "initialCount": 1
+    },
+    {
+      "id": "parking-panic",
+      "title": "PARKING PANIC! 代客泊車",
+      "url": "https://parking-panic.pages.dev/",
+      "initialCount": 2
+    },
+    {
+      "id": "museo-art-puzzle",
+      "title": "Museo 每日名畫拼圖",
+      "url": "https://pickthewheel.com/museo-art-printing-puzzle/",
+      "initialCount": 0
+    },
+    {
+      "id": "lawn-master",
+      "title": "Lawn Master 剪草大師",
+      "url": "https://pickthewheel.com/lawn-master/",
+      "initialCount": 0
+    },
+    {
+      "id": "yakyolife",
+      "title": "YaKyoLife 棒球人生模擬器",
+      "url": "https://www.yakyolife.com/",
+      "initialCount": 1
+    },
+    {
+      "id": "oil-restorer",
+      "title": "油畫修補師",
+      "url": "https://oil-restorer.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "stay-on-track",
+      "title": "不出軌宣言 · Stay on Track",
+      "url": "https://aicooksyourbrain.com/stay-on-track/",
+      "initialCount": 1
+    },
+    {
+      "id": "badminton-iq",
+      "title": "羽球腦",
+      "url": "https://aicooksyourbrain.com/badminton-iq/",
+      "initialCount": 4
+    },
+    {
+      "id": "chihuahua-sim",
+      "title": "吉娃娃模擬器",
+      "url": "https://chihuahua-sim.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "earth-online",
+      "title": "地球Online",
+      "url": "https://a330900neo.github.io/EarthOnlinememe/",
+      "initialCount": 0
+    },
+    {
+      "id": "shanshenbu",
+      "title": "閃身步大亂鬥",
+      "url": "https://shanshenbu.net/",
+      "initialCount": 1
+    },
+    {
+      "id": "doodle-coaster",
+      "title": "塗鴉雲霄飛車",
+      "url": "https://rakugaki-coaster.pages.dev/",
+      "initialCount": 4
+    },
+    {
+      "id": "conveyor-sushi",
+      "title": "迴轉壽司，壽司要逃跑！",
+      "url": "https://keigamesstudio.com/baka/nigeru/",
+      "initialCount": 1
+    },
+    {
+      "id": "nurse-shift",
+      "title": "上班不要吃鳳梨：護理師輪班模擬",
+      "url": "https://busy-nurse.vercel.app/",
+      "initialCount": 0
+    },
+    {
+      "id": "rooftop-scaper",
+      "title": "頂樓加蓋 Scaper",
+      "url": "https://rooftop-scaper.pages.dev/",
+      "initialCount": 3
+    },
+    {
+      "id": "taiwan-sanbao-driver",
+      "title": "台灣三寶駕駛模擬器",
+      "url": "https://pinruichen.github.io/taiwan-sanbao-driver.html",
+      "initialCount": 2
+    },
+    {
+      "id": "spark-tap",
+      "title": "追光",
+      "url": "./arcade.html#tap",
+      "initialCount": 0
+    },
+    {
+      "id": "memory-grid",
+      "title": "記憶方格",
+      "url": "./arcade.html#memory",
+      "initialCount": 0
+    },
+    {
+      "id": "fcf55af8-951a-4874-85d8-f3ad52befd1b",
+      "title": "分組求生記",
+      "url": "https://iammay22.github.io/group-survival/",
+      "initialCount": 1
+    },
+    {
+      "id": "5ab97dda-9119-4599-a533-ddf21b1922d9",
+      "title": "趕飛機塞行李！",
+      "url": "https://daisy-play.github.io/pack/",
+      "initialCount": 0
+    },
+    {
+      "id": "6bc82192-e375-4c8d-bce5-e65243696eba",
+      "title": "こぼすな！海鮮丼",
+      "url": "https://keigamesstudio.com/kaisendon/",
+      "initialCount": 2
+    },
+    {
+      "id": "f1f6c1d2-563e-4414-bb2c-c982cfb79075",
+      "title": "台猜猜 — 每日台灣地理遊戲",
+      "url": "https://geotw.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "7b943c26-b9cf-4de5-a561-073c8d10dbd4",
+      "title": "變身！超長蛋塔｜擀到月球那麼長的 3D 蛋塔遊戲",
+      "url": "https://sherrygamestudio.com/eggtart/",
+      "initialCount": 0
+    },
+    {
+      "id": "a8cb0963-9fb1-4edd-a660-13335a81c31e",
+      "title": "夜市牛排｜鐵板滋滋作響的 3D 料理小遊戲",
+      "url": "https://wok-hey-fried-rice.vercel.app/steak/",
+      "initialCount": 0
+    },
+    {
+      "id": "57baf5af-701b-4a9d-a572-4dde55723cb0",
+      "title": "霉豆腐老闆｜3D 擺攤小遊戲",
+      "url": "https://fermentedtofustall.netlify.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "8858328b-d37e-4a16-b072-fd77b16b72b0",
+      "title": "霉豆腐｜長毛毛的 3D 料理小遊戲",
+      "url": "https://sherrygamestudio.com/fuyu/",
+      "initialCount": 1
+    },
+    {
+      "id": "d481728e-de9f-43d8-9664-7503117f658c",
+      "title": "剝茶葉蛋",
+      "url": "https://tea-egg.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "1683dccd-ac56-41cb-bd54-bac6d16612e7",
+      "title": "巷口牛肉麵 3D · 今天換你掌杓",
+      "url": "https://taiwan-beef-noodle-kitchen.tangzih.chatgpt.site/",
+      "initialCount": 1
+    },
+    {
+      "id": "ae6ae5f6-225f-451e-8ad9-627809e8e325",
+      "title": "PetLife · 20億分之1 — 你會出生成為哪一隻寵物？",
+      "url": "https://petlife1in2billion.netlify.app/",
+      "initialCount": 0
+    },
+    {
+      "id": "5a93312b-53fd-4dba-97e0-c9b25f3424a3",
+      "title": "ラテアート・シミュレーター",
+      "url": "https://keigamesstudio.com/baka/latte/",
+      "initialCount": 1
+    },
+    {
+      "id": "c462a823-cb74-4e18-a55c-17c6964bc624",
+      "title": "兀兀地瓜宮",
+      "url": "https://3d.brade-hu.workers.dev/game/",
+      "initialCount": 0
+    },
+    {
+      "id": "8de187bf-290d-4881-9fee-67173572706e",
+      "title": "內鬼信箱",
+      "url": "https://akangdesigner.github.io/qinghe-mail/",
+      "initialCount": 0
+    },
+    {
+      "id": "6d327876-d6ae-4bfe-ad78-030387877f4f",
+      "title": "farfar0406-rgb.github.io",
+      "url": "https://farfar0406-rgb.github.io/volvo-driving-lab/",
+      "initialCount": 4
+    },
+    {
+      "id": "cd0200c4-4bdf-4037-9fe3-314fa20bb5d1",
+      "title": "bianshu.vercel.app",
+      "url": "https://bianshu.vercel.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "3b6fb300-3ae0-4578-a78b-59e9eb3fad97",
+      "title": "15cm.tw",
+      "url": "https://15cm.tw/game.html?src=threads",
+      "initialCount": 1
+    },
+    {
+      "id": "16cec917-f79e-469f-afc3-1c57da3a430a",
+      "title": "linkuochang2026.github.io",
+      "url": "https://linkuochang2026.github.io/yilan-policy-map/?v=169",
+      "initialCount": 0
+    },
+    {
+      "id": "c980eb06-b7fd-4679-96ed-5e9bbed18243",
+      "title": "simba0812.github.io",
+      "url": "https://simba0812.github.io/MLB/",
+      "initialCount": 0
+    },
+    {
+      "id": "7df81ddb-5347-4556-92e1-d87c80723d0e",
+      "title": "witch-and-bear-fish-catch.vercel.app",
+      "url": "https://witch-and-bear-fish-catch.vercel.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "cdec6995-6833-44a2-95f7-42ba1b25885a",
+      "title": "onlyhandrubbing.github.io",
+      "url": "https://onlyhandrubbing.github.io/bingxiang/",
+      "initialCount": 1
+    },
+    {
+      "id": "deca5d34-ca71-47ef-a7fe-431b4efdf7a0",
+      "title": "www.sameword.cc",
+      "url": "https://www.sameword.cc/zh-hant/",
+      "initialCount": 0
+    },
+    {
+      "id": "3afb5905-7daf-4526-afec-99adcb736760",
+      "title": "herbmaze.cornweb.workers.dev",
+      "url": "https://herbmaze.cornweb.workers.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "c86d888c-7961-48f8-a8d0-2c664faa699f",
+      "title": "yunlehuang-111.github.io",
+      "url": "https://yunlehuang-111.github.io/daiwan-grading-play/",
+      "initialCount": 0
+    },
+    {
+      "id": "15b9a633-4f17-4c7a-8099-5909e52586d7",
+      "title": "bubblespop.netlify.app",
+      "url": "https://bubblespop.netlify.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "f548e8f1-9caa-4e11-8b29-675b75f08a87",
+      "title": "daybreak-orcin.vercel.app",
+      "url": "https://daybreak-orcin.vercel.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "a4ed7791-7dad-4972-8dee-408e91a80d7a",
+      "title": "www.apptap.cc",
+      "url": "https://www.apptap.cc/zh-hant/height/",
+      "initialCount": 1
+    },
+    {
+      "id": "9b8b6fdd-049c-4ae9-9aa4-ae2021737f12",
+      "title": "pit-window.com",
+      "url": "https://pit-window.com/",
+      "initialCount": 2
+    },
+    {
+      "id": "f1743680-f2d9-4e7b-9685-123a687244ad",
+      "title": "www.arealme.com",
+      "url": "https://www.arealme.com/color-hue-test/zh/",
+      "initialCount": 1
+    },
+    {
+      "id": "28e65772-7984-4acc-aded-5d1954c4fe77",
+      "title": "media.gamegen.diy",
+      "url": "https://media.gamegen.diy/interactive-content/992/1157/index.html",
+      "initialCount": 1
+    },
+    {
+      "id": "b559d44c-d3a2-4124-b04c-01956713bd26",
+      "title": "thekingofall.io",
+      "url": "https://thekingofall.io/",
+      "initialCount": 0
+    },
+    {
+      "id": "738fd113-a8b6-4896-a280-8100f7fbe041",
+      "title": "sy19870627.github.io",
+      "url": "https://sy19870627.github.io/sand-pixel-sorter/",
+      "initialCount": 1
+    },
+    {
+      "id": "8c19c124-5b47-4e8c-bddb-e5182734b695",
+      "title": "sy19870627.github.io",
+      "url": "https://sy19870627.github.io/Relic-Caravan/",
+      "initialCount": 0
+    },
+    {
+      "id": "96ccd39a-6ab3-433a-85ce-0573fb9a3ffb",
+      "title": "sy19870627.github.io",
+      "url": "https://sy19870627.github.io/shotengai-tycoon/",
+      "initialCount": 0
+    },
+    {
+      "id": "015752d9-876d-4fb2-99dc-f28fcfb3a51f",
+      "title": "sy19870627.github.io",
+      "url": "https://sy19870627.github.io/taiwan-procession/",
+      "initialCount": 1
+    },
+    {
+      "id": "74605b37-88fe-4293-b43f-60a18e889469",
+      "title": "alexchiencsl-cloud.github.io",
+      "url": "https://alexchiencsl-cloud.github.io/CPR-game/",
+      "initialCount": 1
+    },
+    {
+      "id": "7547e266-afd3-4d7b-b740-7f2b8b8feb1a",
+      "title": "oitt.life",
+      "url": "https://oitt.life/zh-hant/",
+      "initialCount": 0
+    },
+    {
+      "id": "058b29be-fcea-4f75-86f2-4d1ac64a0b84",
+      "title": "caacaanteng.com",
+      "url": "https://caacaanteng.com/",
+      "initialCount": 1
+    },
+    {
+      "id": "243e8047-b405-47ce-a744-47c585f7dd73",
+      "title": "play.cybernatsume.org",
+      "url": "https://play.cybernatsume.org/g/neon_wasteland_last_outpost/",
+      "initialCount": 0
+    },
+    {
+      "id": "3a228659-d748-4ca9-975b-aabc5f348077",
+      "title": "psynurseproject01.github.io",
+      "url": "https://psynurseproject01.github.io/beyond-the-door/",
+      "initialCount": 2
+    },
+    {
+      "id": "f5de85f2-99b5-49d5-81c1-cce7732dc3f7",
+      "title": "pillowspy.vercel.app",
+      "url": "https://pillowspy.vercel.app/",
+      "initialCount": 1
+    },
+    {
+      "id": "5df77cc7-3fa9-46ce-aea0-d1faf8f74902",
+      "title": "alexchiencsl-cloud.github.io",
+      "url": "https://alexchiencsl-cloud.github.io/Wage-slave/",
+      "initialCount": 1
+    },
+    {
+      "id": "8c8b9f88-0ba5-491e-b175-61edf21de7cd",
+      "title": "zhennai.pages.dev",
+      "url": "https://zhennai.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "591259c4-244a-4320-bfe9-4abb65230d61",
+      "title": "brothmaster.netlify.app",
+      "url": "https://brothmaster.netlify.app/",
+      "initialCount": 0
+    },
+    {
+      "id": "5a056e4d-aaa5-4bf2-8ef5-d650ee86e6ff",
+      "title": "happydog.tw",
+      "url": "https://happydog.tw/2026chef/#prep",
+      "initialCount": 1
+    },
+    {
+      "id": "a4552577-bbee-4c7f-a1a0-47323515b04a",
+      "title": "sup.miario.com",
+      "url": "https://sup.miario.com/games/sengoku-samoyed/",
+      "initialCount": 1
+    },
+    {
+      "id": "448bae23-268f-4811-b908-5f0e5cacb308",
+      "title": "UUUMPIRE",
+      "url": "https://hakexva.github.io/uuumpire/",
+      "initialCount": 1
+    },
+    {
+      "id": "a07fe895-18dc-4ee8-bd75-adf6d67d70a3",
+      "title": "天の川水切り",
+      "url": "https://taroj1205.poyo.jp/games/mizukiri",
+      "initialCount": 0
+    },
+    {
+      "id": "3036594e-d54b-4c56-853c-2f4a8d4afcd9",
+      "title": "削蘋果皮",
+      "url": "https://ringo-no-kawamuki.pages.dev/",
+      "initialCount": 1
+    },
+    {
+      "id": "2ea6cd98-1b06-4793-bcc0-82f58ab8de36",
+      "title": "霜淇淋模擬器",
+      "url": "https://softserve.nog.cc/",
+      "initialCount": 1
+    },
+    {
+      "id": "2c745de2-3b55-4d1e-aae6-f14ec3870b5b",
+      "title": "智齒拔完，話說不清",
+      "url": "https://play.cybernatsume.org/g/tooth_out_words_off/",
+      "initialCount": 6
+    },
+    {
+      "id": "f057bd54-db9f-4456-bc63-7da8fbcfa5cc",
+      "title": "malatanggame.vercel.app",
+      "url": "https://malatanggame.vercel.app/",
+      "initialCount": 0
+    },
+    {
+      "id": "e01a80fd-783d-4582-99eb-a8edd5caa3fb",
+      "title": "まっすぐ釘打ち",
+      "url": "https://unboring-studio.com/games/kugi-uchi/",
+      "initialCount": 1
+    }
+  ]
+}

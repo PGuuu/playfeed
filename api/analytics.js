@@ -4,6 +4,7 @@ const OWNERS=new Set(['paulvongulla@gmail.com','paulwu.hs10@nycu.edu.tw']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ENTRIES=new Set(['next','previous','search_selection','saved_selection','creator_selection','internal_selection','external_entry','direct_entry','feed_initial','reload','unknown']);
 const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','unsave_success','comments_open','comment_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open']);
+const { saveCountSummary } = require('./_save-counts');
 const rates=new Map();
 function secret(){const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.supabase_service_role_key;if(!key)throw Error('Analytics unavailable');return key;}
 function signature(id){return crypto.createHmac('sha256',secret()).update('playfeed-analytics-device:'+id).digest('hex');}
@@ -33,8 +34,8 @@ module.exports=async(req,res)=>{
    await owner(req);
    const days=Math.min(90,Math.max(1,Number(req.query?.days)||7));
    const audience=['external','owner','all'].includes(req.query?.audience)?req.query.audience:'external';
-   const [report,devices]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'})]);
-   return sendJson(res,200,{report,devices,audience,days});
+   const [report,devices,saveCounts]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'}),saveCountSummary()]);
+   return sendJson(res,200,{report,devices,saveCounts,audience,days});
   }
   if(req.method!=='POST')return sendJson(res,405,{error:'Method not allowed'});
   const body=await readJson(req,40000),action=body.action;
