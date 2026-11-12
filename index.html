@@ -223,7 +223,7 @@
   </article>
 </template>
 <aside id="save-hint" class="save-hint" hidden aria-labelledby="save-hint-title"><button type="button" class="hint-close" aria-label="關閉儲存提示">×</button><h2 id="save-hint-title">儲存的遊戲在這裡</h2><p id="save-hint-copy"></p><button type="button" id="save-hint-action">免密碼信箱登入</button></aside>
-<script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/auth.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const games = orderPlayfeedGames(await loadPlayfeedGames().catch(()=>{catalogError=true;return[]}));
   let ignoreGameLinkOnReload=performance.getEntriesByType('navigation')[0]?.type==='reload';
@@ -369,6 +369,7 @@
         if (error.message !== '409') throw error;
       });
       try { localStorage.setItem('playfeed:reported:' + game.id,'1'); } catch {}
+      window.PlayFeedAnalytics?.event('report_success',{game:game.id,title:game.title});
       reportDialog.close();
       notifyAction('已收到檢舉，會一併處理。');
     } catch {
@@ -512,6 +513,7 @@
         try {
           const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
           renderSaved(card, state.saved);
+          window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success');
           renderCounts(card, state);
           if(state.saved)showSaveHint();
         } catch (error) { notifyAction(error.message); }
@@ -533,6 +535,7 @@
           share.textContent = '已複製';
           setTimeout(() => { share.textContent = '分享'; }, 1800);
         }
+        window.PlayFeedAnalytics?.event('share_success');
       } catch (error) {
         if (error.name !== 'AbortError') window.prompt('複製遊戲連結', link.href);
       }
@@ -615,6 +618,7 @@
     try {
       invalidateEngagement(cards[index]);
       const counts = await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameKey:new URL(games[index].url,location.origin + "/").href,body})});
+      window.PlayFeedAnalytics?.event('comment_success',{game:games[index].id,title:games[index].title});
       renderCounts(cards[index], counts);
       if(commentsIndex===index) { input.value=''; await readComments(index); }
     } catch { if(commentsIndex===index)commentsMessage.textContent='留言未送出，請再試一次。'; }
@@ -647,6 +651,7 @@
   let gameLoadTimer;
   let gameLoadVersion = 0;
   function unmountGame() {
+    window.PlayFeedAnalytics?.setGame(null);
     closeComments(false);
     gameLoadVersion++;
     cancelAnimationFrame(gameLoadFrame);
@@ -674,6 +679,7 @@
     nextButton.disabled = index === games.length - 1;
     notifyAction('');
     const game = games[index];
+    window.PlayFeedAnalytics?.setGame(game);
     loadEngagement(game, cards[index]);
     const frame = document.createElement('iframe');
     frame.title = game.title;
