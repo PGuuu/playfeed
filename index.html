@@ -125,6 +125,25 @@
   .comments-button, .reaction { position: relative; overflow: visible; }
   .action-count { position: absolute; top: -7px; right: -5px; min-width: 17px; padding: 1px 4px; border: 1px solid #55545f; border-radius: 999px; background: #373640; color: #faf8f2; font-size: 10px; font-weight: 700; line-height: 14px; font-variant-numeric: tabular-nums; pointer-events: none; }
   .reaction[aria-pressed="true"] .action-count { background: #d6fb65; color: #101014; border-color: #d6fb65; }
+
+  :root{--orange:#ff8b3d;--orange-light:#ffb46c;--cream:#fff3df;--ink:#482515}
+  .feed-brand{padding:12px 16px;background:var(--orange);color:var(--ink);border-radius:0 0 22px 22px;box-shadow:0 8px 24px #0003}
+  .feed-brand .brand{font-size:24px}.feed-brand .brand span{color:var(--cream)}
+  .nav-actions{gap:10px}.search-button,.account-link{width:44px;height:44px}.account-link{background:var(--cream);color:var(--ink);font-weight:800}
+  article>footer{padding:14px 12px;background:#ff8b3df5;color:var(--ink);border:1px solid #ffbd83;border-radius:22px;box-shadow:0 8px 28px #0004;gap:10px}
+  .byline{color:var(--ink);font-size:14px;flex:0 0 auto}.actions{flex:1;flex-wrap:nowrap;gap:10px}
+  .actions button{min-width:60px;min-height:48px;padding:12px 14px;border:0;background:var(--cream);color:var(--ink);font-size:16px;font-weight:700;flex:1}
+  .actions .reaction[aria-pressed=true]{background:var(--ink);color:var(--cream)}
+  .action-count{top:-8px;right:-4px;min-width:21px;font-size:11px;line-height:17px;background:var(--ink);color:var(--cream);border-color:var(--orange)}
+  .game-switcher{width:42px;border-radius:16px;border:1px solid #ffbc84;background:var(--orange);box-shadow:0 4px 18px #0004;backdrop-filter:none}
+  .game-switcher button{width:40px;height:52px;color:var(--ink)}.game-switcher button+button{border-color:#71350f30}.game-switcher button:active{background:var(--orange-light)}
+  .triangle{border-left-width:6px;border-right-width:6px}.triangle.up{border-bottom-width:9px}.triangle.down{border-top-width:9px}#toggle-controls svg{width:18px;height:18px}
+  .game-more{width:42px;height:38px;font-size:28px}body.controls-visible .game-more{bottom:100px}#delete-game{margin-top:8px;background:#4c2025;color:#ffd4c8;border-color:#8b4345}
+  .save-hint{position:fixed;z-index:8;right:20px;top:80px;width:min(300px,calc(100vw - 32px));padding:20px;background:var(--cream);color:var(--ink);border:1px solid #ffbd83;border-radius:18px;box-shadow:0 12px 36px #0007;touch-action:manipulation}
+  .save-hint::before{content:'';position:absolute;top:-8px;right:18px;width:14px;height:14px;transform:rotate(45deg);background:var(--cream);border-left:1px solid #ffbd83;border-top:1px solid #ffbd83}
+  .save-hint h2{font-size:18px;margin-right:20px}.save-hint p{font-size:14px;line-height:1.6;margin:10px 0 16px}.save-hint button{border:0;background:var(--orange);color:var(--ink);font-weight:700;font-size:14px}
+  .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
+  @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
@@ -153,6 +172,7 @@
   <ul class="search-results"></ul>
 </dialog>
 <dialog id="report-menu" class="report-dialog" aria-label="遊戲選項">
+  <button type="button" id="delete-game" hidden>刪除遊戲</button>
   <button type="button" id="open-report">檢舉遊戲</button>
   <div class="dialog-actions"><button type="button" data-close>取消</button></div>
 </dialog>
@@ -198,13 +218,14 @@
         <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
         <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><span class="action-label">儲存</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
         <button class="share" type="button" aria-label="分享">分享</button>
-        <a class="source recommend" href="/submit.html">推薦新遊戲</a>
       </div>
     </footer>
   </article>
 </template>
+<aside id="save-hint" class="save-hint" hidden aria-labelledby="save-hint-title"><button type="button" class="hint-close" aria-label="關閉儲存提示">×</button><h2 id="save-hint-title">儲存的遊戲在這裡</h2><p id="save-hint-copy"></p><button type="button" id="save-hint-action">免密碼信箱登入</button></aside>
 <script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script type="module">
-  const games = await loadPlayfeedGames();
+  let catalogError=false;
+  const games = await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
   try { sessionStorage.setItem('playfeed:catalog:v1', JSON.stringify({ time: Date.now(), games })); } catch {}
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
@@ -231,10 +252,13 @@
   const previousButton = document.querySelector('#previous-game');
   const nextButton = document.querySelector('#next-game');
   const feedBrand = document.querySelector('.feed-brand');
+  let canDeleteGame=false, ownerCheckVersion=0;
   PlayFeedAuth.onChange(user => {
     const account = document.querySelector('.account-link');
     account.textContent = user?.email ? user.email[0].toUpperCase() : '👤';
-    account.title = user?.email || '登入 PlayFeed';
+    account.title = user?.email || '免密碼信箱登入';
+    const version=++ownerCheckVersion;canDeleteGame=false;document.querySelector('#delete-game').hidden=true;
+    if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame}).catch(()=>{});
   });
   let visitorToken;
   try {
@@ -259,6 +283,7 @@
   }
   function hideNavigation() {
     clearTimeout(navigationTimer);
+    if(!document.querySelector('#save-hint').hidden)return;
     document.body.classList.remove('controls-visible');
     feedBrand.classList.remove('visible');
     feedBrand.inert = true;
@@ -284,6 +309,27 @@
   const reportForm = document.querySelector('#report-form');
   const openReport = document.querySelector('#open-report');
   let reportGame;
+  document.querySelector('#delete-game').addEventListener('click',async()=>{
+    const game=reportGame;if(!game||!canDeleteGame)return;
+    if(!window.confirm('確定刪除「'+game.title+'」？'))return;
+    const button=document.querySelector('#delete-game');button.disabled=true;
+    try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'delete-game',gameId:game.id})});try{sessionStorage.removeItem('playfeed:catalog:v1')}catch{}location.assign('/')}
+    catch(error){notifyAction(error.message)}finally{button.disabled=false}
+  });
+  const saveHint=document.querySelector('#save-hint');let pendingHintSave=null;
+  function closeSaveHint(){saveHint.hidden=true;document.querySelector('.account-link').classList.remove('save-highlight');pendingHintSave=null;}
+  saveHint.querySelector('.hint-close').addEventListener('click',closeSaveHint);
+  document.querySelector('.account-link').addEventListener('click',closeSaveHint);
+  document.querySelector('#save-hint-action').addEventListener('click',()=>{const save=pendingHintSave;closeSaveHint();if(PlayFeedAuth.user)location.assign('/account.html');else PlayFeedAuth.openLogin(save)});
+  function showSaveHint(save){
+    try{if(localStorage.getItem('playfeed:save-hint:v1'))return false;localStorage.setItem('playfeed:save-hint:v1','1')}catch{if(showSaveHint.shown)return false}showSaveHint.shown=true;
+    pendingHintSave=save;revealNavigation();saveHint.hidden=false;
+    const account=document.querySelector('.account-link');account.classList.add('save-highlight');
+    const rect=account.getBoundingClientRect();saveHint.style.top=(rect.bottom+18)+'px';saveHint.style.right=Math.max(16,innerWidth-rect.right+rect.width/2-26)+'px';
+    document.querySelector('#save-hint-copy').textContent=PlayFeedAuth.user?'點右上角的會員頭像，就能查看你儲存的遊戲。':'加入會員即可儲存遊戲，再點右上角的頭像查看收藏。';
+    document.querySelector('#save-hint-action').textContent=PlayFeedAuth.user?'查看儲存的遊戲':'免密碼信箱登入';return true;
+  }
+  window.addEventListener('resize',()=>{if(!saveHint.hidden)closeSaveHint()});
   for (const dialog of [reportMenu, reportDialog]) {
     dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => {
@@ -444,6 +490,7 @@
     card.setAttribute('aria-label', game.title);
     card.querySelector('.game-more').addEventListener('click', () => {
       reportGame = game;
+      document.querySelector("#delete-game").hidden=!canDeleteGame;
       let reported = false;
       try { reported = localStorage.getItem('playfeed:reported:' + game.id) === '1'; } catch {}
       openReport.textContent = reported ? '已檢舉' : '檢舉遊戲';
@@ -457,7 +504,7 @@
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
       renderSaved(card, false);
-      button.addEventListener('click', () => PlayFeedAuth.requireLogin(async () => {
+      const saveGame = async () => {
         const active = button.getAttribute('aria-pressed') !== 'true';
         button.disabled = true;
         invalidateEngagement(card);
@@ -465,9 +512,14 @@
           const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
           renderSaved(card, state.saved);
           renderCounts(card, state);
+          if(state.saved)showSaveHint();
         } catch (error) { notifyAction(error.message); }
         finally { button.disabled = false; }
-      }));
+      };
+      button.addEventListener('click',()=>{
+        if(!PlayFeedAuth.user&&showSaveHint(saveGame))return;
+        PlayFeedAuth.requireLogin(saveGame);
+      });
     }
     const share = card.querySelector('.share');
     share.addEventListener('click', async () => {
@@ -676,6 +728,7 @@
       unmountGame();
       return;
     }
+    if(!games.length){feed.replaceChildren();const empty=document.createElement('p');empty.className='empty';empty.textContent=catalogError?'遊戲清單暫時無法載入，請重新整理。':'目前沒有可遊玩的遊戲';feed.append(empty);return;}
     const requestedId = location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id'));
     const index = games.findIndex(game => game.id === requestedId);
     const target = Math.max(index, 0);

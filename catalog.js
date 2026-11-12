@@ -1,4 +1,5 @@
 async function loadPlayfeedGames(request = recommendationRequest, baseUrl = location.origin + "/") {
+  const removalResult=Promise.resolve().then(()=>request('/playfeed_removed_games?select=game_url')).then(data=>({data}),error=>({error}));
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const games = [
@@ -84,9 +85,14 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   } catch (error) {
     console.warn('推薦清單暫時無法載入', error);
   }
+  // All catalog consumers (feed, profile, sharing and images) respect owner removals.
+  const removal=await removalResult;
+  if(removal.error||!Array.isArray(removal.data))throw new Error('遊戲清單暫時無法載入，請重新整理。');
+  const removedUrls=new Set(removal.data.map(row=>row.game_url));
   // Stable ties retain the original batch order; legacy entries without a known date stay in their existing order.
   const time = game => Number.isFinite(Date.parse(game.published_at)) ? Date.parse(game.published_at) : 0;
-  return games.sort((a, b) => time(b) - time(a));
+  return games.filter(game=>!removedUrls.has(new URL(game.url,baseUrl).href)).sort((a, b) => time(b) - time(a));
 }
 
 if (typeof module !== "undefined") module.exports = { loadPlayfeedGames };
+

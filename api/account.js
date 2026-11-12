@@ -65,7 +65,7 @@ module.exports = async function handler(request, response) {
     const body = await readJson(request, 30_000);
     const action = safeText(body.action, { name: 'action', max: 30 });
 
-    if (['profile', 'read-notifications', 'recommend', 'publish', 'review'].includes(action)) return sendJson(response, 200, await community.post(user, body));
+    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);
@@ -93,3 +93,4 @@ module.exports = async function handler(request, response) {
     sendJson(response, error.status || 500, { error: error.status ? error.message : '目前無法完成操作，請稍後再試。' });
   }
 };
+

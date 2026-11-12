@@ -43,6 +43,20 @@ async function get(user, action) {
  }
 }
 async function post(user, body) {
+ if(body.action==='delete-game'){
+  if(String(user.email||'').toLowerCase()!=='paulvongulla@gmail.com'||!await isAdmin(user))throw Object.assign(new Error('只有管理員可以刪除遊戲。'),{status:403});
+  const id=safeText(body.gameId,{name:'gameId',max:200,pattern:/^[a-zA-Z0-9_-]+$/});
+  const {loadPlayfeedGames}=require('../catalog');
+  const games=await loadPlayfeedGames(async resource=>{const offset=resource.indexOf('?');return db(resource.slice(1,offset),{query:resource.slice(offset+1)})},'https://playfeed-gilt.vercel.app/');
+  const game=games.find(game=>game.id===id);
+  if(!game)throw Object.assign(new Error('這款遊戲已刪除或不存在。'),{status:404});
+  const url=new URL(game.url,'https://playfeed-gilt.vercel.app/').href;
+  await db('playfeed_removed_games',{method:'POST',query:'on_conflict=game_url',body:{game_url:url,removed_by:user.id},prefer:'resolution=ignore-duplicates,return=minimal'});
+  // Reporting history remains available; the removal itself is already authoritative.
+  try{await db('playfeed_game_reports',{method:'PATCH',query:'game_url=eq.'+eq(url)+'&status=eq.pending',body:{status:'resolved'}})}catch(error){console.warn('Could not resolve reports after game removal')}
+  return {ok:true,id:game.id};
+ }
+
  if (body.action === 'profile') {
   const display_name = safeText(body.displayName, { name: '名稱', max: 40 });
   const bio = safeText(body.bio || '', { name: '自介', min: 0, max: 300 });
