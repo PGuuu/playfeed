@@ -33,6 +33,8 @@ module.exports = async function handler(request, response) {
     const metadata = `<meta property="og:type" content="website"><meta property="og:site_name" content="PlayFeed"><meta property="og:locale" content="zh_TW"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${link}"><link rel="canonical" href="${link}"><meta property="og:image" content="${image}"><meta property="og:image:alt" content="${title} preview"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`;
     // Serve the actual feed here: redirects and hash URLs can lose per-game preview metadata.
     const page = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8')
+      .replace(/<meta\b[^>]*(?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>/g, '')
+      .replace(/<link\b[^>]*rel="canonical"[^>]*>/g, '')
       .replace(/<title>[^<]*<\/title>/, () => `<title>${title} | PlayFeed</title>`)
       .replace(/<meta name="description"[^>]*>/, () => `<meta name="description" content="${description}">`)
       .replace('</head>', () => metadata + '</head>');
