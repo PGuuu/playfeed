@@ -395,6 +395,7 @@
       author.textContent = game.creator?.name || game.author;
       link.append(title, author);
       link.addEventListener('click', () => {
+        pendingEntrySource='search_selection';
         searchDialog.close();
         if (location.hash === link.hash) gameFromLink();
       });
@@ -646,6 +647,7 @@
   grip.addEventListener('pointercancel',finishDrag);
 
   let activeIndex = -1;
+  let firstGameEntry=true,pendingEntrySource=null;
   let gameResizeObserver;
   let gameLoadFrame;
   let gameLoadTimer;
@@ -669,7 +671,7 @@
     activeIndex = -1;
   }
 
-  function showGame(index) {
+  function showGame(index, entrySource) {
     if (activeIndex === index) return;
     unmountGame();
     activeIndex = index;
@@ -679,7 +681,7 @@
     nextButton.disabled = index === games.length - 1;
     notifyAction('');
     const game = games[index];
-    window.PlayFeedAnalytics?.setGame(game);
+    window.PlayFeedAnalytics?.setGame(game,entrySource);
     loadEngagement(game, cards[index]);
     const frame = document.createElement('iframe');
     frame.title = game.title;
@@ -725,7 +727,7 @@
     if (location.href !== url.href) history.replaceState(null, '', url);
   }
 
-  function gameFromLink() {
+  function gameFromLink(entrySource) {
     const profile = profiles.get(location.hash);
     feed.hidden = Boolean(profile);
     creatorPage.hidden = !profile;
@@ -741,15 +743,19 @@
     ignoreGameLinkOnReload=false;
     const index = games.findIndex(game => game.id === requestedId);
     const target = Math.max(index, 0);
-    showGame(target);
+    const source=typeof entrySource==='string'?entrySource:pendingEntrySource||(firstGameEntry?undefined:'internal_selection');
+    pendingEntrySource=null;firstGameEntry=false;
+    showGame(target,source);
   }
 
   gameFromLink();
   window.addEventListener('hashchange', gameFromLink);
+  document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed'))pendingEntrySource='creator_selection';},true);
   function switchGame(direction) {
     const target = activeIndex + direction;
     if (target < 0 || target >= games.length) return;
-    showGame(target);
+    window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
+    showGame(target,direction<0?'previous':'next');
     revealNavigation(true);
   }
   for (const [button, direction] of [[previousButton, -1], [nextButton, 1]]) {

@@ -2,6 +2,7 @@ const crypto=require('node:crypto');
 const {readJson,sendJson,requestOriginAllowed,supabaseRest,verifyPhuzeSession}=require('./_lib');
 const OWNERS=new Set(['paulvongulla@gmail.com','paulwu.hs10@nycu.edu.tw']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ENTRIES=new Set(['next','previous','search_selection','saved_selection','creator_selection','internal_selection','external_entry','direct_entry','feed_initial','reload','unknown']);
 const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','unsave_success','comments_open','comment_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open']);
 const rates=new Map();
 function secret(){const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.supabase_service_role_key;if(!key)throw Error('Analytics unavailable');return key;}
@@ -68,7 +69,7 @@ module.exports=async(req,res)=>{
   const rows=body.events.map(e=>{
    if(!UUID.test(e.id||'')||!UUID.test(e.session||'')||!ACTIONS.has(e.action)||!Number.isInteger(e.ms||0)||(e.ms||0)<0||(e.ms||0)>60000)throw Object.assign(Error('Invalid event'),{status:400});
    let referrer='';try{referrer=new URL(e.referrer).hostname.slice(0,200)}catch{}
-   return {id:e.id,device_id:id,session_id:e.session,game_id:text(e.game,200),game_title:text(e.title,300),action:e.action,duration_ms:e.action==='game_time'?(e.ms||0):0,path:['/','/account.html','/submit.html','/analytics.html'].includes(e.path)?e.path:e.path?.startsWith('/g/')?'/g/':'/',referrer,is_bot:info.is_bot};
+   return {id:e.id,device_id:id,session_id:e.session,game_id:text(e.game,200),game_title:text(e.title,300),action:e.action,entry_source:ENTRIES.has(e.entry)?e.entry:'unknown',previous_game_id:text(e.previous,200),duration_ms:e.action==='game_time'?(e.ms||0):0,path:['/','/account.html','/submit.html','/analytics.html'].includes(e.path)?e.path:e.path?.startsWith('/g/')?'/g/':'/',referrer,is_bot:info.is_bot};
   });
   if(rows.length)await db('playfeed_analytics_events',{method:'POST',query:'on_conflict=id',body:rows,prefer:'resolution=ignore-duplicates,return=minimal'});
   await db('playfeed_analytics_devices',{method:'PATCH',query:'id=eq.'+id,body:{last_seen:new Date().toISOString()}});

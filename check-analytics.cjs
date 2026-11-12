@@ -21,8 +21,9 @@ async function main(){
   await handler({method,headers:{host:'playfeed-gilt.vercel.app','user-agent':'iPhone Safari/605',...headers},body,query:{}},res);return res;
  }
  const init=await call({action:'init'});assert.equal(init.code,200);const cookie=init.headers['Set-Cookie'].split(';')[0];
- const event={id:crypto.randomUUID(),session:crypto.randomUUID(),action:'game_time',game:'test',title:'Test',ms:15000,referrer:'https://example.com/private?q=secret',path:'/'};
+ const event={id:crypto.randomUUID(),session:crypto.randomUUID(),action:'game_time',game:'test',title:'Test',entry:'next',previous:'prior-game',ms:15000,referrer:'https://example.com/private?q=secret',path:'/'};
  await call({action:'events',events:[event]},{cookie});await call({action:'events',events:[event]},{cookie});assert.equal(events.size,1);assert.equal([...events.values()][0].referrer,'example.com');
+ assert.equal([...events.values()][0].entry_source,'next');assert.equal([...events.values()][0].previous_game_id,'prior-game');
  const id=[...devices.keys()][0];assert(!devices.get(id).is_owner);
  await call({action:'identify'},{cookie,authorization:'Bearer owner'});assert(devices.get(id).is_owner);
  assert.equal((await call({}, {},'GET')).code,403);
@@ -37,14 +38,26 @@ async function main(){
  assert.equal(handler.deviceInfo({headers:{'user-agent':'iPhone CriOS/123 Safari/605'}}).family,'iPhone');
  // Browser lifecycle: background time is excluded, switching closes the old game's interval.
  let clock=0;const callbacks={},sent=[],storage=new Map(),document={visibilityState:'visible',referrer:'',addEventListener(n,f){callbacks[n]=f}};
- const context={crypto,performance:{now:()=>clock},Date,location:{pathname:'/'},document,Element:class{},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},navigator:{sendBeacon:()=>true},Blob,Headers,setInterval:f=>{callbacks.tick=f},fetch:async(_,o)=>{sent.push(JSON.parse(o.body));return {ok:true}},window:{addEventListener(){}}};
+ const context={crypto,URL,URLSearchParams,performance:{now:()=>clock},Date,location:{pathname:'/',origin:'https://playfeed-gilt.vercel.app',hash:'',search:''},document,Element:class{},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},navigator:{sendBeacon:()=>true},Blob,Headers,setInterval:f=>{callbacks.tick=f},fetch:async(_,o)=>{sent.push(JSON.parse(o.body));return {ok:true}},window:{addEventListener(){}}};
  vm.runInNewContext(fs.readFileSync('analytics.js','utf8'),context);
  await new Promise(r=>setImmediate(r));const analytics=context.window.PlayFeedAnalytics;
- analytics.setGame({id:'a',title:'A'});clock=5000;analytics.setGame({id:'b',title:'B'});clock=12000;document.visibilityState='hidden';callbacks.visibilitychange();clock=45000;callbacks.tick();document.visibilityState='visible';callbacks.visibilitychange();clock=48000;analytics.setGame(null);await analytics.flush();await new Promise(r=>setImmediate(r));await analytics.flush();
+ analytics.setGame({id:'a',title:'A'});clock=5000;analytics.setGame(null);analytics.setGame({id:'b',title:'B'},'next');clock=12000;document.visibilityState='hidden';callbacks.visibilitychange();clock=45000;callbacks.tick();document.visibilityState='visible';callbacks.visibilitychange();clock=48000;analytics.setGame(null);await analytics.flush();await new Promise(r=>setImmediate(r));await analytics.flush();
  const all=sent.flatMap(b=>b.events||[]),unique=[...new Map(all.map(e=>[e.id,e])).values()];
  assert.equal(unique.filter(e=>e.game==='a'&&e.action==='game_time').reduce((s,e)=>s+e.ms,0),5000);
  assert.equal(unique.filter(e=>e.game==='b'&&e.action==='game_time').reduce((s,e)=>s+e.ms,0),10000);
  assert.equal(unique.filter(e=>e.action==='game_view').length,2);
+ assert.equal(unique.find(e=>e.action==='game_view'&&e.game==='a').entry,'feed_initial');
+ assert.equal(unique.find(e=>e.action==='game_view'&&e.game==='b').entry,'next');
+ assert.equal(unique.find(e=>e.action==='game_view'&&e.game==='b').previous,'a');
+ assert(unique.filter(e=>e.action==='game_time'&&e.game==='b').every(e=>e.entry==='next'));
+ analytics.setGame({id:'a',title:'A'},'previous');await new Promise(r=>setImmediate(r));await analytics.flush();
+ assert(sent.flatMap(b=>b.events||[]).some(e=>e.game==='a'&&e.action==='game_view'&&e.entry==='previous'&&e.previous==='b'));
+ for(const [referrer,path,navigation,expected]of [['https://outside.example/post','/g/a','navigate','external_entry'],['','/g/a','navigate','direct_entry'],['https://playfeed-gilt.vercel.app/account.html','/g/a','navigate','saved_selection'],['','/g/a','reload','reload']]){
+  const batches=[];
+  const ctx={...context,document:{...document,referrer,visibilityState:'visible'},location:{...context.location,pathname:path},performance:{now:()=>0,getEntriesByType:()=>[{type:navigation}]},window:{addEventListener(){}},fetch:async(_,o)=>{batches.push(JSON.parse(o.body));return {ok:true}}};
+  vm.runInNewContext(fs.readFileSync('analytics.js','utf8'),ctx);await new Promise(r=>setImmediate(r));ctx.window.PlayFeedAnalytics.setGame({id:'a',title:'A'});await new Promise(r=>setImmediate(r));await ctx.window.PlayFeedAnalytics.flush();
+  assert.equal(batches.flatMap(b=>b.events||[]).find(e=>e.action==='game_view').entry,expected);
+ }
  console.log('PASS: signed device cookies, both owner emails, event deduplication, private report, one-use device link, input validation, visible-only dwell and game switching');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

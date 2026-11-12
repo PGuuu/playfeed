@@ -13,6 +13,8 @@ create table public.playfeed_analytics_events (
  session_id uuid not null,
  game_id text not null default '',
  game_title text not null default '',
+ entry_source text not null default 'unknown',
+ previous_game_id text not null default '',
  action text not null,
  duration_ms integer not null default 0 check(duration_ms between 0 and 60000),
  path text not null default '/',
@@ -57,6 +59,10 @@ with selected as (
  count(*) filter(where action='report_success') as reports,
  count(*) filter(where action='creator_open') as creator_opens
  from selected where game_id<>'' group by game_id
+), entries as (
+ select game_id,max(game_title) as title,entry_source,count(*) filter(where action='game_view') as views,
+ count(distinct device_id) as visitors,sum(duration_ms) as duration_ms
+ from selected where game_id<>'' and action in ('game_view','game_time') group by game_id,entry_source
 ), actions as (
  select action,count(*) as count from selected where action<>'game_time' group by action
 ), devices as (
@@ -73,6 +79,7 @@ with selected as (
 select jsonb_build_object(
  'summary',(select jsonb_build_object('visitors',count(distinct device_id),'sessions',count(distinct session_id),'page_views',count(*) filter(where action='page_view'),'game_views',count(*) filter(where action='game_view'),'duration_ms',coalesce(sum(duration_ms),0)) from selected),
  'games',coalesce((select jsonb_agg(to_jsonb(g) order by views desc,duration_ms desc) from game_stats g),'[]'::jsonb),
+ 'entries',coalesce((select jsonb_agg(to_jsonb(e) order by game_id,views desc) from entries e),'[]'::jsonb),
  'actions',coalesce((select jsonb_agg(to_jsonb(a) order by count desc) from actions a),'[]'::jsonb),
  'devices',coalesce((select jsonb_agg(to_jsonb(d)) from devices d),'[]'::jsonb),
  'sources',coalesce((select jsonb_agg(to_jsonb(s) order by visits desc) from sources s),'[]'::jsonb),
