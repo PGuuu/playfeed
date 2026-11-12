@@ -77,7 +77,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
       if (original) {
         original.published_at ||= game.created_at;
       } else {
-        const entry = { ...game, published_at: game.created_at, author: game.author || new URL(url).hostname, external: true, recommended: true };
+        const entry = { ...game, published_at: game.created_at, author: game.author || '來源：' + new URL(url).hostname, external: true, recommended: true };
         games.push(entry);
         existing.set(url, entry);
       }
