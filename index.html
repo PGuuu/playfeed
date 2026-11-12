@@ -477,7 +477,7 @@
     byline.href = game.creator.hash;
     card.querySelector('.game-title').textContent=game.title;
     card.querySelector('.game-title').title=game.title;
-    byline.textContent = 'by '+game.creator.name;
+    byline.textContent = game.creator.name.startsWith('來源：') ? game.creator.name : 'by '+game.creator.name;
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
       renderSaved(card, false);
