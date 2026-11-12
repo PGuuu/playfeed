@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>推薦遊戲 · PlayFeed</title>
+<style>
+  body { max-width: 720px; margin: auto; padding: 20px; background: #101014; color: #faf8f2; font: 16px system-ui; }
+  a { color: inherit; } label { display: block; margin-bottom: 12px; }
+  input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; font: inherit; }
+  button { padding: 8px 14px; font: inherit; }
+  iframe { width: 100%; height: min(65dvh, 640px); border: 0; background: #1b1b23; }
+  dialog { width:min(360px,calc(100% - 32px)); border:1px solid #3a3a43; border-radius:20px; padding:24px; color:#fff; background:#19191f; text-align:center; }
+  dialog::backdrop { background:#000b; } #phuze-widget { min-height:54px; text-align:left; margin:18px 0; }
+</style>
+<a href="/">← 回遊戲牆</a>
+<h1>推薦遊戲</h1><p><a href="/account.html">查看我的推薦</a></p>
+<form id="recommend">
+  <label>遊戲網址 <input name="url" type="url" placeholder="https://" required></label>
+  <button>推薦並預覽</button>
+</form>
+<p id="message" role="status"></p>
+<div id="player"></div>
+<form id="publish" hidden>
+  <button>試玩成功，公開上架</button>
+</form>
+<dialog id="login-dialog"><h2>登入 PlayFeed</h2><p>登入後才能推薦及發布遊戲。</p><div id="phuze-widget"></div><button type="button" data-close-login>取消</button></dialog>
+<script src="https://phuze.edato.me/phuze.js"></script><script src="/auth.js"></script><script src="/recommendations.js"></script>
+<script>
+  const publish = document.querySelector('#publish');
+  let currentUrl;
+  const form = document.querySelector('#recommend');
+  const player = document.querySelector('#player');
+  const message = document.querySelector('#message');
+  form.addEventListener('input', () => {
+    player.replaceChildren();
+    currentUrl = undefined;
+    publish.hidden = true;
+    publish.reset();
+    message.textContent = '';
+  });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    player.replaceChildren();
+    currentUrl = undefined;
+    publish.hidden = true;
+    publish.reset();
+    let url;
+    try { url = new URL(form.elements.url.value); } catch {}
+    if (!url || url.protocol !== 'https:' || url.username || url.password || url.origin === location.origin || !/^([a-z0-9-]+\.)+[a-z][a-z0-9-]+$/.test(url.hostname) || url.port) {
+      message.textContent = '請提供不含帳號密碼的外部 HTTPS 遊戲網址。';
+      return;
+    }
+    const frame = document.createElement('iframe');
+    frame.title = '遊戲預覽';
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.setAttribute('allow', 'fullscreen');
+    frame.src = url.href;
+    player.append(frame);
+    currentUrl = url.href;
+    publish.hidden = false;
+    const games = JSON.parse(localStorage.getItem('playfeed:recommendations') || '[]');
+    if (!games.includes(url.href)) {
+      localStorage.setItem('playfeed:recommendations', JSON.stringify([url.href, ...games]));
+    }
+    message.textContent = '請在下方試玩。如果畫面空白或原站顯示拒絕連線，可能是原站禁止嵌入。';
+  });
+  publish.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!currentUrl) return;
+    const button = publish.querySelector('button');
+    button.disabled = true;
+    message.textContent = '正在上架…';
+    try {
+      if (!PlayFeedAuth.user) { PlayFeedAuth.openLogin(() => publish.requestSubmit()); return; }
+      const result = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'publish', url: currentUrl }) });
+      location.assign('/#' + encodeURIComponent(result.id));
+    } catch (error) {
+      message.textContent = error.message || '目前無法上架，請稍後再試。';
+    } finally {
+      button.disabled = false;
+    }
+  });
+  const selected = new URLSearchParams(location.search).get('game');
+  if (selected) {
+    form.elements.url.value = selected;
+    form.requestSubmit();
+  }
+</script>
+</html>

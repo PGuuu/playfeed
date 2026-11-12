@@ -1,2881 +1,653 @@
-<!DOCTYPE html>
-<html lang="zh-Hant" class="booting">
+<!doctype html>
+<html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#ffffff">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="在 PlayFeed 直接玩網頁遊戲，往上滑就換下一款。">
 <title>PlayFeed — 滑一下，玩一個</title>
-<link rel="stylesheet" href="creator.css">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-  :root {
-    --main-nav-height: calc(70px + env(safe-area-inset-bottom));
-    --game-top-height: calc(56px + env(safe-area-inset-top));
-    --play-exit-height: calc(64px + env(safe-area-inset-bottom));
-  }
-  html, body { height: 100%; background: #fff; color: #262626; font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif; overscroll-behavior: none;
-    -webkit-user-select: none; user-select: none; }
-  html.booting, html.booting body { background: #fff; }
-  #bootSplash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
-    overflow: hidden; isolation: isolate; background: #fff; color: #fff; opacity: 1; visibility: visible; }
-  #bootSplash.done { pointer-events: none; animation: bootSplashExit .9s ease forwards; }
-  .boot-color-fade { position: absolute; inset: 0; z-index: 0; background: #fff; }
-  .boot-color-stream { position: absolute; inset: 0 0 auto; height: 1200vh; display: grid;
-    grid-auto-rows: 100vh; animation: bootColorSwipe 4.8s linear infinite; will-change: transform; }
-  .boot-color-panel:nth-child(6n+1) { background: #ff2d6f; }
-  .boot-color-panel:nth-child(6n+2) { background: #ff8a00; }
-  .boot-color-panel:nth-child(6n+3) { background: #ffd60a; }
-  .boot-color-panel:nth-child(6n+4) { background: #00d7c8; }
-  .boot-color-panel:nth-child(6n+5) { background: #2878ff; }
-  .boot-color-panel:nth-child(6n+6) { background: #8d36ff; }
-  #bootSplash.done .boot-color-fade { animation: bootColorsToWhite .68s ease forwards; }
-  #bootSplash.done .boot-brand { animation: bootBrandFade .72s ease forwards; }
-  @keyframes bootColorSwipe {
-    from { transform: translateY(0); }
-    to { transform: translateY(-600vh); }
-  }
-  @keyframes bootColorsToWhite {
-    0%, 22% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @keyframes bootBrandFade {
-    0%, 48% { transform: translateY(-2vh); opacity: 1; }
-    100% { transform: translateY(-7vh); opacity: 0; }
-  }
-  @keyframes bootSplashExit {
-    0%, 76% { opacity: 1; visibility: visible; }
-    100% { opacity: 0; visibility: hidden; }
-  }
-  .boot-brand { position: relative; z-index: 1; text-align: center; transform: translateY(-2vh);
-    text-shadow: 0 3px 20px rgba(0,0,0,.28); }
-  .boot-logo { font-size: clamp(38px, 11vw, 64px); line-height: 1; font-weight: 900;
-    letter-spacing: -.055em; color: #fff; }
-  .boot-tagline { margin-top: 12px; color: rgba(255,255,255,.9); font-size: 14px; font-weight: 700;
-    letter-spacing: .12em; text-transform: lowercase; }
-  /* 只有輸入框可以選字（留言、Email） */
-  input, textarea { -webkit-user-select: text; user-select: text; }
+  * { box-sizing: border-box; }
+  :root { color-scheme: dark; font: 16px system-ui, sans-serif; background: #101014; color: #faf8f2; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { touch-action: none; }
+  [hidden] { display: none !important; }
+  button, a { color: inherit; font: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, a:focus-visible { outline: 2px solid #d6fb65; outline-offset: 4px; }
+  #feed { position: fixed; inset: 0; height: 100dvh; overflow: hidden; }
+  article { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; max-width: 900px; margin: auto; padding: max(8px, env(safe-area-inset-top)) clamp(8px, 2vw, 20px) max(8px, env(safe-area-inset-bottom)); }
+  header, footer, .actions { display: flex; align-items: center; gap: 10px; }
+  header, footer { justify-content: space-between; }
+  .brand { font-size: 1.18rem; font-weight: 900; letter-spacing: -.06em; }
+  .brand span { color: #d6fb65; }
+  a.brand { color: inherit; text-decoration: none; }
+  .nav-actions { display: flex; align-items: center; gap: 6px; }
+  .search-button { background: transparent; border: 0; padding: 0; width: 38px; height: 38px; }
+  .magnifier { width: 15px; height: 15px; border: 2px solid currentColor; border-radius: 50%; position: relative; }
+  .magnifier::after { content: ''; position: absolute; width: 7px; height: 2px; background: currentColor; transform: rotate(45deg); right: -5px; bottom: -3px; }
+  .search-dialog { width: min(580px, calc(100vw - 24px)); max-height: 85dvh; border: 1px solid #383841; border-radius: 18px; padding: 16px; background: #17171e; color: inherit; overscroll-behavior: contain; touch-action: pan-y; }
+  .search-dialog::backdrop { background: #0009; }
+  article { position: relative; }
+  .game-more { position: absolute; z-index: 3; top: max(16px, env(safe-area-inset-top)); right: 16px; border: 0; padding: 0; width: 34px; height: 30px; border-radius: 10px; background: #19191e66; color: #ffffffa6; font-size: 23px; line-height: 1; touch-action: manipulation; }
+  .report-dialog { width: min(380px,calc(100vw - 32px)); padding: 20px; border: 1px solid #383841; border-radius: 18px; background: #19191f; color: inherit; max-height: 85dvh; touch-action: pan-y; }
+  .report-dialog::backdrop { background: #0009; }
+  .report-dialog h2 { margin-bottom: 16px; }
+  .report-dialog label { display: block; margin: 12px 0; font-size: 14px; }
+  .report-dialog textarea { display: block; width: 100%; margin-top: 8px; background: #25252d; border: 1px solid #4c4b54; border-radius: 10px; color: inherit; padding: 10px; font: inherit; font-size: 16px; }
+  .report-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .report-submit { background: #d6fb65; color: #161910; }
+  #report-menu button { width: 100%; padding: 12px; border-radius: 10px; }
+  .search-dialog form { display: flex; gap: 8px; }
+  .search-dialog input { min-width: 0; flex: 1; background: #25252d; color: inherit; border: 1px solid #4c4b54; border-radius: 12px; padding: 12px; font: inherit; }
+  .search-results { list-style: none; padding: 0; margin: 12px 0 0; }
+  .search-results a { display: block; padding: 12px 4px; color: inherit; text-decoration: none; border-bottom: 1px solid #ffffff13; }
+  .search-results small { display: block; margin-top: 5px; color: #aaa8b4; }
+  .feed-brand { position: fixed; z-index: 5; top: 0; left: max(12px, calc((100% - 852px) / 2)); padding: 8px 12px; border-radius: 0 0 10px 10px; background: #101014; opacity: 0; transform: translateY(-100%); transition: transform .2s, opacity .2s; pointer-events: none; }
+  .feed-brand.visible { opacity: 1; transform: translateY(0); }
+  .feed-brand { right: max(12px, calc((100% - 852px) / 2)); display: flex; justify-content: space-between; align-items: center; }
+  .feed-brand.visible { pointer-events: auto; }
+  .account-link { pointer-events: auto; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #25252d; text-decoration: none; }
+  @media (prefers-reduced-motion: reduce) { .feed-brand { transition: none; } }
+  .stage { min-height: 0; overflow: hidden; position: relative; border: 1px solid #383841; border-radius: 18px; background: #1b1b23; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; }
+  iframe.fitted { position: absolute; left: 50%; top: 50%; translate: -50% -50%; transform: scale(var(--game-scale, 0)); }
+  .stage.native-viewport { display: grid; place-items: center; }
+  .empty { height: 100%; display: grid; place-items: center; color: #bbb9c3; }
+  h1, h2 { font-size: clamp(.98rem, 3.5vw, 1.25rem); margin: 0 0 3px; }
+  footer { touch-action: manipulation; min-width: 0; }
+  button, .source { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #4c4b54; border-radius: 999px; background: #25252d; padding: .58rem .8rem; text-decoration: none; font-size: .8rem; white-space: nowrap; }
+  .recommend { border-color: #d6fb65; background: #d6fb65; color: #161910; font-weight: 750; }
+  .game-switcher { position: fixed; z-index: 4; right: max(12px, calc((100vw - 852px) / 2)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; width: 42px; border: 1px solid #ffffff30; border-radius: 16px; overflow: hidden; background: #19191e66; backdrop-filter: blur(8px); touch-action: none; }
+  .game-switcher button { border: 0; border-radius: 0; background: transparent; width: 40px; height: 48px; padding: 0; color: #fff; }
+  .game-switcher button + button { border-top: 1px solid #ffffff22; }
+  .game-switcher button:active { background: #ffffff30; }
+  .game-switcher button:disabled { opacity: .25; cursor: default; }
+  .triangle { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; }
+  .triangle.up { border-bottom: 8px solid currentColor; }
+  .triangle.down { border-top: 8px solid currentColor; }
+  .like { gap: 4px; font-variant-numeric: tabular-nums; }
+  .like .heart { font-size: 23px; line-height: 1; }
+  .like[aria-pressed="true"] { color: #ff4d6d; }
+  .like-count { font-size: 12px; }
+  .action-status { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: #25252d; padding: 8px 14px; border-radius: 12px; z-index: 6; }
+  .action-status:empty { display: none; }
+  .actions { flex: 0 0 auto; gap: 6px; }
+  .byline { min-width: 0; padding-block: 8px; color: #dedce4; font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-underline-offset: 3px; }
+  .creator-page { max-width: 650px; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; margin: auto; padding: 24px 16px; }
+  .creator-page header { margin-bottom: 40px; }
+  .creator-page h1 { margin: 8px 0; font-size: clamp(1.8rem, 7vw, 2.8rem); }
+  .creator-page .label { color: #d6fb65; font-size: .85rem; }
+  .creator-page .note { color: #bbb9c3; line-height: 1.5; }
+  .works { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; list-style: none; padding: 0; margin-top: 20px; }
+  .works a { position: relative; display: block; aspect-ratio: 1; overflow: hidden; border: 1px solid #383841; border-radius: 8px; background: #1b1b23; text-decoration: none; }
+  .works a:hover { border-color: #d6fb65; }
+  .works img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .works .text-cover { display: grid; place-items: center; padding: 12px; background: radial-gradient(at 25% 15%, #35414b, #232330 72%); }
+  .text-cover .work-title { position: static; padding: 0; background: none; text-align: center; }
+  .work-title { position: absolute; inset: auto 0 0; padding: 28px 10px 10px; background: linear-gradient(transparent, #000e); font-size: clamp(.8rem, 3vw, 1.05rem); font-weight: 750; }
+  @media (max-width: 420px) { .actions { gap: 4px; } .actions button, .actions .source { padding-inline: 8px; } .recommend { font-size: 12px; } }
 
-  #feed { height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none;
-    overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
-  #feed::-webkit-scrollbar { display: none; }
-
-  .post { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
-    display: flex; align-items: flex-start; justify-content: center; overflow: hidden; touch-action: pan-y; }
-  .standalone-post { touch-action: none; }
-  .stage { position: relative; width: 100%; height: calc(100dvh - var(--main-nav-height));
-    margin-bottom: var(--main-nav-height); max-width: none; background: #000; }
-  .stage.playing { height: 100dvh; margin-bottom: 0; touch-action: none; }
-  .standalone-post .stage { height: 100dvh; margin-bottom: 0; }
-  /* 首頁的垂直手勢交給原生 scroll-snap，水平手勢仍交給遊戲；
-     個人頁開啟的單一遊戲則用互動式拖曳，以便即時顯示前後遊戲。 */
-  canvas.game { width: 100%; height: calc(100% - var(--game-top-height)); margin-top: var(--game-top-height);
-    display: block; touch-action: pan-y; }
-  .stage.playing canvas.game {
-    height: calc(100% - var(--game-top-height) - var(--play-exit-height));
-    touch-action: none;
-  }
-  .standalone-post canvas.game { touch-action: none; }
-  .sandbox-post .sandbox-frame-host,
-  .sandbox-post .sandbox-input {
-    position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
-  }
-  .sandbox-post .sandbox-input { touch-action: pan-y; }
-  .sandbox-post .stage.playing .sandbox-frame-host,
-  .sandbox-post .stage.playing .sandbox-input { bottom: var(--play-exit-height); }
-  .sandbox-post .stage.playing .sandbox-input { touch-action: none; }
-  .sandbox-post.standalone-post .sandbox-input { touch-action: none; }
-  @media (orientation: landscape) {
-    .stage { width: min(100vw, calc((100dvh - var(--main-nav-height)) * 4 / 7));
-      height: calc(100dvh - var(--main-nav-height)); }
-    .stage.playing { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
-    .standalone-post .stage { width: min(100vw, calc(100dvh * 4 / 7)); height: 100dvh; }
-  }
-
-  .hud { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: var(--game-top-height);
-    padding: env(safe-area-inset-top) 62px 0 14px; color: #fff;
-    background: #000; display: flex; align-items: center; gap: 8px; pointer-events: none; }
-  .chip { background: transparent; border-radius: 999px; padding: 6px 4px;
-    font-size: 13px; font-weight: 600; white-space: nowrap; }
-  .score-chip b { font-size: 18px; font-weight: 600; margin-left: 4px; }
-  .best-chip { display: none !important; }
-  .game-title-chip { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-    text-align: center; font-size: 14px; font-weight: 750; }
-
-  #authChip { position: fixed; top: calc(9px + env(safe-area-inset-top)); right: 12px; z-index: 40;
-    width: 38px; height: 38px; border: 1px solid rgba(255,255,255,.38); cursor: pointer;
-    color: #000; font-family: inherit; background: #fff; border-radius: 50%; padding: 0;
-    display: grid; place-items: center; font-size: 12px; font-weight: 850; letter-spacing: -.02em; }
-  #authChip.on { background: #fff; color: #000; }
-
-  .rail { position: absolute; right: 10px; top: calc(var(--game-top-height) + 10px); bottom: 14px;
-    display: flex; flex-direction: column; justify-content: flex-end;
-    gap: clamp(4px, 1.2dvh, 14px); align-items: center; z-index: 5; transition: opacity 0.28s; }
-  /* 遊戲進行中：淡出側邊鈕並停用點擊（防誤觸） */
-  .stage.playing .rail { opacity: 0; pointer-events: none; }
-  .play-exit-zone {
-    position: absolute; z-index: 9; left: 0; right: 0; bottom: 0;
-    height: var(--play-exit-height); display: none; pointer-events: none;
-    align-items: flex-start; justify-content: center;
-    padding-top: 9px; color: rgba(255,255,255,.9);
-    background: linear-gradient(to bottom, rgba(0,0,0,.72), #000 42%);
-    font-size: 11px; font-weight: 700; letter-spacing: .02em;
-  }
-  .stage.playing .play-exit-zone { display: flex; }
-  .play-exit-zone::after {
-    content: ""; position: absolute; z-index: 0; top: -23px;
-    width: 108px; height: 38px; border-radius: 56px 56px 0 0;
-    background: #000;
-    box-shadow: 0 -6px 18px rgba(0,0,0,.22);
-    transform: translateY(var(--exit-lift, 0px));
-    transition: transform .12s ease;
-  }
-  .play-exit-zone::before {
-    content: ""; position: absolute; z-index: 1; top: -8px; width: 48px; height: 5px;
-    border-radius: 99px; background: rgba(255,255,255,.94);
-    transform: translateY(var(--exit-lift, 0px));
-    transition: transform .12s ease;
-  }
-  .play-exit-zone span { position: relative; z-index: 1; margin-top: 12px; opacity: .86; }
-  body.game-active #feed { overflow-y: hidden; }
-  body.game-active #mainNav { transform: translateY(100%); opacity: 0; pointer-events: none; }
-  .rail button { background: none; border: none; color: #fff; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-family: inherit; }
-  .rail .ic { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.14);
-    backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
-    font-size: 21px; transition: transform 0.12s; }
-  .rail button:active .ic { transform: scale(0.85); }
-  .rail button.liked .ic { background: #43b968; }
-  .rail button.disliked .ic { background: #d83e65; }
-  .rail button.saved .ic { background: #d9a13b; }
-  .rail button.rmx .ic { background: rgba(0,149,246,.58); }
-  .sound-toggle {
-    position: absolute; z-index: 8; left: 12px; bottom: 12px;
-    width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.32);
-    border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-    color: #fff; background: rgba(0,0,0,.48); backdrop-filter: blur(7px);
-    box-shadow: 0 4px 16px rgba(0,0,0,.2);
-  }
-  .sound-toggle .ico { width: 23px; height: 23px; }
-  .sound-toggle.muted { background: rgba(0,0,0,.7); color: rgba(255,255,255,.76); }
-  .sound-toggle:active { transform: scale(.9); }
-  .stage.playing .sound-toggle { bottom: calc(var(--play-exit-height) + 12px); }
-  .creator-playtest-stage .sound-toggle {
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px);
-  }
-  @media (max-height: 700px) {
-    .rail { top: calc(var(--game-top-height) + 6px); bottom: 8px; gap: 3px; }
-    .rail button { gap: 1px; font-size: 10px; line-height: 1.1; }
-    .rail .ic { width: 40px; height: 40px; font-size: 19px; }
-  }
-  /* 統一的線條圖示（取代原本的 emoji） */
-  .ico { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
-    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .rail button.liked .ico, .rail button.disliked .ico, .rail button.saved .ico { fill: currentColor; }
-  .tico { display: inline-flex; vertical-align: -2px; font-size: 15px; margin-right: 5px; }
-
-  .overlay { position: absolute; left: 0; right: 0; top: var(--game-top-height); bottom: 0;
-    z-index: 4; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; background: transparent;
-    text-align: center; padding: 24px; pointer-events: none; }
-  .overlay.hidden { display: none; }
-  .overlay-main { width: min(86%, 360px); display: flex; flex-direction: column; align-items: center;
-    gap: 13px; padding: 16px 18px; border-radius: 20px; pointer-events: auto;
-    color: #fff; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.16);
-    backdrop-filter: blur(3px); box-shadow: 0 10px 32px rgba(0,0,0,.12);
-    text-shadow: 0 1px 7px rgba(0,0,0,.48); }
-  .overlay h2 { font-size: 26px; font-weight: 700; }
-  .overlay p { font-size: 15px; opacity: 0.92; line-height: 1.6; }
-  .overlay-main .author-link { border: 0; background: transparent; color: #fff; cursor: pointer;
-    font: 700 13px inherit; padding: 1px 8px; opacity: .9; }
-  .pv-tag { font-size: 12px; font-weight: 600; color: #7de08c; text-shadow: 0 1px 6px rgba(0,0,0,0.9);
-    display: flex; align-items: center; gap: 6px; }
-  .pv-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7de08c;
-    animation: pvblink 1.2s ease-in-out infinite; }
-  @keyframes pvblink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .overlay .go { border: none; cursor: pointer; background: #262626; color: #fff;
-    font-family: inherit; font-size: 16px; font-weight: 600; padding: 12px 40px; border-radius: 999px; }
-  .overlay .ov-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
-  .overlay .share-score { border: none; cursor: pointer; background: #efefef;
-    color: #262626; font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 22px;
-    border-radius: 999px; backdrop-filter: blur(6px); }
-  .overlay .final { font-size: 44px; font-weight: 700; }
-  .overlay .result-score-label { display: block; margin-bottom: 3px; font-size: 12px;
-    font-weight: 650; opacity: .78; }
-  .overlay .newbest { color: #ffd75e; font-size: 14px; font-weight: 600; }
-  .tap-start-hint { position: absolute; z-index: 4; left: 50%;
-    top: calc(50% + var(--game-top-height) / 2); transform: translate(-50%, -50%);
-    padding: 10px 17px; border-radius: 999px; pointer-events: none; white-space: nowrap;
-    color: #111; background: rgba(255,255,255,.86); border: 1px solid rgba(255,255,255,.72);
-    box-shadow: 0 6px 22px rgba(0,0,0,.18); backdrop-filter: blur(5px);
-    font-size: 15px; font-weight: 750; letter-spacing: .01em;
-    animation: tapHintArrive .72s cubic-bezier(.2,.8,.2,1) both; }
-  .tap-start-hint.hidden { display: none; }
-  @keyframes tapHintArrive {
-    0% { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.94); }
-    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
-    100% { opacity: .9; transform: translate(-50%, -50%) scale(1); }
-  }
-
-  .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-    background: rgba(255,255,255,0.92); color: #111; font-size: 14px; font-weight: 500;
-    padding: 10px 20px; border-radius: 999px; z-index: 90; opacity: 0; pointer-events: none;
-    transition: opacity 0.25s; max-width: 86vw; text-align: center; }
-  .toast.show { opacity: 1; }
-
-  /* 留言面板 */
-  #sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-    background: #16161d; border-radius: 18px 18px 0 0; max-height: 68dvh;
-    display: flex; flex-direction: column; transform: translateY(105%); transition: transform 0.25s; }
-  #sheet.open { transform: translateY(0); }
-  #sheet .head { display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  #sheet .head b { font-size: 15px; }
-  #sheet .head button { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
-  #cmtList { overflow-y: auto; padding: 8px 18px; flex: 1; min-height: 120px; }
-  .cmt { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .cmt .who { font-size: 12px; color: #9a9ab0; margin-bottom: 3px; }
-  .cmt .body { font-size: 14px; line-height: 1.5; }
-  #cmtForm { display: flex; gap: 8px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
-  #cmtInput { flex: 1; background: #23232d; border: none; border-radius: 999px; color: #fff;
-    font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
-  #cmtSend { border: none; background: #0095f6; color: #fff; font-family: inherit;
-    font-weight: 600; font-size: 14px; border-radius: 999px; padding: 0 20px; cursor: pointer; }
-
-  /* Remix 改造面板 */
-  #remixSheet { position: fixed; inset: 0; z-index: 68;
-    background: #101016; max-height: none;
-    display: none; flex-direction: column; }
-  #remixSheet.open { display: flex; }
-  #remixSheet .head { display: flex; align-items: center; justify-content: space-between;
-    padding: max(14px, env(safe-area-inset-top)) 18px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.08); }
-  #remixSheet .head b { font-size: 15px; }
-  #remixSheet .head button { background: rgba(255,255,255,.1); border: none; color: #ddd;
-    border-radius: 999px; padding: 8px 14px; font: 600 12px inherit; cursor: pointer; }
-  #remixSheet .note { font-size: 12px; color: #8a8aa0; padding: 10px 18px 4px; line-height: 1.6; }
-  #remixChoice { display: none; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px; }
-  #remixSheet.choosing #remixChoice { display: grid; width: min(100%, 760px); margin: auto; align-content: center; }
-  #remixSheet.choosing #remixVersions,
-  #remixSheet.choosing #remixNote,
-  #remixSheet.choosing #remixSlots,
-  #remixSheet.choosing #remixFoot { display: none; }
-  .remix-choice {
-    min-height: 128px; border: 1px solid rgba(255,255,255,.1); border-radius: 18px;
-    background: #20202a; color: #fff; padding: 16px; text-align: left; cursor: pointer;
-    font-family: inherit;
-  }
-  .remix-choice strong { display: block; font-size: 16px; }
-  .remix-choice span { display: block; margin-top: 7px; color: #9b9bad; font-size: 12px; line-height: 1.55; }
-  .remix-choice.mechanic { border-color: rgba(112,220,140,.32); background: rgba(112,220,140,.08); }
-  .remix-choice.mechanic strong { color: #8bea9e; }
-  .remix-choice:disabled { cursor: not-allowed; opacity: .42; }
-  @media (max-width: 380px) {
-    #remixChoice { grid-template-columns: 1fr; }
-    .remix-choice { min-height: 104px; }
-  }
-  #remixSlots { flex: 1; overflow-y: auto; padding: 4px 18px calc(16px + env(safe-area-inset-bottom)); }
-  .slot { display: flex; align-items: center; gap: 14px; padding: 12px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06); }
-  .slot .preview { width: 58px; height: 58px; border-radius: 12px; flex: none; overflow: hidden;
-    display: flex; align-items: center; justify-content: center; font-size: 34px;
-    background-color: #2a2a34;
-    background-image: linear-gradient(45deg,#3a3a44 25%,transparent 25%),linear-gradient(-45deg,#3a3a44 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3a3a44 75%),linear-gradient(-45deg,transparent 75%,#3a3a44 75%);
-    background-size: 14px 14px; background-position: 0 0,0 7px,7px -7px,-7px 0; }
-  .slot .preview img { width: 100%; height: 100%; object-fit: contain; }
-  .slot .info { flex: 1; min-width: 0; }
-  .slot .info .l { font-size: 14px; font-weight: 600; }
-  .slot .info .h { font-size: 12px; color: #9a9ab0; margin-top: 2px; }
-  .slot .acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
-  .slot .up { border: none; background: #0095f6; color: #fff; font-family: inherit; font-size: 13px;
-    font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap; }
-  .slot .rst { border: none; background: none; color: #8a8aa0; font-family: inherit; font-size: 12px;
-    cursor: pointer; }
-  .slot .rst[disabled] { opacity: 0.35; cursor: default; }
-  #remixFoot { display: flex; gap: 8px; padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
-    border-top: 1px solid rgba(255,255,255,0.08); }
-  #remixName { flex: 1; min-width: 0; background: #23232d; border: none; border-radius: 999px; color: #fff;
-    font-family: inherit; font-size: 14px; padding: 11px 16px; outline: none; }
-  #remixSave { border: none; background: #0095f6; color: #fff; font-family: inherit; font-weight: 600;
-    font-size: 14px; border-radius: 999px; padding: 0 18px; cursor: pointer; white-space: nowrap; }
-  #remixSave:disabled { opacity: 0.6; cursor: default; }
-  /* 這個遊戲已有的改造版（橫向捲動的縮圖） */
-  #remixVersions { display: flex; gap: 8px; overflow-x: auto; padding: 10px 18px 2px; scrollbar-width: none; }
-  #remixVersions::-webkit-scrollbar { display: none; }
-  #remixVersions:empty { display: none; }
-  .verchip { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    cursor: pointer; width: 62px; }
-  .verchip .sw { width: 54px; height: 54px; border-radius: 12px; flex: none; }
-  .verchip .nm { font-size: 11px; color: #bcbcd0; max-width: 62px; overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-  .verchip.cur .sw { outline: 2px solid #0095f6; outline-offset: 1px; }
-  .vhead { font-size: 12px; color: #9a9ab0; padding: 12px 18px 0; }
-
-  /* 登入視窗（Phuze magic link） */
-  #login { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.6);
-    display: none; align-items: center; justify-content: center; padding: 24px; }
-  #login.open { display: flex; }
-  #login .box { background: #1a1a22; border-radius: 18px; padding: 26px 22px; width: 100%;
-    max-width: 340px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
-  #login h3 { font-size: 19px; }
-  #login p { font-size: 13px; color: #a5a5ba; line-height: 1.6; }
-  #phuze-widget { min-height: 52px; text-align: left; }
-  #login .ghost { background: none; border: none; color: #8f8fa5; font-size: 13px;
-    font-family: inherit; cursor: pointer; padding: 6px; }
-  .backdrop { position: fixed; inset: 0; z-index: 55; display: none; }
-  .backdrop.open { display: block; }
-
-  /* 個人頁（IG 風格全螢幕 + 分頁 + 縮圖網格 + 底部導覽） */
-  #profile { position: fixed; inset: 0; z-index: 65; background: #fff;
-    display: none; flex-direction: column; }
-  #profile.open { display: flex; }
-  #notifications { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
-    display: none; flex-direction: column; }
-  #notifications.open { display: flex; }
-  #searchPage { position: fixed; inset: 0; z-index: 65; background: #fff; color: #262626;
-    display: none; flex-direction: column; }
-  #searchPage.open { display: flex; }
-  .search-head { padding: max(14px, env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid #efefef; }
-  .search-head b { display: block; margin-bottom: 10px; font-size: 17px; }
-  #searchInput { width: 100%; height: 42px; border: 0; border-radius: 10px; outline: none;
-    background: #efefef; color: #262626; padding: 0 14px; font: 15px inherit; }
-  #searchResults { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
-  .search-section-title { padding: 18px 16px 8px; color: #737373; font-size: 12px; font-weight: 750; }
-  .search-result { width: 100%; display: grid; grid-template-columns: 50px minmax(0,1fr); gap: 12px;
-    align-items: center; border: 0; border-bottom: 1px solid #efefef; background: #fff;
-    color: #262626; padding: 10px 16px; text-align: left; cursor: pointer; font-family: inherit; }
-  .search-result:active { background: #f7f7f7; }
-  .search-result-thumb { width: 50px; height: 50px; border-radius: 10px; display: grid;
-    place-items: center; overflow: hidden; background: #efefef center/cover no-repeat;
-    color: #262626; font-size: 19px; font-weight: 750; }
-  .search-result.account .search-result-thumb { border-radius: 50%; }
-  .search-result-copy { min-width: 0; }
-  .search-result-copy strong, .search-result-copy span { display: block; overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap; }
-  .search-result-copy strong { font-size: 14px; }
-  .search-result-copy span { margin-top: 3px; color: #737373; font-size: 12px; }
-  .search-empty { padding: 70px 24px; color: #737373; text-align: center; font-size: 14px; }
-  #notificationList { flex: 1; overflow-y: auto; padding-bottom: var(--main-nav-height); }
-  .notification-empty { padding: 64px 24px; color: #737373; text-align: center; font-size: 14px; }
-  .notification-item { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px;
-    align-items: center; padding: 13px 18px; border-bottom: 1px solid #efefef; cursor: pointer; }
-  .notification-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%;
-    background: #f2f2f2; color: #262626; font-size: 19px; }
-  .notification-text { min-width: 0; font-size: 13px; line-height: 1.45; }
-  .notification-text b { font-weight: 750; }
-  .notification-time { display: block; margin-top: 3px; color: #8e8e8e; font-size: 11px; }
-  #navNotificationsMain { position: relative; }
-  #notificationBadge { position: absolute; top: 4px; left: 50%; margin-left: 7px; min-width: 16px; height: 16px;
-    padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: #ed4956;
-    color: #fff; font: 700 10px/1 system-ui; }
-  #notificationBadge[hidden] { display: none; }
-  .phead { display: flex; align-items: center; justify-content: space-between;
-    padding: max(14px, env(safe-area-inset-top)) 18px 12px; }
-  .phead-actions { display: flex; align-items: center; gap: 7px; }
-  .phead b { font-size: 17px; font-weight: 700; }
-  .phead button { background: rgba(255,255,255,0.1); border: none; color: #ccc;
-    font-family: inherit; font-size: 12px; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
-  .phead button.following { background: rgba(67,185,104,.2); color: #8be2a0; }
-  .language-toggle { border: 1px solid #dbdbdb !important; background: #fff !important;
-    color: #262626 !important; font-weight: 750 !important; }
-  #login .language-toggle { align-self: center; margin-top: 4px; padding: 7px 16px; border-radius: 999px;
-    font: 750 12px inherit; cursor: pointer; }
-  .ptabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .ptabs button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
-    font-size: 13px; font-weight: 600; padding: 12px 0; cursor: pointer; border-bottom: 2px solid transparent; }
-  .ptabs button.active { color: #fff; border-bottom-color: #fff; }
-  .ptabs button[hidden] { display: none; }
-  .profile-summary { padding: 12px 18px 14px; border-bottom: 1px solid #efefef; }
-  .profile-summary-row { display: flex; align-items: center; gap: 22px; }
-  #profileAvatar { width: 76px; height: 76px; flex: none; border-radius: 50%; display: grid;
-    place-items: center; overflow: hidden; background: #efefef center/cover no-repeat; color: #262626;
-    font-size: 28px; font-weight: 750; }
-  #profileAvatar.editable { cursor: pointer; box-shadow: inset 0 0 0 2px #fff, 0 0 0 1px #dbdbdb; }
-  .profile-stats { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); text-align: center; gap: 8px; }
-  .profile-stat b { display: block; font-size: 17px; }
-  .profile-stat span { display: block; margin-top: 2px; color: #737373; font-size: 12px; }
-  #profileBio { margin-top: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
-  #profileWebsite { display: inline-block; margin-top: 5px; color: #00376b; font-size: 13px;
-    font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
-  #profileEditBtn { width: 100%; margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px;
-    background: #efefef; color: #262626; font: 650 13px inherit; cursor: pointer; }
-  #profileEditor { display: grid; gap: 8px; margin-top: 12px; }
-  #profileEditor[hidden] { display: none; }
-  #profileEditor input, #profileEditor textarea { width: 100%; border: 1px solid #dbdbdb; border-radius: 8px;
-    background: #fafafa; color: #262626; padding: 9px 11px; font: 13px/1.4 inherit; resize: vertical; }
-  .profile-editor-actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .profile-editor-actions button { border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer;
-    background: #efefef; color: #262626; font: 650 13px inherit; }
-  .profile-editor-actions button[type="submit"] { background: #0095f6; color: #fff; }
-  #pgrid { flex: 1; min-height: 0; overflow-y: auto; display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row;
-    grid-auto-rows: var(--profile-grid-row-height, 220px);
-    gap: 3px; padding: 3px; align-content: start; }
-  #pgrid .gempty { grid-column: 1 / -1; text-align: center; color: #77778c;
-    font-size: 13px; padding: 48px 24px; line-height: 1.8; }
-  .gcell { position: relative; width: 100%; min-width: 0; overflow: hidden;
-    height: 100%; cursor: pointer; display: block; contain: layout paint; }
-  .gcell .hero { position: absolute; inset: 0; width: 100%; height: 100%; font-size: 46px; line-height: 1;
-    display: flex; align-items: center; justify-content: center; }
-  .gcell .hero img { width: 100%; height: 100%; object-fit: cover; }
-  .gcell .cap { position: absolute; left: 50%; top: 50%; max-width: 88%; transform: translate(-50%,-50%);
-    padding: 6px 9px; border-radius: 9px; background: rgba(0,0,0,.38); backdrop-filter: blur(3px);
-    font-size: 11px; font-weight: 650; color: #fff; white-space: nowrap; overflow: hidden;
-    text-overflow: ellipsis; text-shadow: 0 1px 5px rgba(0,0,0,.55); }
-  .gcell .badge { position: absolute; top: 5px; left: 5px; font-size: 10px; font-weight: 700;
-    background: rgba(106,90,208,0.9); color: #fff; padding: 2px 7px; border-radius: 999px; }
-  @media (max-width: 520px) {
-    .ptabs button { font-size: 11px; }
-    .ptabs .tico { margin-right: 2px; font-size: 13px; }
-  }
-
-  /* 底部常駐導覽（IG 風格）：首頁／我的，兩個畫面都固定看得到 */
-  #mainNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 66; display: flex;
-    background: rgba(55,42,130,0.78); backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255,255,255,0.08);
-    padding: 5px 0 calc(8px + env(safe-area-inset-bottom)); }
-  #mainNav.hide { transform: translateY(100%); opacity: 0; pointer-events: none; }
-  #mainNav button { flex: 1; background: none; border: none; color: #8a8aa0; font-family: inherit;
-    min-width: 0; min-height: 52px; font-size: 11px; cursor: pointer; padding: 6px 2px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    touch-action: manipulation; pointer-events: auto; }
-  #mainNav button .ni { font-size: 21px; line-height: 1; }
-  #mainNav button.active { color: #fff; }
-
-  /* 單一遊戲視圖：從個人頁／版本列表／分享連結進來的改造版，不混進首頁 */
-  #remixView { position: fixed; inset: 0; z-index: 67; background: #fff;
-    display: none; flex-direction: column; }
-  #remixView.open { display: flex; }
-  #remixViewStage { flex: 1; position: relative; overflow: hidden; }
-  #remixViewBack { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 10;
-    border: none; cursor: pointer; color: #fff; font-family: inherit;
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
-    border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; }
-
-  /* Instagram 式中性介面：白底、黑字、淺灰分隔，顏色留給內容。 */
-  #profile, #remixView { background: #fff; color: #262626; }
-  .phead, .ptabs { background: #fff; border-color: #dbdbdb; }
-  .phead button { background: #efefef; color: #262626; }
-  .ptabs button { color: #737373; }
-  .ptabs button.active { color: #262626; border-bottom-color: #262626; }
-  #pgrid .gempty { color: #737373; }
-  #mainNav { background: #000; border-top-color: #000; }
-  #mainNav button { color: rgba(255,255,255,.68); }
-  #mainNav button.active { color: #fff; }
-  #cmtSend, #remixSave, .slot .up { background: #0095f6; }
-  #login, #sheet { color: #262626; }
-  #login .box, #sheet, #remixSheet { background: #fff; color: #262626; }
-  #login p, #login .ghost { color: #737373; }
-  #cmtInput, #remixName { background: #fafafa; color: #262626; border: 1px solid #dbdbdb; }
-  #sheet .head, #remixSheet .head, #remixFoot { border-color: #dbdbdb; }
-  #sheet .head button, #remixSheet .head button { color: #262626; background: #efefef; }
-  .cmt, .slot { border-color: #efefef; }
-  .cmt .who, #remixSheet .note, .slot .info .h, .slot .rst, .verchip .nm { color: #737373; }
-  .remix-choice { background: #fff; color: #262626; border-color: #dbdbdb; }
-  .remix-choice span { color: #737373; }
-  .remix-choice.mechanic { border-color: #dbdbdb; background: #fafafa; }
-  .remix-choice.mechanic strong { color: #262626; }
-  .gcell .badge { background: #0095f6; }
-  .verchip.cur .sw { outline-color: #0095f6; }
-  #desktopPager { display: none; position: fixed; right: 24px; bottom: 92px; z-index: 54;
-    flex-direction: column; gap: 10px; }
-  #desktopPager button { width: 46px; height: 46px; border: 1px solid #dbdbdb; border-radius: 50%;
-    background: rgba(255,255,255,.94); color: #262626; box-shadow: 0 2px 12px rgba(0,0,0,.12);
-    cursor: pointer; font: 700 23px/1 system-ui; }
-  #desktopPager button:hover { background: #f2f2f2; }
-  #standalonePager { display: none; position: absolute; right: 24px; bottom: 24px; z-index: 12;
-    flex-direction: column; gap: 10px; }
-  #standalonePager button { width: 46px; height: 46px; border: 1px solid #dbdbdb; border-radius: 50%;
-    background: rgba(255,255,255,.94); color: #262626; box-shadow: 0 2px 12px rgba(0,0,0,.12);
-    cursor: pointer; font: 700 23px/1 system-ui; }
-  @media (orientation: landscape) and (pointer: fine) {
-    #desktopPager, #standalonePager { display: flex; }
-  }
+  .game-viewport { min-height: 0; position: relative; overflow: hidden; }
+  .game-viewport > .stage { width: 100%; height: 100%; }
+  body.comments-open article { height: calc(100% - var(--comments-height)); }
+  body.comments-open .game-switcher { top: calc((100dvh - var(--comments-height)) / 2); }
+  .comments-sheet { position: fixed; z-index: 7; bottom: 0; left: 50%; width: min(900px,100%); height: min(48dvh,440px); background: #19191f; border: 1px solid #383841; border-bottom: 0; border-radius: 22px 22px 0 0; display: flex; flex-direction: column; transform: translate(-50%,var(--drag-y,0px)); box-shadow: 0 -8px 30px #0004; animation: sheet-in .2s ease-out; padding-bottom: env(safe-area-inset-bottom); }
+  @keyframes sheet-in { from { transform: translate(-50%,100%); } }
+  .comments-grip { position: relative; flex-shrink: 0; text-align: center; padding: 20px 48px 12px; touch-action: none; cursor: grab; border-bottom: 1px solid #ffffff12; }
+  .comments-grip::before { content: ''; position: absolute; width: 32px; height: 4px; border-radius: 3px; background: #777782; top: 8px; left: calc(50% - 16px); }
+  .comments-grip h2 { margin: 0; font-size: 15px; }
+  .comments-close { position: absolute; right: 10px; top: 14px; border: 0; background: transparent; padding: 4px 10px; font-size: 20px; }
+  .comments-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 8px 18px; }
+  .comments-list { list-style: none; margin: 0; padding: 0; }
+  .comments-list li { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 10px 0; }
+  .comment-avatar { width: 30px; height: 30px; display: grid; place-items: center; background: #34343e; border-radius: 50%; font-size: 13px; }
+  .comment-name { font-size: 13px; font-weight: 700; }
+  .comment-time { color: #9997a3; font-size: 11px; margin-left: 8px; }
+  .comment-body { margin: 5px 0 0; font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .comments-message { color: #bbb9c3; font-size: 13px; }
+  .comments-form { display: flex; gap: 8px; flex-shrink: 0; padding: 12px; border-top: 1px solid #ffffff12; }
+  .comments-form input { min-width: 0; flex: 1; border: 1px solid #42424d; border-radius: 22px; padding: 10px 14px; background: #25252d; color: inherit; font: inherit; font-size: 16px; touch-action: manipulation; }
+  .comments-form button { border: 0; background: transparent; color: #d6fb65; }
+  #login-dialog { width: min(360px,calc(100% - 32px)); border: 1px solid #3a3a43; border-radius: 20px; padding: 0; color: #faf8f2; background: #19191f; }
+  #login-dialog::backdrop { background: #000a; backdrop-filter: blur(4px); }
+  .login-box { padding: 24px; text-align: center; }
+  .login-box h2 { margin: 0 0 8px; }
+  .login-box p { color: #aaa8b3; font-size: 14px; line-height: 1.5; }
+  #phuze-widget { min-height: 54px; text-align: left; margin-top: 18px; }
+  .login-cancel { margin-top: 12px; border: 0; background: transparent; color: #aaa8b3; }
+  @media(prefers-reduced-motion:reduce) { .comments-sheet { animation: none; } }
 </style>
 </head>
 <body>
+<nav class="feed-brand visible" aria-label="遊戲牆導覽"><a class="brand" href="/" aria-label="重新整理 PlayFeed">Play<span>Feed</span></a><div class="nav-actions"><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><a class="account-link" href="/account.html" aria-label="我的頁面">👤</a></div></nav>
+<dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">登入 PlayFeed</h2><p>輸入 Email，點信裡的連結就完成登入。登入後可以按讚、留言及儲存遊戲。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
+<dialog class="search-dialog" aria-label="搜尋遊戲">
+  <form method="dialog"><input type="search" id="game-search" aria-label="遊戲關鍵字" placeholder="搜尋遊戲、作者" autocomplete="off"><button aria-label="關閉搜尋">關閉</button></form>
+  <p id="search-status" role="status"></p>
+  <ul class="search-results"></ul>
+</dialog>
+<dialog id="report-menu" class="report-dialog" aria-label="遊戲選項">
+  <button type="button" id="open-report">檢舉遊戲</button>
+  <div class="dialog-actions"><button type="button" data-close>取消</button></div>
+</dialog>
+<dialog id="report-dialog" class="report-dialog" aria-labelledby="report-heading">
+  <h2 id="report-heading">檢舉遊戲</h2>
+  <form id="report-form">
+    <label><input type="radio" name="reason" value="not_playable" required> 無法載入或操作</label>
+    <label><input type="radio" name="reason" value="inappropriate"> 內容不適合</label>
+    <label><input type="radio" name="reason" value="attribution"> 作者或版權問題</label>
+    <label><input type="radio" name="reason" value="other"> 其他</label>
+    <label>補充說明（選填）<textarea name="details" maxlength="1000" rows="3"></textarea></label>
+    <p id="report-message" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close>取消</button><button class="report-submit" type="submit">送出檢舉</button></div>
+  </form>
+</dialog>
+<section id="comments-sheet" class="comments-sheet" role="region" aria-labelledby="comments-heading" hidden>
+  <div class="comments-grip" aria-label="向下拖曳收起留言"><h2 id="comments-heading">留言</h2><button class="comments-close" type="button" aria-label="關閉留言">×</button></div>
+  <div class="comments-content"><p class="comments-message" role="status"></p><ul class="comments-list"></ul></div>
+  <form class="comments-form"><input name="comment" aria-label="新增留言" placeholder="登入後留言…" maxlength="1000" required autocomplete="off"><button type="submit">發送</button></form>
+</section>
+<main id="feed" aria-label="PlayFeed 遊戲牆"></main>
+<nav class="game-switcher" aria-label="切換遊戲">
+  <button id="previous-game" type="button" aria-label="上一款"><span class="triangle up" aria-hidden="true"></span></button>
+  <button id="next-game" type="button" aria-label="下一款"><span class="triangle down" aria-hidden="true"></span></button>
+</nav>
+<div class="action-status" role="status" aria-live="polite"></div>
+<main id="creator" class="creator-page" aria-labelledby="creator-name" hidden>
+  <header><span class="brand">Play<span>Feed</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
+  <span class="label">創作者作品集</span>
+  <h1 id="creator-name"></h1>
+  <p class="note">PlayFeed 整理的作品集。</p>
+  <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
+  <ul class="works"></ul>
+</main>
+<template id="card">
+  <article>
+    <button class="game-more" type="button" aria-label="更多遊戲選項">⋯</button>
 
-<div id="bootSplash" role="status" aria-label="PlayFeed 載入中">
-  <div class="boot-color-fade" aria-hidden="true">
-    <div class="boot-color-stream">
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-      <i class="boot-color-panel"></i><i class="boot-color-panel"></i>
-    </div>
-  </div>
-  <div class="boot-brand">
-    <div class="boot-logo">PlayFeed</div>
-    <div class="boot-tagline">play and swipe</div>
-  </div>
-</div>
-<button id="authChip">登入</button>
-<div id="feed"></div>
-<div class="toast" id="toast"></div>
-
-<div class="backdrop" id="backdrop"></div>
-<div id="sheet">
-  <div class="head"><b id="sheetTitle">留言</b><button id="sheetClose">&#10005;</button></div>
-  <div id="cmtList"></div>
-  <div id="cmtForm">
-    <input id="cmtInput" maxlength="300" placeholder="留下你的 feedback…">
-    <button id="cmtSend">送出</button>
-  </div>
-</div>
-
-<div id="profile">
-  <div class="phead"><b id="profileWho">個人頁</b><div class="phead-actions">
-    <button type="button" class="language-toggle">EN</button>
-    <button id="profileActionBtn">登出</button>
-  </div></div>
-  <div class="profile-summary">
-    <div class="profile-summary-row">
-      <div id="profileAvatar">P</div>
-      <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-      <div class="profile-stats">
-        <div class="profile-stat"><b id="profilePostCount">0</b><span>遊戲</span></div>
-        <div class="profile-stat"><b id="profileFollowerCount">0</b><span>被追蹤</span></div>
-        <div class="profile-stat"><b id="profileFollowingCount">0</b><span>追蹤中</span></div>
+    <div class="game-viewport"><div class="stage"><div class="empty">準備遊戲中</div></div></div>
+    <footer>
+      <a class="byline"></a>
+      <div class="actions">
+        <button class="like" type="button" aria-label="喜歡" aria-pressed="false"><span class="heart" aria-hidden="true">♡</span><span class="like-count">–</span></button>
+        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 11.5a9 9 0 0 1-9 9 10 10 0 0 1-4-.8L3 21l1.3-5A9 9 0 1 1 21 11.5Z"/></svg></button>
+        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false">☆</button>
+        <button class="share" type="button" aria-label="分享">↗</button>
+        <a class="source recommend" href="/submit.html">推薦新遊戲</a>
       </div>
-    </div>
-    <div id="profileBio"></div>
-    <a id="profileWebsite" target="_blank" rel="noopener noreferrer" hidden></a>
-    <button id="profileEditBtn" hidden>編輯個人資料</button>
-    <form id="profileEditor" hidden>
-      <input id="profileDisplayName" maxlength="30" placeholder="顯示名稱">
-      <textarea id="profileBioInput" maxlength="120" rows="3" placeholder="自我介紹"></textarea>
-      <input id="profileWebsiteInput" maxlength="120" inputmode="url" placeholder="https://你的網站">
-      <div class="profile-editor-actions">
-        <button type="button" id="profileEditCancel">取消</button>
-        <button type="submit">儲存</button>
-      </div>
-    </form>
-  </div>
-  <div class="ptabs">
-    <button class="active" data-tab="created"><span class="tico" data-ico="create"></span>自創</button>
-    <button data-tab="remixed"><span class="tico" data-ico="remix"></span>改造</button>
-    <button data-tab="saved"><span class="tico" data-ico="save"></span>儲存</button>
-    <button data-tab="liked"><span class="tico" data-ico="like"></span>按讚</button>
-    <button data-tab="disliked"><span class="tico" data-ico="dislike"></span>倒讚</button>
-  </div>
-  <div id="pgrid"></div>
-</div>
-
-<div id="notifications">
-  <div class="phead"><b>通知</b><button id="notificationReadAll">全部已讀</button></div>
-  <div id="notificationList"></div>
-</div>
-
-<div id="searchPage">
-  <div class="search-head">
-    <b>搜尋</b>
-    <input id="searchInput" type="search" enterkeyhint="search" autocomplete="off"
-      placeholder="搜尋帳號或遊戲">
-  </div>
-  <div id="searchResults"></div>
-</div>
-
-<div id="mainNav">
-  <button type="button" id="navHomeMain" class="active"><span class="ni" data-ico="home"></span>首頁</button>
-  <button type="button" id="navCreateMain"><span class="ni" data-ico="create"></span>創作</button>
-  <button type="button" id="navSearchMain"><span class="ni" data-ico="search"></span>搜尋</button>
-  <button type="button" id="navNotificationsMain"><span class="ni" data-ico="bell"></span><span id="notificationBadge" hidden></span>通知</button>
-  <button type="button" id="navMeMain"><span class="ni" data-ico="user"></span>個人</button>
-</div>
-<div id="desktopPager" aria-label="切換遊戲">
-  <button type="button" data-direction="-1" aria-label="上一個遊戲">↑</button>
-  <button type="button" data-direction="1" aria-label="下一個遊戲">↓</button>
-</div>
-
-<div id="remixView">
-  <button id="remixViewBack">&#8249; 返回</button>
-  <div id="remixViewStage"></div>
-  <div id="standalonePager" aria-label="切換這個分類的遊戲">
-    <button type="button" data-direction="-1" aria-label="上一個遊戲">↑</button>
-    <button type="button" data-direction="1" aria-label="下一個遊戲">↓</button>
-  </div>
-</div>
-
-<div id="remixSheet">
-  <div class="head"><b id="remixTitle">二創這個遊戲</b><button id="remixClose">取消</button></div>
-  <div id="remixChoice">
-    <button class="remix-choice image" id="chooseImageRemix"><strong>換皮</strong><span>玩法不變，替換角色或物件的外觀。</span></button>
-    <button class="remix-choice mechanic" id="chooseMechanicRemix"><strong>複製玩法創作</strong><span>複製玩法規格，交給自己的 AI 製作不同主題。</span></button>
-  </div>
-  <div id="remixVersions"></div>
-  <div class="note" id="remixNote">上傳圖片替換遊戲元素（支援透明圖檔）。圖片會置中縮放、對齊虛線輪廓，並即時顯示在上面的畫面。儲存後會變成大家都能玩的新遊戲（需登入）。</div>
-  <div id="remixSlots"></div>
-  <div id="remixFoot">
-    <input id="remixName" maxlength="40" placeholder="幫你的新版本取個名字">
-    <button id="remixSave">儲存成新遊戲</button>
-  </div>
-  <input type="file" id="remixFile" accept="image/*" style="display:none">
-</div>
-
-<div id="login">
-  <div class="box">
-    <h3>登入 PlayFeed</h3>
-    <p>輸入 Email，點信裡的連結就完成登入。<br>登入後就能按讚、留言、把遊戲收進「我的頁面」。</p>
-    <div id="phuze-widget"></div>
-    <button type="button" class="language-toggle">EN</button>
-    <button class="ghost" id="skipLogin">先不用，我玩玩就好</button>
-  </div>
-</div>
-
-<script src="i18n.js"></script>
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://phuze.edato.me/phuze.js"></script>
-
-<script>
-/* ---------- 全域：畫布尺寸與音效（遊戲包會用到） ---------- */
-const W = 400, H = 700;
-let AC = null;
-let audioUnlocked = false;
-let audioPlaybackActive = false;
-let audioMuted = true;
-try {
-  const savedAudioMuted = localStorage.getItem('playfeed-muted');
-  audioMuted = savedAudioMuted === null ? true : savedAudioMuted !== '0';
-} catch (_) {}
-const activeAudioVoices = new Set();
-function ensureAudio() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return;
-  if (!AC) AC = new AudioContextClass();
-  if (AC.state === 'suspended') AC.resume();
-}
-function unlockFeedAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-  ensureAudio();
-  window.dispatchEvent(new CustomEvent('playfeed-audio-unlocked'));
-}
-window.addEventListener('pointerdown', unlockFeedAudio, { capture: true, once: true });
-function beep(f1, f2, dur, vol, type) {
-  if (!audioUnlocked || audioMuted || !audioPlaybackActive) return;
-  ensureAudio();
-  if (!AC) return;
-  const seconds = Math.min(2, Math.max(.01, Number(dur) || .08));
-  const volume = Math.min(.5, Math.max(.001, Number(vol) || .08));
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = type || 'sine';
-  o.frequency.setValueAtTime(Math.max(20, Number(f1) || 220), AC.currentTime);
-  o.frequency.exponentialRampToValueAtTime(Math.max(20, Number(f2) || 220), AC.currentTime + seconds);
-  g.gain.setValueAtTime(volume, AC.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + seconds);
-  o.connect(g); g.connect(AC.destination);
-  activeAudioVoices.add(o);
-  o.onended = () => activeAudioVoices.delete(o);
-  o.start(); o.stop(AC.currentTime + seconds);
-}
-function setAudioMuted(muted) {
-  audioMuted = !!muted;
-  try { localStorage.setItem('playfeed-muted', audioMuted ? '1' : '0'); } catch (_) {}
-  if (audioMuted) stopActiveAudio();
-  else {
-    ensureAudio();
-  }
-  document.querySelectorAll('.sound-toggle').forEach(updateSoundToggle);
-}
-function stopActiveAudio() {
-  for (const voice of activeAudioVoices) {
-    try { voice.stop(); } catch (_) {}
-  }
-  activeAudioVoices.clear();
-}
-function setAudioPlaybackActive(active) {
-  audioPlaybackActive = !!active;
-  if (!audioPlaybackActive) stopActiveAudio();
-}
-function sourceUsesSound(source) {
-  return typeof source === 'string' && /\b(?:env\s*\.\s*)?beep\s*\(/.test(source);
-}
-function entryUsesSound(entry) {
-  if (typeof entry?.usesSound === 'boolean') return entry.usesSound;
-  if (sourceUsesSound(entry?.script)) return true;
-  try { return sourceUsesSound(Function.prototype.toString.call(entry?.base?.create)); }
-  catch (_) { return false; }
-}
-</script>
-
-<!-- 遊戲包：新增一批遊戲就在下面加一行 -->
-<script src="games/pack1.js"></script>
-<script src="games/pack2.js"></script>
-<script src="games/pack3.js"></script>
-<script src="games/pack4.js"></script>
-<script src="games/pack5.js"></script>
-<script src="games/pack6.js"></script>
-<script src="mechanic-templates.js"></script>
-
-<script>
-/* ---------- 後台連線（沒設定 config.js 也能跑，會進入體驗模式） ---------- */
-const cfg = window.PLAYFEED_CONFIG || {};
-const i18n = window.PlayFeedI18n;
-const tr = (value, vars) => i18n ? i18n.t(value, vars) : String(value ?? '');
-const online = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
-const db = online ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
-const phuzeOn = !!(cfg.PHUZE_PUBLISHABLE_KEY && window.Phuze);
-let user = null;
-let phuzeToken = '';
-let pendingAction = null;   // 被登入擋下的動作，登入成功後自動補做
-const officialOwner = { id: 'playfeed-owner', name: '我' };
-const DISLIKE_PREFIX = '__dislike__:';
-const FOLLOW_PREFIX = '__follow__:';
-const PROFILE_PREFIX = '__profile__:';
-const AVATAR_PREFIX = '__avatar__:';
-const likeState = {};   // game_id -> { count, mine, dislikeCount, disliked }
-const followState = {}; // author_id -> { count, mine }
-const followingCounts = {}; // user_id -> following count
-const profileDetails = {}; // user_id -> { display_name, bio, website }
-const saveState = {};   // game_id -> mine
-const bests = {};
-
-/* ---------- 統一的線條圖示（inline SVG，取代原本各處的 emoji） ---------- */
-const ICONS = {
-  like:    '<svg class="ico" viewBox="0 0 24 24"><path d="M7 10v11H3V10h4Z"/><path d="M7 19h10.2a2 2 0 0 0 1.9-1.4l1.7-6A2 2 0 0 0 18.9 9H14l.7-3.2A2.3 2.3 0 0 0 12.5 3L7 10v9Z"/></svg>',
-  dislike: '<svg class="ico" viewBox="0 0 24 24"><path d="M17 14V3h4v11h-4Z"/><path d="M17 5H6.8a2 2 0 0 0-1.9 1.4l-1.7 6A2 2 0 0 0 5.1 15H10l-.7 3.2a2.3 2.3 0 0 0 2.2 2.8L17 14V5Z"/></svg>',
-  comment: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5Z"/></svg>',
-  save:    '<svg class="ico" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
-  remix:   '<svg class="ico" viewBox="0 0 24 24"><path d="M4.5 19.5 14.5 9.5"/><path d="M18 2.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" fill="currentColor" stroke="none"/></svg>',
-  share:   '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
-  bell:    '<svg class="ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
-  search:  '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>',
-  sound:   '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.7 6.3a8 8 0 0 1 0 11.4"/></svg>',
-  muted:   '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6.5 9H3v6h3.5l4.5 4V5Z"/><path d="m16 10 5 5"/><path d="m21 10-5 5"/></svg>',
-  home:    '<svg class="ico" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 8.5V21h14V8.5"/><path d="M9.5 21v-6h5v6"/></svg>',
-  user:    '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
-  create:  '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.8 4.8 1.9-4.8 1.9L12 16.4l-1.9-4.8L5.3 9.7l4.8-1.9z"/><path d="M19 15l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke="none"/></svg>'
-};
-function injectIcons(root) { (root || document).querySelectorAll('[data-ico]').forEach(el => { el.innerHTML = ICONS[el.dataset.ico] || ''; }); }
-injectIcons();   /* 填入靜態元素（底部導覽、個人頁分頁） */
-function updateSoundToggle(button) {
-  if (!button) return;
-  button.classList.toggle('muted', audioMuted);
-  button.setAttribute('aria-pressed', audioMuted ? 'true' : 'false');
-  button.setAttribute('aria-label', audioMuted ? tr('開啟音效') : tr('關閉音效'));
-  button.innerHTML = audioMuted ? ICONS.muted : ICONS.sound;
-}
-function createSoundToggle(visible) {
-  if (!visible) return null;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'sound-toggle';
-  updateSoundToggle(button);
-  button.addEventListener('click', event => {
-    event.preventDefault();
-    event.stopPropagation();
-    setAudioMuted(!audioMuted);
-  });
-  return button;
-}
-
-const authChip = document.getElementById('authChip');
-function displayName(u) {
-  const e = (u && u.email) || '';
-  return e ? e.split('@')[0].slice(0, 12) : '玩家';
-}
-function setUser(u) {
-  user = u;
-  const name = u ? displayName(u) : '登入';
-  const clean = String(name || '').replace(/^@/, '').trim();
-  const initials = /^[\x00-\x7F]+$/.test(clean)
-    ? clean.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
-    : Array.from(clean).slice(0, 1).join('');
-  authChip.textContent = u ? (initials || 'P') : (i18n?.locale === 'en' ? 'IN' : '登入');
-  authChip.title = u ? name : tr('登入');
-  authChip.setAttribute('aria-label', u ? `${tr('帳號')}：${name}` : tr('登入'));
-  authChip.classList.toggle('on', !!u);
-  setTimeout(() => {
-    refreshOfficialAuthors();
-    if (window.PlayFeedCreator) {
-      window.PlayFeedCreator.refreshAuthors();
-      window.PlayFeedCreator.syncOfficialGames();
-    }
-    if (u) setTimeout(() => loadNotifications(false), 900);
-  }, 0);
-}
-function currentPhuzeToken(session) {
-  return String(
-    session?.token ||
-    session?.sessionToken ||
-    session?.accessToken ||
-    localStorage.getItem('phuze_session') ||
-    ''
-  );
-}
-async function secureWrite(action, payload = {}) {
-  if (!phuzeToken) throw new Error('登入已失效，請重新登入');
-  const response = await fetch('/api/write', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${phuzeToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ action, ...payload })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || !result.ok) {
-    if (response.status === 401) {
-      phuzeToken = '';
-      setUser(null);
-    }
-    throw new Error(result.error || '操作失敗，請稍後再試');
-  }
-  return result;
-}
-
-/* ---------- 登入（Phuze magic link） ---------- */
-const loginBox = document.getElementById('login');
-function openLogin() { loginBox.classList.add('open'); setNavVisible(false); }
-function closeLogin() { loginBox.classList.remove('open'); restoreNavVisibility(); }
-document.getElementById('skipLogin').addEventListener('click', () => { pendingAction = null; closeLogin(); });
-authChip.addEventListener('click', () => {
-  if (user) return openProfile();
-  if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
-  openLogin();
-});
-if (phuzeOn) {
-  Phuze.init({
-    publishableKey: cfg.PHUZE_PUBLISHABLE_KEY,
-    locale: i18n?.locale === 'en' ? 'en' : 'zh-TW',
-    text: {
-      button: tr('寄登入連結給我'), buttonLoading: tr('寄送中…'), buttonSignOut: tr('登出'),
-      placeholder: 'name@example.com',
-      sentTitle: tr('去收信！'), sentSubtitle: tr('點信裡的連結，這個畫面會自動完成登入。')
-    },
-    theme: { accentColor: '#0095f6', accentHoverColor: '#1877f2', accentTextColor: '#ffffff',
-             borderRadius: '12px', borderColor: '#33334a' }
-  });
-  Phuze.mount('#phuze-widget');
-  Phuze.onSessionChange(session => {
-    const wasIn = !!user;
-    phuzeToken = session ? currentPhuzeToken(session) : '';
-    setUser(session ? { id: session.uid, email: session.email || '' } : null);
-    loadLikes(); loadSaves();
-    if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
-    if (session && !wasIn) {
-      if (loginBox.classList.contains('open')) { closeLogin(); toast('登入成功！'); }
-      if (pendingAction) { const fn = pendingAction; pendingAction = null; fn(); }
-    }
-    if (!session) pendingAction = null;
-  });
-}
-function requireLogin(action) {
-  if (!online || !phuzeOn) { toast('體驗模式：尚未連接後台，互動先不會被儲存'); return false; }
-  if (!user) { pendingAction = action || null; openLogin(); return false; }
-  return true;
-}
-
-/* ---------- 底部常駐導覽（IG 風格：首頁 / 我的） ---------- */
-const mainNav = document.getElementById('mainNav');
-function setNavVisible(v) { mainNav.classList.toggle('hide', !v); }
-function setGameActive(active) {
-  setAudioPlaybackActive(active);
-  document.body.classList.toggle('game-active', !!active);
-  if (active) setNavVisible(false);
-  else restoreNavVisibility();
-}
-function advanceFeedFrom(post) {
-  const next = post?.nextElementSibling?.classList?.contains('post')
-    ? post.nextElementSibling
-    : null;
-  setGameActive(false);
-  if (next) requestAnimationFrame(() => next.scrollIntoView({ block: 'start', behavior: 'smooth' }));
-}
-/* 關掉某個蓋在上面的面板（留言/登入/改造）後，導覽列該不該出現要看底下是首頁還是單一遊戲視圖 */
-function restoreNavVisibility() { setNavVisible(!document.getElementById('remixView').classList.contains('open')); }
-function setMainNavActive(tab) {
-  setAudioPlaybackActive(false);
-  document.getElementById('navHomeMain').classList.toggle('active', tab === 'home');
-  document.getElementById('navCreateMain').classList.toggle('active', tab === 'create');
-  document.getElementById('navSearchMain').classList.toggle('active', tab === 'search');
-  document.getElementById('navNotificationsMain').classList.toggle('active', tab === 'notifications');
-  document.getElementById('navMeMain').classList.toggle('active', tab === 'me');
-}
-document.getElementById('navHomeMain').addEventListener('click', () => {
-  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeProfile(); closeSearch(); closeNotifications(); closeStandalone();
-});
-document.getElementById('navCreateMain').addEventListener('click', () => {
-  closeProfile(); closeSearch(); closeNotifications(); closeStandalone();
-  if (window.PlayFeedCreator) window.PlayFeedCreator.open();
-  else toast('創作工具載入中，請再按一次');
-});
-document.getElementById('navSearchMain').addEventListener('click', openSearch);
-document.getElementById('navMeMain').addEventListener('click', () => {
-  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeSearch(); closeNotifications();
-  if (user) return openProfile();
-  if (!phuzeOn) return toast('尚未連接會員系統，先設定 config.js（見開始指南）');
-  pendingAction = () => openProfile();
-  openLogin();
-});
-document.getElementById('navNotificationsMain').addEventListener('click', () => {
-  if (!user) {
-    pendingAction = openNotifications;
-    return openLogin();
-  }
-  openNotifications();
-});
-
-/* ---------- 搜尋：帳號與遊戲 ---------- */
-const searchPage = document.getElementById('searchPage');
-const searchInput = document.getElementById('searchInput');
-const searchResults = document.getElementById('searchResults');
-let searchProfileIndexLoaded = false;
-function searchGames() {
-  const games = [];
-  for (const row of window.PlayFeedCreator?.rows || []) {
-    games.push({
-      id: `game:${row.slug}`,
-      title: row.title || row.slug,
-      authorId: row.author_id,
-      authorName: row.author_name || '玩家',
-      description: row.description || row.tip || '',
-      bg: row.bg || '#efefef',
-      screenshot: row.screenshot || '',
-    });
-  }
-  for (const row of remixRows || []) {
-    games.push({
-      id: `remix:${row.id}`,
-      title: row.name || '改造遊戲',
-      authorId: row.user_id,
-      authorName: row.author || '玩家',
-      description: '換皮改造',
-      bg: baseEntryById(row.base_id)?.bg || '#efefef',
-      screenshot: '',
-    });
-  }
-  return uniqueProfileEntries(games);
-}
-function searchAccounts() {
-  const accounts = new Map();
-  const add = (id, name) => {
-    if (!id) return;
-    const detail = profileDetails[id] || {};
-    accounts.set(id, {
-      id,
-      name: detail.display_name || name || '玩家',
-      bio: detail.bio || '',
-      avatar: detail.avatar || '',
-    });
-  };
-  for (const row of window.PlayFeedCreator?.rows || []) add(row.author_id, row.author_name);
-  for (const row of remixRows || []) add(row.user_id, row.author);
-  for (const id of Object.keys(profileDetails)) add(id, profileDetails[id]?.display_name);
-  return [...accounts.values()];
-}
-async function loadSearchProfiles() {
-  if (searchProfileIndexLoaded || !online) return;
-  searchProfileIndexLoaded = true;
-  const { data, error } = await db.from('comments').select('game_id,user_id,name,body')
-    .like('game_id', PROFILE_PREFIX + '%').order('created_at', { ascending: false }).limit(500);
-  if (error) return;
-  for (const row of data || []) {
-    if (profileDetails[row.user_id]) continue;
-    try {
-      const stored = JSON.parse(row.body);
-      profileDetails[row.user_id] = {
-        display_name: stored.display_name || stored.d || row.name || '玩家',
-        bio: stored.bio || stored.b || '',
-        website: stored.website || stored.w || '',
-      };
-    } catch (_) {}
-  }
-}
-function appendSearchTitle(text) {
-  const title = document.createElement('div');
-  title.className = 'search-section-title';
-  title.textContent = text;
-  searchResults.appendChild(title);
-}
-function renderSearchResults() {
-  const query = searchInput.value.trim().toLocaleLowerCase('zh-Hant');
-  searchResults.innerHTML = '';
-  if (!query) {
-    searchResults.innerHTML = '<div class="search-empty">輸入遊戲名稱或創作者帳號</div>';
-    return;
-  }
-  const accounts = searchAccounts().filter(account =>
-    `${account.name} ${account.bio}`.toLocaleLowerCase('zh-Hant').includes(query)
-  ).slice(0, 30);
-  const games = searchGames().filter(game =>
-    `${game.title} ${game.description} ${game.authorName}`.toLocaleLowerCase('zh-Hant').includes(query)
-  ).slice(0, 60);
-  if (accounts.length) appendSearchTitle('帳號');
-  for (const account of accounts) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'search-result account';
-    const thumb = document.createElement('span');
-    thumb.className = 'search-result-thumb';
-    if (account.avatar) thumb.style.backgroundImage = `url("${account.avatar}")`;
-    else thumb.textContent = [...account.name][0]?.toUpperCase() || 'P';
-    const copy = document.createElement('span');
-    copy.className = 'search-result-copy';
-    const name = document.createElement('strong'); name.textContent = account.name;
-    const bio = document.createElement('span'); bio.textContent = account.bio || '查看創作者頁面';
-    copy.append(name, bio); button.append(thumb, copy);
-    button.addEventListener('click', () => {
-      closeSearch();
-      openAuthorProfile(account.id, account.name);
-    });
-    searchResults.appendChild(button);
-  }
-  if (games.length) appendSearchTitle('遊戲');
+    </footer>
+  </article>
+</template>
+<script src="https://phuze.edato.me/phuze.js"></script><script src="/auth.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script type="module">
+  const games = await loadPlayfeedGames();
+  const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
+  const profiles = new Map();
+  const creatorHashes = new Map();
   for (const game of games) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'search-result game';
-    const thumb = document.createElement('span');
-    thumb.className = 'search-result-thumb';
-    thumb.style.backgroundColor = game.bg;
-    if (game.screenshot) thumb.style.backgroundImage = `url("${game.screenshot}")`;
-    else thumb.textContent = '🎮';
-    const copy = document.createElement('span');
-    copy.className = 'search-result-copy';
-    const title = document.createElement('strong'); title.textContent = game.title;
-    const author = document.createElement('span'); author.textContent = `@${game.authorName}`;
-    copy.append(title, author); button.append(thumb, copy);
-    button.addEventListener('click', () => {
-      closeSearch();
-      openStandalone(game.id);
+    if (!game.creator) {
+      const name = game.external ? game.author : playfeed.name;
+      const identity = name.trim().toLocaleLowerCase();
+      const hash = creatorHashes.get(identity) || '#creator-' + game.id;
+      creatorHashes.set(identity, hash);
+      game.creator = game.external
+        ? { name, url: game.creator_url || game.url, hash }
+        : playfeed;
+    }
+    const { hash } = game.creator;
+    if (!profiles.has(hash)) profiles.set(hash, { ...game.creator, games: [] });
+    profiles.get(hash).games.push(game);
+    profiles.set('#creator-' + game.id, profiles.get(hash));
+  }
+  const feed = document.querySelector('#feed');
+  const creatorPage = document.querySelector('#creator');
+  const backToFeed = document.querySelector('#back-to-feed');
+  const switcher = document.querySelector('.game-switcher');
+  const previousButton = document.querySelector('#previous-game');
+  const nextButton = document.querySelector('#next-game');
+  const feedBrand = document.querySelector('.feed-brand');
+  PlayFeedAuth.onChange(user => {
+    const account = document.querySelector('.account-link');
+    account.textContent = user?.email ? user.email[0].toUpperCase() : '👤';
+    account.title = user?.email || '登入 PlayFeed';
+  });
+  let visitorToken;
+  try {
+    visitorToken = localStorage.getItem('playfeed:visitor-token');
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(visitorToken || '')) {
+      visitorToken = crypto.randomUUID();
+      localStorage.setItem('playfeed:visitor-token', visitorToken);
+    }
+  } catch { visitorToken = crypto.randomUUID(); }
+  let navigationTimer;
+  function revealNavigation() {
+    if (feed.hidden) return;
+    feedBrand.classList.add('visible');
+    feedBrand.inert = false;
+    clearTimeout(navigationTimer);
+    navigationTimer = setTimeout(hideNavigation, 1000);
+  }
+  function hideNavigation() {
+    feedBrand.classList.remove('visible');
+    feedBrand.inert = true;
+  }
+  const searchDialog = document.querySelector('.search-dialog');
+  const searchInput = document.querySelector('#game-search');
+  const reportMenu = document.querySelector('#report-menu');
+  const reportDialog = document.querySelector('#report-dialog');
+  const reportForm = document.querySelector('#report-form');
+  const openReport = document.querySelector('#open-report');
+  let reportGame;
+  for (const dialog of [reportMenu, reportDialog]) {
+    dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
     });
-    searchResults.appendChild(button);
   }
-  if (!accounts.length && !games.length) {
-    searchResults.innerHTML = '<div class="search-empty">找不到符合的帳號或遊戲</div>';
-  }
-}
-async function openSearch() {
-  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeProfile(); closeNotifications(); closeStandalone();
-  searchPage.classList.add('open');
-  setMainNavActive('search');
-  await loadSearchProfiles();
-  renderSearchResults();
-  setTimeout(() => searchInput.focus(), 30);
-}
-function closeSearch() {
-  searchPage.classList.remove('open');
-}
-searchInput.addEventListener('input', renderSearchResults);
-
-/* ---------- 個人頁面（IG 風格：分頁 + 縮圖網格） ---------- */
-const profileBox = document.getElementById('profile');
-let profileTab = 'created';
-let profileOwner = null;
-function ownProfileView() {
-  return !!(user && profileOwner && profileOwner.id === user.id);
-}
-function updateProfileAction() {
-  const button = document.getElementById('profileActionBtn');
-  if (!profileOwner) { button.style.display = 'none'; return; }
-  button.style.display = '';
-  if (ownProfileView()) {
-    button.textContent = '登出';
-    button.classList.remove('following');
-    return;
-  }
-  const state = followState[profileOwner.id] || { count: 0, mine: false };
-  button.textContent = state.mine ? '已追蹤' : '追蹤';
-  button.classList.toggle('following', state.mine);
-}
-function renderProfileSummary() {
-  if (!profileOwner) return;
-  const detail = profileDetails[profileOwner.id] || {};
-  const name = detail.display_name || profileOwner.name || '玩家';
-  const avatar = document.getElementById('profileAvatar');
-  document.getElementById('profileWho').textContent = name;
-  avatar.textContent = detail.avatar ? '' : ([...name][0]?.toUpperCase() || 'P');
-  avatar.style.backgroundImage = detail.avatar ? `url("${detail.avatar}")` : '';
-  avatar.classList.toggle('editable', ownProfileView());
-  avatar.title = ownProfileView() ? '更換頭貼' : '';
-  document.getElementById('profilePostCount').textContent =
-    profileData('created').length + profileData('remixed').length;
-  document.getElementById('profileFollowerCount').textContent =
-    (followState[profileOwner.id] || { count: 0 }).count;
-  document.getElementById('profileFollowingCount').textContent = followingCounts[profileOwner.id] || 0;
-  document.getElementById('profileBio').textContent = detail.bio || '';
-  const website = document.getElementById('profileWebsite');
-  website.hidden = !detail.website;
-  website.href = detail.website || '#';
-  website.textContent = detail.website ? detail.website.replace(/^https?:\/\//, '') : '';
-  const edit = document.getElementById('profileEditBtn');
-  edit.hidden = !ownProfileView();
-  document.getElementById('profileEditor').hidden = true;
-}
-async function loadProfileDetail(ownerId) {
-  if (!online || !ownerId) return;
-  const [profileResult, avatarResult] = await Promise.all([
-    db.from('comments').select('body,name,created_at')
-      .eq('game_id', PROFILE_PREFIX + ownerId).order('created_at', { ascending: false }).limit(1),
-    db.from('comments').select('game_id,body')
-      .like('game_id', AVATAR_PREFIX + ownerId + ':%').order('game_id', { ascending: true }).limit(400),
-  ]);
-  const { data, error } = profileResult;
-  const existing = profileDetails[ownerId] || {};
-  if (!error && data?.[0]) {
+  openReport.addEventListener('click', () => {
+    reportMenu.close();
+    reportForm.reset();
+    document.querySelector('#report-message').textContent = '';
+    reportDialog.showModal();
+  });
+  reportForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const game = reportGame;
+    if (!game) return;
+    const button = reportForm.querySelector('[type=submit]');
+    if (button.disabled) return;
+    button.disabled = true;
+    document.querySelector('#report-message').textContent = '正在送出…';
     try {
-      const stored = JSON.parse(data[0].body);
-      profileDetails[ownerId] = {
-        ...existing,
-        display_name: stored.display_name || stored.d || data[0].name || '玩家',
-        bio: stored.bio || stored.b || '',
-        website: stored.website || stored.w || '',
-      };
-    } catch (_) {}
-  }
-  if (!avatarResult.error && avatarResult.data?.length) {
-    const image = avatarResult.data.map(row => row.body || '').join('');
-    if (/^data:image\/(?:png|jpeg|webp);base64,/i.test(image)) {
-      profileDetails[ownerId] = { ...(profileDetails[ownerId] || existing), avatar: image };
-    }
-  }
-  if (profileOwner?.id === ownerId) renderProfileSummary();
-}
-function configureProfileTabs() {
-  const own = ownProfileView();
-  document.querySelectorAll('.ptabs button').forEach(button => {
-    const personal = ['saved', 'liked', 'disliked'].includes(button.dataset.tab);
-    button.hidden = !own && personal;
-  });
-  if (!own && !['created', 'remixed'].includes(profileTab)) profileTab = 'created';
-  document.querySelectorAll('.ptabs button').forEach(button =>
-    button.classList.toggle('active', button.dataset.tab === profileTab)
-  );
-}
-function openProfile(owner = null) {
-  if (owner) {
-    profileOwner = { id: owner.id, name: authorLabel(owner.name) };
-  } else if (user) {
-    profileOwner = { id: user.id, name: displayName(user) };
-  } else {
-    return;
-  }
-  closeSearch();
-  closeStandalone();
-  configureProfileTabs();
-  updateProfileAction();
-  renderProfileGrid(profileTab);
-  renderProfileSummary();
-  loadProfileDetail(profileOwner.id);
-  profileBox.classList.add('open');
-  setMainNavActive(ownProfileView() ? 'me' : 'home');
-}
-function openAuthorProfile(authorId, name) {
-  if (!authorId) return;
-  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  openProfile({ id: authorId, name });
-}
-function closeProfile() { profileBox.classList.remove('open'); setMainNavActive('home'); }
-document.querySelectorAll('.ptabs button').forEach(b => b.addEventListener('click', () => {
-  profileTab = b.dataset.tab;
-  document.querySelectorAll('.ptabs button').forEach(x => x.classList.toggle('active', x === b));
-  renderProfileGrid(profileTab);
-}));
-document.getElementById('profileActionBtn').addEventListener('click', async () => {
-  if (ownProfileView()) {
-    closeProfile();
-    if (phuzeOn) await Phuze.logout();
-    toast('已登出');
-    return;
-  }
-  if (profileOwner) toggleFollow(profileOwner.id);
-});
-document.getElementById('profileEditBtn').addEventListener('click', () => {
-  if (!ownProfileView()) return;
-  const detail = profileDetails[profileOwner.id] || {};
-  document.getElementById('profileDisplayName').value = detail.display_name || profileOwner.name || '';
-  document.getElementById('profileBioInput').value = detail.bio || '';
-  document.getElementById('profileWebsiteInput').value = detail.website || '';
-  document.getElementById('profileEditor').hidden = false;
-});
-document.getElementById('profileEditCancel').addEventListener('click', () => {
-  document.getElementById('profileEditor').hidden = true;
-});
-document.getElementById('profileEditor').addEventListener('submit', async event => {
-  event.preventDefault();
-  if (!ownProfileView() || !requireLogin()) return;
-  const displayNameValue = document.getElementById('profileDisplayName').value.trim();
-  const bio = document.getElementById('profileBioInput').value.trim();
-  let website = document.getElementById('profileWebsiteInput').value.trim();
-  if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
-  try {
-    const result = await secureWrite('profile', { displayName: displayNameValue, bio, website });
-    profileDetails[user.id] = { ...(profileDetails[user.id] || {}), ...result.profile };
-    profileOwner.name = result.profile.display_name || profileOwner.name;
-    renderProfileSummary();
-    toast('個人資料已儲存');
-  } catch (error) {
-    toast('儲存失敗：' + error.message);
-  }
-});
-document.getElementById('profileAvatar').addEventListener('click', () => {
-  if (ownProfileView()) document.getElementById('profileAvatarInput').click();
-});
-document.getElementById('profileAvatarInput').addEventListener('change', async event => {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file || !ownProfileView() || !requireLogin()) return;
-  if (!/^image\/(?:png|jpeg|webp)$/i.test(file.type) || file.size > 8_000_000) {
-    toast('請選擇 8MB 以下的 PNG、JPG 或 WebP 圖片');
-    return;
-  }
-  try {
-    const source = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = reject;
-      reader.onload = () => {
-        const image = new Image();
-        image.onerror = reject;
-        image.onload = () => resolve(image);
-        image.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-    const side = Math.min(source.naturalWidth, source.naturalHeight);
-    const canvas = document.createElement('canvas');
-    canvas.width = 160;
-    canvas.height = 160;
-    const context = canvas.getContext('2d');
-    context.drawImage(
-      source,
-      (source.naturalWidth - side) / 2,
-      (source.naturalHeight - side) / 2,
-      side,
-      side,
-      0,
-      0,
-      160,
-      160
-    );
-    let image = canvas.toDataURL('image/webp', .78);
-    if (image.length > 75_000) image = canvas.toDataURL('image/jpeg', .62);
-    if (image.length > 75_000) throw new Error('圖片壓縮後仍然太大');
-    const result = await secureWrite('avatar', { image });
-    profileDetails[user.id] = { ...(profileDetails[user.id] || {}), avatar: result.avatar };
-    renderProfileSummary();
-    toast('頭貼已更新');
-  } catch (error) {
-    toast('頭貼上傳失敗：' + (error.message || '請換一張圖片'));
-  }
-});
-
-/* ---------- 通知：追蹤、按讚、儲存 ---------- */
-const notificationsBox = document.getElementById('notifications');
-let notificationEvents = [];
-function ownedNotificationGames() {
-  if (!user) return new Map();
-  const created = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(user.id) : [];
-  const remixed = remixRows.filter(row => row.user_id === user.id).map(cacheRemixEntry).filter(Boolean);
-  return new Map([...created, ...remixed].map(entry => [entry.id, entry]));
-}
-function notificationTime(value) {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (seconds < 60) return tr('剛剛');
-  if (seconds < 3600) return tr(`${Math.floor(seconds / 60)} 分鐘前`);
-  if (seconds < 86400) return tr(`${Math.floor(seconds / 3600)} 小時前`);
-  if (seconds < 86400 * 7) return tr(`${Math.floor(seconds / 86400)} 天前`);
-  return new Date(value).toLocaleDateString(i18n?.locale === 'en' ? 'en-US' : 'zh-TW');
-}
-function renderNotifications(markRead = false) {
-  const list = document.getElementById('notificationList');
-  list.innerHTML = '';
-  if (!notificationEvents.length) {
-    const empty = document.createElement('div');
-    empty.className = 'notification-empty';
-    empty.textContent = '還沒有新通知。';
-    list.appendChild(empty);
-  }
-  for (const event of notificationEvents) {
-    const item = document.createElement('div');
-    item.className = 'notification-item';
-    const icon = document.createElement('div');
-    icon.className = 'notification-icon';
-    icon.textContent = event.type === 'follow' ? '＋' : (event.type === 'like' ? '♡' : '▱');
-    const text = document.createElement('div');
-    text.className = 'notification-text';
-    const actor = document.createElement('b');
-    actor.textContent = event.actorName;
-    const message = document.createTextNode(event.type === 'follow'
-      ? ` ${tr('開始追蹤你')}`
-      : ` ${tr(event.type === 'like' ? '按讚了' : '儲存了')} ${i18n?.locale === 'en' ? `“${event.gameTitle}”` : `《${event.gameTitle}》`}`);
-    const time = document.createElement('span');
-    time.className = 'notification-time';
-    time.textContent = notificationTime(event.createdAt);
-    text.append(actor, message, time);
-    item.append(icon, text);
-    item.addEventListener('click', () => {
-      if (event.gameId) {
-        closeNotifications();
-        openStandalone(event.gameId);
-      } else if (event.actorId) {
-        closeNotifications();
-        openAuthorProfile(event.actorId, event.actorName);
-      }
-    });
-    list.appendChild(item);
-  }
-  const readKey = user ? `playfeed-notifications-read:${user.id}` : '';
-  const previousRead = Number(localStorage.getItem(readKey) || 0);
-  const unread = notificationEvents.filter(event => new Date(event.createdAt).getTime() > previousRead).length;
-  const badge = document.getElementById('notificationBadge');
-  badge.hidden = markRead || unread === 0;
-  badge.textContent = unread > 99 ? '99+' : String(unread);
-  if (markRead && readKey) localStorage.setItem(readKey, String(Date.now()));
-}
-async function loadNotifications(markRead = false) {
-  if (!online || !user) return;
-  const owned = ownedNotificationGames();
-  const [likesResult, savesResult, profilesResult] = await Promise.all([
-    db.from('likes').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
-    db.from('saves').select('game_id,user_id,created_at').order('created_at', { ascending: false }).limit(250),
-    db.from('comments').select('game_id,user_id,name,body,created_at')
-      .like('game_id', PROFILE_PREFIX + '%').order('created_at', { ascending: false }).limit(500),
-  ]);
-  const actorNames = {};
-  for (const row of profilesResult.data || []) {
-    if (!row.game_id.startsWith(PROFILE_PREFIX)) continue;
-    try {
-      const stored = JSON.parse(row.body);
-      actorNames[row.user_id] = stored.display_name || stored.d || row.name || '玩家';
-    } catch (_) {
-      actorNames[row.user_id] = row.name || '玩家';
-    }
-  }
-  const events = [];
-  for (const row of likesResult.data || []) {
-    if (row.user_id === user.id) continue;
-    if (row.game_id === FOLLOW_PREFIX + user.id) {
-      events.push({ type: 'follow', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
-        createdAt: row.created_at });
-      continue;
-    }
-    if (row.game_id.startsWith(DISLIKE_PREFIX) || row.game_id.startsWith(FOLLOW_PREFIX)) continue;
-    const game = owned.get(row.game_id);
-    if (game) events.push({ type: 'like', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
-      gameId: row.game_id, gameTitle: game.title.split('：')[0], createdAt: row.created_at });
-  }
-  for (const row of savesResult.data || []) {
-    if (row.user_id === user.id) continue;
-    const game = owned.get(row.game_id);
-    if (game) events.push({ type: 'save', actorId: row.user_id, actorName: actorNames[row.user_id] || '玩家',
-      gameId: row.game_id, gameTitle: game.title.split('：')[0], createdAt: row.created_at });
-  }
-  notificationEvents = events.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 150);
-  renderNotifications(markRead);
-}
-function openNotifications() {
-  if (!user) return openLogin();
-  if (window.PlayFeedCreator) window.PlayFeedCreator.close();
-  closeProfile();
-  closeSearch();
-  closeStandalone();
-  notificationsBox.classList.add('open');
-  setMainNavActive('notifications');
-  loadNotifications(true);
-}
-function closeNotifications() {
-  notificationsBox.classList.remove('open');
-  if (!profileBox.classList.contains('open')) setMainNavActive('home');
-}
-document.getElementById('notificationReadAll').addEventListener('click', () => renderNotifications(true));
-
-function profileData(tab) {
-  const ownerId = profileOwner && profileOwner.id;
-  if (tab === 'created') {
-    const official = posts.map(post => post.entry).filter(entry => entry.authorId === ownerId);
-    const submitted = window.PlayFeedCreator ? window.PlayFeedCreator.profileEntries(ownerId) : [];
-    return uniqueProfileEntries([...submitted, ...official]);
-  }
-  if (tab === 'remixed') {
-    return uniqueProfileEntries(
-      remixRows.filter(r => r.user_id === ownerId).map(cacheRemixEntry).filter(Boolean)
-    );
-  }
-  if (!ownProfileView()) return [];
-  const st = tab === 'saved' ? saveState : likeState;
-  return uniqueProfileEntries(Object.keys(st)
-    .filter(id => tab === 'saved' ? st[id] :
-      (tab === 'disliked' ? st[id]?.disliked : st[id]?.mine))
-    .map(entryFor).filter(Boolean));
-}
-function uniqueProfileEntries(entries) {
-  const seen = new Set();
-  return entries.filter(entry => {
-    if (!entry?.id || seen.has(entry.id)) return false;
-    seen.add(entry.id);
-    return true;
-  });
-}
-const profilePreviewJobs = new Map();
-function updateProfileGridRowHeight() {
-  const grid = document.getElementById('pgrid');
-  const width = grid.clientWidth;
-  if (!width) return;
-  const columnWidth = Math.max(1, (width - 12) / 3);
-  grid.style.setProperty('--profile-grid-row-height', `${columnWidth * 7 / 4}px`);
-}
-if ('ResizeObserver' in window) {
-  new ResizeObserver(updateProfileGridRowHeight).observe(document.getElementById('pgrid'));
-} else {
-  window.addEventListener('resize', updateProfileGridRowHeight);
-}
-function captureBuiltInThumbnail(entry) {
-  if (!entry?.base?.create) return Promise.resolve(null);
-  if (entry.screenshot) return Promise.resolve(entry.screenshot);
-  if (profilePreviewJobs.has(entry.id)) return profilePreviewJobs.get(entry.id);
-  const job = new Promise(resolve => {
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    const getSprite = key => spriteReady(entry.sprites && entry.sprites[key]);
-    const drawSprite = (key, cx, cy, size, flip) => {
-      const image = getSprite(key);
-      if (!image) return false;
-      const scale = Math.min(size / mediaW(image), size / mediaH(image));
-      const width = mediaW(image) * scale, height = mediaH(image) * scale;
-      ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
-      ctx.drawImage(image, -width / 2, -height / 2, width, height); ctx.restore();
-      return true;
-    };
-    let game = null;
-    let finished = false;
-    let inputTimer = null;
-    let captureTimer = null;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      clearInterval(inputTimer); clearTimeout(captureTimer);
-      try { game?.stop(); } catch (_) {}
-      let image = null;
-      try { image = canvas.toDataURL('image/webp', .78); } catch (_) {}
-      if (image) entry.screenshot = image;
-      resolve(image);
-    };
-    const env = {
-      W, H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, getSprite, sprite: drawSprite,
-      setScore: () => {}, over: () => setTimeout(finish, 30)
-    };
-    try {
-      game = entry.base.create(env);
-      game.start();
-      inputTimer = setInterval(() => {
-        const x = 60 + Math.random() * 280, y = 130 + Math.random() * 450;
-        game.input('down', x, y);
-        if (Math.random() < .45) game.input('move', Math.max(20, Math.min(380, x + (Math.random() - .5) * 180)), y);
-        setTimeout(() => { if (!finished) game.input('up', x, y); }, 80);
-      }, 180);
-      captureTimer = setTimeout(finish, 1500);
-    } catch (_) {
-      finish();
-    }
-  });
-  profilePreviewJobs.set(entry.id, job);
-  return job;
-}
-function profileThumbnailFor(entry) {
-  if (entry.userScript && window.PlayFeedCreator) {
-    return window.PlayFeedCreator.captureThumbnail(entry.id, false, entry);
-  }
-  if (entry.screenshot) return Promise.resolve(entry.screenshot);
-  return captureBuiltInThumbnail(entry);
-}
-let profileGridObserver = null;
-function renderProfileGrid(tab) {
-  const grid = document.getElementById('pgrid');
-  const items = profileData(tab);
-  updateProfileGridRowHeight();
-  profileGridObserver?.disconnect();
-  const observer = new IntersectionObserver(entries => {
-    for (const observed of entries) {
-      if (!observed.isIntersecting) continue;
-      observer.unobserve(observed.target);
-      observed.target.loadPreview?.();
-    }
-  }, { root: grid, rootMargin: '220px 0px' });
-  profileGridObserver = observer;
-  grid.innerHTML = '';
-  if (!items.length) {
-    const msg = { created: '還沒有自創遊戲。到「創作」貼上 Script，就能發布第一款。',
-      remixed: '還沒有改造遊戲。從 Feed 選一款支援改造的遊戲開始。',
-      saved: '還沒有收藏。看到喜歡的遊戲按「儲存」。',
-      liked: '還沒有按讚的遊戲。', disliked: '還沒有倒讚的遊戲。' }[tab];
-    const empty = document.createElement('div');
-    empty.className = 'gempty'; empty.textContent = msg; grid.appendChild(empty);
-    return;
-  }
-  for (const e of items) {
-    const cell = document.createElement('div');
-    cell.className = 'gcell';
-    cell.style.background = e.bg;
-    const hero = document.createElement('span');
-    hero.className = 'hero';
-    const showPreview = source => {
-      if (!source) return;
-      const image = document.createElement('img');
-      image.src = source;
-      hero.replaceChildren(image);
-    };
-    if (e.screenshot) {
-      showPreview(e.screenshot);
-    } else {
-      hero.textContent = '🎮';
-      cell.loadPreview = () => profileThumbnailFor(e).then(showPreview);
-      profileGridObserver.observe(cell);
-    }
-    cell.appendChild(hero);
-    const cap = document.createElement('span'); cap.className = 'cap';
-    cap.textContent = e.title.split('：')[0]; cell.appendChild(cap);
-    cell.addEventListener('click', () => {
-      const returnContext = {
-        owner: profileOwner ? { ...profileOwner } : null,
-        tab,
-        scrollTop: grid.scrollTop,
-      };
-      closeProfile();
-      openStandalone(e.id, items, returnContext);
-    });
-    grid.appendChild(cell);
-  }
-}
-
-/* ---------- 按讚 ---------- */
-function emptyReaction() {
-  return { count: 0, mine: false, dislikeCount: 0, disliked: false };
-}
-function reactionState(gameId) {
-  return likeState[gameId] || (likeState[gameId] = emptyReaction());
-}
-function reactionDbKey(gameId, reaction) {
-  return reaction === 'dislike' ? DISLIKE_PREFIX + gameId : gameId;
-}
-async function loadLikes() {
-  if (!online) return;
-  const { data, error } = await db.from('likes').select('game_id,user_id');
-  if (error || !data) return;
-  for (const key of Object.keys(likeState)) delete likeState[key];
-  for (const p of posts) likeState[p.id] = emptyReaction();
-  for (const key of Object.keys(followState)) delete followState[key];
-  for (const key of Object.keys(followingCounts)) delete followingCounts[key];
-  for (const row of data) {
-    if (row.game_id.startsWith(FOLLOW_PREFIX)) {
-      const authorId = row.game_id.slice(FOLLOW_PREFIX.length);
-      const state = followState[authorId] || (followState[authorId] = { count: 0, mine: false });
-      state.count++;
-      followingCounts[row.user_id] = (followingCounts[row.user_id] || 0) + 1;
-      if (user && row.user_id === user.id) state.mine = true;
-      continue;
-    }
-    const isDislike = row.game_id.startsWith(DISLIKE_PREFIX);
-    const gameId = isDislike ? row.game_id.slice(DISLIKE_PREFIX.length) : row.game_id;
-    const st = reactionState(gameId);
-    if (isDislike) {
-      st.dislikeCount++;
-      if (user && row.user_id === user.id) st.disliked = true;
-    } else {
-      st.count++;
-      if (user && row.user_id === user.id) st.mine = true;
-    }
-  }
-  for (const p of posts) p.refreshLike();
-  if (profileBox.classList.contains('open')) { updateProfileAction(); renderProfileSummary(); }
-}
-function refreshPost(gameId) {
-  const p = posts.find(p => p.id === gameId) || (standalonePost && standalonePost.id === gameId ? standalonePost : null);
-  if (p) { p.refreshLike(); p.refreshSave(); }
-}
-async function toggleReaction(gameId, reaction) {
-  if (!requireLogin(() => toggleReaction(gameId, reaction))) return;
-  const st = reactionState(gameId);
-  const previous = { ...st };
-  const isLike = reaction === 'like';
-  const active = isLike ? st.mine : st.disliked;
-  let nextReaction = null;
-
-  if (active) {
-    if (isLike) { st.mine = false; st.count = Math.max(0, st.count - 1); }
-    else { st.disliked = false; st.dislikeCount = Math.max(0, st.dislikeCount - 1); }
-  } else {
-    if (isLike) {
-      if (st.disliked) {
-        st.disliked = false;
-        st.dislikeCount = Math.max(0, st.dislikeCount - 1);
-      }
-      st.mine = true; st.count++;
-    } else {
-      if (st.mine) {
-        st.mine = false;
-        st.count = Math.max(0, st.count - 1);
-      }
-      st.disliked = true; st.dislikeCount++;
-    }
-    nextReaction = reaction;
-  }
-  refreshPost(gameId);
-  try {
-    await secureWrite('reaction', { gameId, reaction: nextReaction });
-  } catch (error) {
-    Object.assign(st, previous);
-    refreshPost(gameId);
-    toast('操作失敗：' + error.message);
-    return;
-  }
-  if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
-  if (profileBox.classList.contains('open')) renderProfileGrid(profileTab);
-}
-
-/* ---------- 儲存（收藏到我的頁面） ---------- */
-async function loadSaves() {
-  for (const p of posts) saveState[p.id] = false;
-  if (online && user) {
-    const { data } = await db.from('saves').select('game_id').eq('user_id', user.id);
-    if (data) for (const row of data) saveState[row.game_id] = true;
-  }
-  for (const p of posts) p.refreshSave();
-}
-async function toggleSave(gameId) {
-  if (!requireLogin(() => toggleSave(gameId))) return;
-  const on = !saveState[gameId];
-  saveState[gameId] = on;
-  refreshPost(gameId);
-  try {
-    await secureWrite('save', { gameId, active: on });
-    if (on) toast('已收藏到我的頁面 🔖');
-  } catch (error) {
-    saveState[gameId] = !on;
-    refreshPost(gameId);
-    toast('操作失敗：' + error.message);
-    return;
-  }
-  if (window.PlayFeedCreator) window.PlayFeedCreator.refreshInteractions();
-}
-
-/* ---------- 留言 ---------- */
-const sheet = document.getElementById('sheet');
-const backdrop = document.getElementById('backdrop');
-const cmtList = document.getElementById('cmtList');
-let sheetGame = null;
-function closeSheet() { sheet.classList.remove('open'); backdrop.classList.remove('open'); restoreNavVisibility(); }
-document.getElementById('sheetClose').addEventListener('click', closeSheet);
-backdrop.addEventListener('click', () => { closeSheet(); closeProfile(); closeRemix(); });
-async function openComments(g) {
-  sheetGame = g;
-  document.getElementById('sheetTitle').textContent = i18n?.locale === 'en'
-    ? `Comments on ${g.title.split('：')[0]}`
-    : g.title.split('：')[0] + ' 的留言';
-  cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">載入中…</div></div>';
-  sheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
-  if (!online) {
-    cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">尚未連接後台，設定 config.js 之後留言就會是真的。</div></div>';
-    return;
-  }
-  const { data, error } = await db.from('comments')
-    .select('name,body,created_at').eq('game_id', g.id)
-    .order('created_at', { ascending: false }).limit(50);
-  if (error) { cmtList.innerHTML = '<div class="cmt"><div class="body">載入失敗，稍後再試</div></div>'; return; }
-  renderComments(data);
-}
-function renderComments(rows) {
-  if (!rows.length) {
-    cmtList.innerHTML = '<div class="cmt"><div class="body" style="color:#8f8fa5">還沒有留言，搶頭香吧。</div></div>';
-    return;
-  }
-  cmtList.innerHTML = rows.map(r => {
-    const d = new Date(r.created_at);
-    const when = (d.getMonth()+1) + '/' + d.getDate() + ' ' +
-      String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return `<div class="cmt"><div class="who">${esc(r.name)} · ${when}</div><div class="body">${esc(r.body)}</div></div>`;
-  }).join('');
-}
-async function sendComment() {
-  const input = document.getElementById('cmtInput');
-  const body = input.value.trim();
-  if (!body || !sheetGame) return;
-  if (!requireLogin(sendComment)) return;
-  try {
-    await secureWrite('comment', { gameId: sheetGame.id, body });
-  } catch (error) {
-    return toast('送出失敗：' + error.message);
-  }
-  input.value = '';
-  openComments(sheetGame);
-}
-document.getElementById('cmtSend').addEventListener('click', sendComment);
-
-/* ---------- 分享 ---------- */
-async function shareGame(g) {
-  const url = location.origin + location.pathname + '#' + g.id;
-  if (navigator.share) {
-    const text = i18n?.locale === 'en' ? `Come play “${g.title}” on PlayFeed!` : '來挑戰「' + g.title + '」！';
-    try { await navigator.share({ title: 'PlayFeed', text, url }); } catch (e) {}
-  } else {
-    try { await navigator.clipboard.writeText(url); toast('連結已複製，貼給朋友挑戰吧'); }
-    catch (e) { toast(url); }
-  }
-}
-
-/* ---------- 分數上傳 ---------- */
-async function submitScore(gameId, score) {
-  if (!online || !user || !score) return;
-  try { await secureWrite('score', { gameId, score }); } catch (error) {}
-}
-
-/* ---------- 分享成績（含截圖卡片） ---------- */
-function buildShareCard(snapURL, title, score, cb) {
-  const img = new Image();
-  img.onload = () => {
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const cx = c.getContext('2d');
-    cx.drawImage(img, 0, 0, W, H);           /* 精華截圖：結算那一刻的畫面 */
-    /* 頂部徽章 */
-    const tg = cx.createLinearGradient(0, 0, 0, 120);
-    tg.addColorStop(0, 'rgba(0,0,0,0.55)'); tg.addColorStop(1, 'rgba(0,0,0,0)');
-    cx.fillStyle = tg; cx.fillRect(0, 0, W, 120);
-    cx.textAlign = 'left'; cx.fillStyle = '#fff'; cx.font = '800 20px system-ui';
-    cx.fillText('🎮 PlayFeed', 20, 42);
-    /* 底部：遊戲名 + 大分數 */
-    const grd = cx.createLinearGradient(0, H - 260, 0, H);
-    grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.88)');
-    cx.fillStyle = grd; cx.fillRect(0, H - 260, W, 260);
-    cx.textAlign = 'center';
-    cx.fillStyle = 'rgba(255,255,255,0.9)'; cx.font = '700 26px system-ui';
-    cx.fillText(title.split('：')[0], W / 2, H - 108);
-    cx.fillStyle = '#ffd75e'; cx.font = '900 60px system-ui';
-    cx.fillText(score + '', W / 2, H - 50);
-    cx.fillStyle = 'rgba(255,255,255,0.85)'; cx.font = '600 15px system-ui';
-    cx.fillText(tr('分 · 換你來破紀錄'), W / 2, H - 24);
-    cb(c.toDataURL('image/png'));
-  };
-  img.onerror = () => cb(null);
-  img.src = snapURL;
-}
-async function shareScoreCard(cardURL, g, score) {
-  const url = location.origin + location.pathname + '#' + g.id;
-  const text = i18n?.locale === 'en'
-    ? `I scored ${score} in “${g.title.split('：')[0]}” on PlayFeed. Can you beat it? 👉`
-    : '我在 PlayFeed 玩《' + g.title.split('：')[0] + '》拿了 ' + score + ' 分！來挑戰 👉';
-  let file = null;
-  try {
-    const blob = await (await fetch(cardURL)).blob();
-    file = new File([blob], 'playfeed-score.png', { type: 'image/png' });
-  } catch (e) {}
-  /* 1. 首選：原生分享「帶精華圖」 */
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], text, url }); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
-  /* 2. 不支援帶圖分享：下載精華圖（確保圖一定到手）+ 複製文字連結 */
-  const a = document.createElement('a'); a.href = cardURL; a.download = 'playfeed-score.png'; a.click();
-  let copied = false;
-  try { await navigator.clipboard.writeText(text + ' ' + url); copied = true; } catch (e) {}
-  if (navigator.share) { try { await navigator.share({ text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  toast(copied ? '精華圖已下載，文字連結也複製好了' : '精華圖已下載');
-}
-
-/* ---------- Remix：上傳圖片替換元素 → 發佈成新遊戲（存後端 remixes 表） ---------- */
-function imgFrom(dataURL) { const im = new Image(); im.src = dataURL; return im; }
-function spritesFromData(data) { const out = {}; for (const k in (data || {})) out[k] = imgFrom(data[k]); return out; }
-/* Remix 資料快取：remixRows 是後端原始資料，entry 是要餵給 makePost/UI 的整理過格式。
-   刻意跟「首頁 feed 裡有哪些 post」脫鉤——remix 不會自動混進首頁，只在被明確點開時才建立畫面。 */
-let remixRows = [];
-const remixEntryCache = {};
-function cacheRemixEntry(row) {
-  const id = 'remix:' + row.id;
-  if (!remixEntryCache[id]) {
-    const entry = toRemixEntry(row);
-    if (!entry) return null;
-    remixEntryCache[id] = entry;
-  }
-  return remixEntryCache[id];
-}
-function baseEntryById(id) { const g = (window.GAMES || []).find(g => g.id === id); return g ? toBaseEntry(g) : null; }
-function entryFor(id) {
-  if (id.indexOf('game:') === 0 && window.PlayFeedCreator) {
-    return window.PlayFeedCreator.entryFor(id);
-  }
-  if (id.indexOf('remix:') === 0) {
-    if (remixEntryCache[id]) return remixEntryCache[id];
-    const row = remixRows.find(r => 'remix:' + r.id === id);
-    return row ? cacheRemixEntry(row) : null;
-  }
-  return baseEntryById(id);
-}
-
-async function toggleFollow(authorId) {
-  if (!requireLogin(() => toggleFollow(authorId))) return;
-  if (authorId === user.id) return;
-  const state = followState[authorId] || (followState[authorId] = { count: 0, mine: false });
-  const previous = { ...state };
-  state.mine = !state.mine;
-  state.count = Math.max(0, state.count + (state.mine ? 1 : -1));
-  followingCounts[user.id] = Math.max(0, (followingCounts[user.id] || 0) + (state.mine ? 1 : -1));
-  updateProfileAction();
-  renderProfileSummary();
-  try {
-    await secureWrite('follow', { authorId, active: state.mine });
-  } catch (error) {
-    Object.assign(state, previous);
-    followingCounts[user.id] = Math.max(0, (followingCounts[user.id] || 0) + (state.mine ? 1 : -1));
-    updateProfileAction();
-    renderProfileSummary();
-    toast('操作失敗：' + error.message);
-  }
-}
-async function shareResult(g, score) {
-  const url = location.origin + location.pathname + '#' + g.id;
-  const text = i18n?.locale === 'en'
-    ? `I scored ${score} in “${g.title.split('：')[0]}” on PlayFeed. Can you beat it?`
-    : `我在 PlayFeed 玩《${g.title.split('：')[0]}》拿了 ${score} 分！來挑戰`;
-  if (navigator.share) {
-    try { await navigator.share({ title: 'PlayFeed', text, url }); return; } catch (e) {}
-  }
-  try {
-    await navigator.clipboard.writeText(`${text} ${url}`);
-    toast('成績與連結已複製');
-  } catch (e) {
-    toast(url);
-  }
-}
-function authorLabel(value) {
-  return String(value || '玩家').replace(/^@/, '').replace(/·改造$/, '');
-}
-function refreshOfficialAuthors() {
-  if (typeof posts === 'undefined') return;
-  for (const post of posts) {
-    if (!post.entry.isOfficial) continue;
-    post.entry.authorId = officialOwner.id;
-    post.entry.authorName = '我';
-    post.entry.author = '@我';
-    post.el.querySelectorAll('.author-link').forEach(button => {
-      button.textContent = post.entry.author;
-    });
-  }
-}
-function registerOfficialOwner(authorId, name) {
-  if (!authorId) return;
-  officialOwner.id = authorId;
-  officialOwner.name = '我';
-  refreshOfficialAuthors();
-}
-function mechanicTemplateFor(entry) {
-  if (entry && entry.mechanicContext) return entry.mechanicContext;
-  const base = entry && entry.base;
-  const baseId = base && base.id;
-  const recipe = baseId && window.PLAYFEED_MECHANIC_TEMPLATES &&
-    window.PLAYFEED_MECHANIC_TEMPLATES[baseId];
-  if (!recipe) return null;
-  return {
-    sourceGameId: baseId,
-    sourceTitle: base.title || entry.title,
-    summary: recipe.summary,
-    preserve: [...recipe.preserve]
-  };
-}
-function openMechanicCreator(entry) {
-  const template = mechanicTemplateFor(entry);
-  if (!template || !window.PlayFeedCreator) {
-    toast('這款遊戲目前沒有玩法模板');
-    return;
-  }
-  const feedPost = posts.find(post => post.id === entry.id);
-  if (feedPost) feedPost.deactivate();
-  if (standalonePost && standalonePost.id === entry.id) standalonePost.deactivate();
-  window.PlayFeedCreator?.pausePreview(entry.id);
-  closeRemix(false);
-  window.PlayFeedCreator.openMechanic(template);
-}
-function mediaW(im) { return im.naturalWidth || im.width; }
-function mediaH(im) { return im.naturalHeight || im.height; }
-function spriteReady(im) {
-  if (!im) return null;
-  return (im.complete && im.naturalWidth) ? im : null;
-}
-function processUpload(file, cb) {
-  if (!file || !file.type.startsWith('image/')) { toast('請上傳圖片檔（支援透明圖檔）'); return; }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      const max = 240, sc = Math.min(1, max / Math.max(img.width, img.height));
-      const w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
-      const c = document.createElement('canvas'); c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      cb(c.toDataURL('image/png'));
-    };
-    img.onerror = () => toast('圖片讀取失敗');
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-}
-const remixSheet = document.getElementById('remixSheet');
-const remixFile = document.getElementById('remixFile');
-let activeRemix = null;   // { entry, draft:{ slotKey:{dataURL,img} } }
-let remixSlotKey = null;
-function activeRemixSpriteData() {
-  if (!activeRemix) return {};
-  const data = { ...(activeRemix.originalSpriteData || {}) };
-  for (const [key, value] of Object.entries(activeRemix.draft)) {
-    if (value?.dataURL) data[key] = value.dataURL;
-  }
-  return data;
-}
-function previewActiveRemix() {
-  if (!activeRemix?.entry?.userScript) return;
-  const data = activeRemixSpriteData();
-  if (standalonePost?.id === activeRemix.entry.id) standalonePost.setSpriteData?.(data);
-  window.PlayFeedCreator?.previewSprites(activeRemix.entry.id, data);
-}
-/* 正在改造的那個 post，畫圖時優先用草稿（即時預覽） */
-function draftSpriteFor(entryId, key) {
-  if (activeRemix && activeRemix.entry.id === entryId) {
-    const d = activeRemix.draft[key];
-    if (d) return spriteReady(d.img);
-  }
-  return null;
-}
-function remixBaseIdFor(entry) {
-  return entry?.remixOf || entry?.base?.id || entry?.sourceGameId || entry?.id;
-}
-function remixBaseEntryFor(entry) {
-  if (entry?.base) return toBaseEntry(entry.base);
-  const baseId = remixBaseIdFor(entry);
-  return baseId ? entryFor(baseId) : entry;
-}
-function openRemix(entry) {
-  const mechanicTemplate = mechanicTemplateFor(entry);
-  const canChangeSkin = !!(entry.remixSlots && entry.remixSlots.length);
-  if (!canChangeSkin && !mechanicTemplate) return toast('這款遊戲目前沒有可用的二創方式');
-  const draft = {};
-  for (const k in (entry.spriteData || {})) draft[k] = { dataURL: entry.spriteData[k], img: imgFrom(entry.spriteData[k]) };
-  activeRemix = { entry, draft, originalSpriteData: { ...(entry.spriteData || {}) } };
-  document.getElementById('remixTitle').textContent = '二創《' + entry.title.split('：')[0] + '》';
-  document.getElementById('remixName').value = '';
-  const imageChoice = document.getElementById('chooseImageRemix');
-  imageChoice.disabled = !canChangeSkin;
-  imageChoice.querySelector('span').textContent = canChangeSkin
-    ? '玩法不變，替換角色或物件的外觀。'
-    : '這款遊戲目前沒有提供可替換的外觀元素。';
-  if (canChangeSkin) {
-    renderRemixVersions();
-    renderRemixSlots();
-  } else {
-    document.getElementById('remixVersions').innerHTML = '';
-    document.getElementById('remixSlots').innerHTML = '';
-  }
-  remixSheet.classList.toggle('choosing', !!mechanicTemplate);
-  remixSheet.classList.add('open'); backdrop.classList.add('open'); setNavVisible(false);
-  const p = posts.find(p => p.id === entry.id) || (standalonePost && standalonePost.id === entry.id ? standalonePost : null);
-  if (p) p.deactivate();
-  window.PlayFeedCreator?.pausePreview(entry.id);
-  stopActiveAudio();
-}
-function closeRemix(resumePreview = true) {
-  const resumeId = activeRemix?.entry?.id || null;
-  if (activeRemix?.entry?.userScript) {
-    const original = activeRemix.originalSpriteData || {};
-    if (standalonePost?.id === resumeId) standalonePost.setSpriteData?.(original);
-    window.PlayFeedCreator?.previewSprites(resumeId, original);
-  }
-  remixSheet.classList.remove('open', 'choosing'); backdrop.classList.remove('open');
-  restoreNavVisibility();
-  activeRemix = null;
-  if (resumePreview && resumeId) {
-    const localPost = posts.find(post => post.id === resumeId) ||
-      (standalonePost && standalonePost.id === resumeId ? standalonePost : null);
-    if (localPost) setTimeout(() => localPost.activate(), 40);
-    if (window.PlayFeedCreator) window.PlayFeedCreator.resumePreview(resumeId);
-  }
-}
-document.getElementById('remixClose').addEventListener('click', closeRemix);
-document.getElementById('chooseImageRemix').addEventListener('click', () => {
-  if (document.getElementById('chooseImageRemix').disabled) return;
-  remixSheet.classList.remove('choosing');
-});
-document.getElementById('chooseMechanicRemix').addEventListener('click', () => {
-  if (activeRemix) openMechanicCreator(activeRemix.entry);
-});
-/* 這個遊戲已有的改造版：可直接跳過去玩（來源是 remixRows，跟這些版本目前有沒有在畫面上無關） */
-function renderRemixVersions() {
-  const host = document.getElementById('remixVersions');
-  const baseId = remixBaseIdFor(activeRemix.entry);
-  const baseEntry = remixBaseEntryFor(activeRemix.entry);
-  const siblings = remixRows.filter(r => r.base_id === baseId);
-  if (!siblings.length) { host.innerHTML = ''; return; }
-  host.innerHTML = '<div class="vhead" style="padding-left:0">這個遊戲的版本（' + (siblings.length + 1) + '）：點縮圖直接玩</div>';
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:8px;overflow-x:auto;';
-  const baseChip = document.createElement('div');
-  baseChip.className = 'verchip' + (activeRemix.entry.id === baseId ? ' cur' : '');
-  baseChip.innerHTML = '<span class="sw" style="background:' + (baseEntry?.bg || '#efefef') + '"></span><span class="nm">原版</span>';
-  baseChip.addEventListener('click', () => {
-    closeRemix(false); closeStandalone();
-    if (String(baseId).startsWith('game:')) {
-      openStandalone(baseId);
-    } else {
-      const p = posts.find(x => x.id === baseId);
-      if (p) setTimeout(() => p.el.scrollIntoView({ behavior: 'smooth' }), 60);
-    }
-  });
-  row.appendChild(baseChip);
-  for (const r of siblings) {
-    const id = 'remix:' + r.id;
-    const entry = cacheRemixEntry(r);
-    if (!entry) continue;
-    const chip = document.createElement('div');
-    chip.className = 'verchip' + (activeRemix.entry.id === id ? ' cur' : '');
-    chip.innerHTML = '<span class="sw" style="background:' + entry.bg + '"></span><span class="nm">' + entry.title + '</span>';
-    chip.addEventListener('click', () => { closeRemix(false); openStandalone(id); });
-    row.appendChild(chip);
-  }
-  host.appendChild(row);
-}
-/* 槽位預覽：畫出元素的輪廓＋你上傳的圖，讓你知道圖會怎麼縮放對齊 */
-function drawSlotPreview(cvs, slot, cur) {
-  const S = 58, pad = 7, ctx = cvs.getContext('2d');
-  ctx.clearRect(0, 0, S, S);
-  const shape = slot.shape || 'free';
-  let bw = S - 2 * pad, bh = S - 2 * pad;
-  if (shape === 'wide') bh = 32;
-  else if (shape === 'tall') bw = 34;
-  const bx = (S - bw) / 2, by = (S - bh) / 2;
-  const shapePath = () => {
-    ctx.beginPath();
-    if (shape === 'circle') ctx.arc(S / 2, S / 2, Math.min(bw, bh) / 2, 0, 6.283);
-    else ctx.roundRect(bx, by, bw, bh, 6);
-  };
-  const im = cur && cur.img;
-  if (im && im.complete && im.naturalWidth) {
-    const sc = Math.min(bw / im.width, bh / im.height), w = im.width * sc, h = im.height * sc;
-    ctx.drawImage(im, (S - w) / 2, (S - h) / 2, w, h);
-  } else {
-    ctx.globalAlpha = 0.5; ctx.font = Math.min(bw, bh) * 0.78 + 'px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(slot.default, S / 2, S / 2 + 2); ctx.globalAlpha = 1;
-  }
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
-  shapePath(); ctx.stroke(); ctx.setLineDash([]);
-}
-function renderRemixSlots() {
-  const host = document.getElementById('remixSlots');
-  host.innerHTML = '';
-  for (const slot of activeRemix.entry.remixSlots) {
-    const cur = activeRemix.draft[slot.key];
-    const changed = !!cur;
-    const row = document.createElement('div');
-    row.className = 'slot';
-    row.innerHTML =
-      '<canvas class="preview" width="58" height="58"></canvas>' +
-      '<div class="info"><div class="l">' + slot.label + '</div><div class="h">' + (slot.hint || '') + '</div></div>' +
-      '<div class="acts"><button class="up">' + (cur && cur.img ? '換一張' : '上傳圖片') + '</button>' +
-      '<button class="rst"' + (changed ? '' : ' disabled') + '>還原</button></div>';
-    const cvs = row.querySelector('canvas');
-    drawSlotPreview(cvs, slot, cur);
-    row.querySelector('.up').addEventListener('click', () => { remixSlotKey = slot.key; remixFile.value = ''; remixFile.click(); });
-    row.querySelector('.rst').addEventListener('click', () => {
-      delete activeRemix.draft[slot.key];
-      renderRemixSlots();
-      previewActiveRemix();
-    });
-    host.appendChild(row);
-  }
-}
-remixFile.addEventListener('change', () => {
-  const file = remixFile.files && remixFile.files[0];
-  if (!file || !activeRemix || !remixSlotKey) return;
-  processUpload(file, dataURL => {
-    const d = { dataURL, img: imgFrom(dataURL) };
-    d.img.onload = renderRemixSlots;
-    activeRemix.draft[remixSlotKey] = d;
-    renderRemixSlots();   /* 即時更新縮圖；上面的遊戲畫面下一幀就換成新圖 */
-    previewActiveRemix();
-    toast('換好了！看上面的畫面 👆');
-  });
-});
-async function saveRemixAsGame() {
-  if (!activeRemix) return;
-  const keys = Object.keys(activeRemix.draft);
-  if (!keys.length) { toast('先換上至少一張圖再儲存'); return; }
-  if (!requireLogin(saveRemixAsGame)) return;   /* 未登入 → 跳登入，登入後自動續存 */
-  const base = remixBaseEntryFor(activeRemix.entry);
-  const baseId = remixBaseIdFor(activeRemix.entry);
-  const name = (document.getElementById('remixName').value.trim() || ((base?.title || activeRemix.entry.title).split('：')[0] + ' Remix')).slice(0, 40);
-  const sprites = {};
-  for (const k of keys) {
-    const d = activeRemix.draft[k];
-    const dataURL = d.dataURL;
-    if (dataURL) sprites[k] = dataURL;
-  }
-  if (!Object.keys(sprites).length) { toast('沒有可儲存的內容'); return; }
-  const btn = document.getElementById('remixSave');
-  btn.disabled = true; btn.textContent = '發佈中…';
-  let data, error;
-  try {
-    const result = await secureWrite('remix', { baseId, name, sprites });
-    data = result.remix;
-  } catch (caught) {
-    error = caught;
-  }
-  btn.disabled = false; btn.textContent = '儲存成新遊戲';
-  if (error) { toast('發佈失敗：' + error.message); return; }
-  remixRows.push(data);
-  const entry = cacheRemixEntry(data);
-  closeRemix();
-  toast('已發佈！這就是你的新遊戲 🎉');
-  if (entry) openStandalone(entry.id);
-}
-document.getElementById('remixSave').addEventListener('click', saveRemixAsGame);
-
-/* ---------- Feed 引擎 ---------- */
-const feed = document.getElementById('feed');
-if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-document.getElementById('desktopPager').addEventListener('click', event => {
-  const button = event.target.closest('button[data-direction]');
-  if (!button) return;
-  const items = [...feed.querySelectorAll(':scope > .post')];
-  if (!items.length) return;
-  const current = items.reduce((best, item, index) => {
-    const distance = Math.abs(item.offsetTop - feed.scrollTop);
-    return distance < best.distance ? { index, distance } : best;
-  }, { index: 0, distance: Infinity }).index;
-  const next = Math.max(0, Math.min(items.length - 1, current + Number(button.dataset.direction)));
-  items[next].scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
-document.getElementById('standalonePager').addEventListener('click', event => {
-  const button = event.target.closest('button[data-direction]');
-  if (button) navigateStandalone(Number(button.dataset.direction));
-});
-const posts = [];
-const bootStartedAt = performance.now();
-let bootFinished = false;
-function finishBoot() {
-  if (bootFinished) return;
-  bootFinished = true;
-  if (!location.hash) feed.scrollTop = 0;
-  const delay = Math.max(0, 1650 - (performance.now() - bootStartedAt));
-  setTimeout(() => {
-    document.documentElement.classList.remove('booting');
-    document.getElementById('bootSplash').classList.add('done');
-  }, delay);
-}
-setTimeout(finishBoot, 8000);
-
-/* 一個 entry = 基本遊戲 或 已發佈的 remix。都用 entry.base.create() 跑，靠 getSprite 換皮。 */
-function makePost(entry, opts) {
-  opts = opts || {};
-  const post = document.createElement('section');
-  post.className = 'post';
-  if (opts.standalone) post.classList.add('standalone-post');
-  post.style.background = entry.bg;
-  post.innerHTML = `
-    <div class="stage">
-      <canvas class="game" width="${W}" height="${H}"></canvas>
-      <div class="hud">
-        <span class="chip score-chip">分數<b class="sc">0</b></span>
-        <span class="chip game-title-chip">${entry.title}</span>
-        <span class="chip best-chip" style="display:none">最佳 <span class="bs">0</span></span>
-      </div>
-      <div class="rail">
-        <button class="like" aria-label="按讚"><span class="ic">${ICONS.like}</span><span class="lc">0</span></button>
-        <button class="dislike" aria-label="倒讚"><span class="ic">${ICONS.dislike}</span><span class="dc">0</span></button>
-        <button class="cmt"><span class="ic">${ICONS.comment}</span><span>留言</span></button>
-        <button class="sv"><span class="ic">${ICONS.save}</span><span>儲存</span></button>
-        <button class="shr"><span class="ic">${ICONS.share}</span><span>分享</span></button>
-        <button class="rmx"><span class="ic">${ICONS.remix}</span><span>二創</span></button>
-      </div>
-      <div class="tap-start-hint hidden">點一下開始</div>
-      <div class="play-exit-zone"><span>↑ 從底部上滑下一則</span></div>
-      <div class="overlay hidden"></div>
-    </div>`;
-
-  const canvas = post.querySelector('canvas');
-  const renderDpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
-  const ctx = canvas.getContext('2d');
-  const stage = post.querySelector('.stage');
-  const soundToggle = createSoundToggle(entryUsesSound(entry));
-  if (soundToggle) stage.appendChild(soundToggle);
-  const overlay = post.querySelector('.overlay');
-  const tapHint = post.querySelector('.tap-start-hint');
-  const exitZone = post.querySelector('.play-exit-zone');
-  exitZone.querySelector('span').textContent = tr('↑ 從底部上滑下一則');
-  const scEl = post.querySelector('.sc');
-  const bestChip = post.querySelector('.best-chip');
-  const bsEl = post.querySelector('.bs');
-  const likeBtn = post.querySelector('.like');
-  const dislikeBtn = post.querySelector('.dislike');
-  const state = { game: null, running: false };
-  const gid = entry.id;
-  const mechanicTemplate = mechanicTemplateFor(entry);
-  /* 換皮優先序：改造草稿 → 這個 entry 自己的圖（remix 才有） */
-  const getSprite = key => {
-    return draftSpriteFor(gid, key) || spriteReady(entry.sprites[key]);
-  };
-  /* 便利函式：有換圖就置中等比畫出並回傳 true，沒有就回傳 false（讓遊戲畫預設外觀） */
-  const drawSprite = (key, cx, cy, size, flip) => {
-    const im = getSprite(key);
-    if (!im) return false;
-    const iw = mediaW(im), ih = mediaH(im);
-    const s = Math.min(size / iw, size / ih), w = iw * s, h = ih * s;
-    ctx.save(); ctx.translate(cx, cy); if (flip) ctx.scale(-1, 1);
-    ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore();
-    return true;
-  };
-
-  /* 預覽：cover 只顯示遊戲首頁；demo 才由平台送出隨機輸入示範玩法。 */
-  const pv = { game: null, on: false, timer: null, restartT: null, swipeIv: null };
-  const viewport = { W, H };
-  function fitCanvas() {
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const pixelWidth = Math.max(1, Math.round(rect.width * renderDpr));
-    const pixelHeight = Math.max(1, Math.round(rect.height * renderDpr));
-    const wide = pixelWidth / pixelHeight >= W / H;
-    viewport.W = wide ? H * pixelWidth / pixelHeight : W;
-    viewport.H = wide ? H : W * pixelHeight / pixelWidth;
-    canvas.width = pixelWidth;
-    canvas.height = pixelHeight;
-    const unit = Math.min(pixelWidth / viewport.W, pixelHeight / viewport.H);
-    ctx.setTransform(unit, 0, 0, unit, 0, 0);
-    pvEnv.W = env.W = viewport.W;
-    pvEnv.H = env.H = viewport.H;
-  }
-  const pvEnv = {
-    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep: () => {}, setScore: () => {}, getSprite, sprite: drawSprite,
-    over() {
-      if (!pv.on) return;
-      clearTimeout(pv.restartT);
-      pv.restartT = setTimeout(() => { if (pv.on && !state.running) pv.game.start(); }, 900);
-    }
-  };
-  function startPreview() {
-    if (pv.on || state.running) return;
-    fitCanvas();
-    pv.on = true;
-    if (!pv.game) pv.game = entry.base.create(pvEnv);
-    pv.game.start();
-    tapHint.classList.remove('hidden');
-    if ((entry.preview || entry.base.preview || 'demo') === 'demo') schedulePvInput(1250);
-  }
-  function stopPreview() {
-    pv.on = false;
-    tapHint.classList.add('hidden');
-    clearTimeout(pv.timer); clearTimeout(pv.restartT); clearInterval(pv.swipeIv);
-    if (pv.game) pv.game.stop();
-  }
-  function schedulePvInput(delay = 350 + Math.random() * 550) {
-    pv.timer = setTimeout(() => {
-      if (!pv.on) return;
-      pvDemoInput();
-      schedulePvInput();
-    }, delay);
-  }
-  function pvDemoInput() {
-    const x = viewport.W * (0.15 + Math.random() * 0.7);
-    const y = viewport.H * (0.25 + Math.random() * 0.55);
-    pv.game.input('down', x, y);
-    if (Math.random() < 0.45) {
-      /* 偶爾加入水平或垂直拖曳，讓不同操作的遊戲預覽都能展現玩法。 */
-      let step = 0;
-      const dx = (Math.random() - 0.5) * viewport.W * .6;
-      const dy = (Math.random() - 0.5) * viewport.H * .34;
-      clearInterval(pv.swipeIv);
-      pv.swipeIv = setInterval(() => {
-        if (!pv.on) return clearInterval(pv.swipeIv);
-        step++;
-        pv.game.input('move', x + dx * step / 6, y + dy * step / 6);
-        if (step >= 6) { clearInterval(pv.swipeIv); pv.game.input('up', x + dx, y + dy); }
-      }, 30);
-    } else {
-      setTimeout(() => { if (pv.on) pv.game.input('up', x, y); }, 90);
-    }
-  }
-
-  const env = {
-    W: viewport.W, H: viewport.H, ctx, locale: i18n?.locale || 'zh-Hant', beep, getSprite, sprite: drawSprite,
-    setScore(n) { scEl.textContent = n; },
-    over(score) {
-      state.running = false;
-      stage.classList.remove('playing');
-      setGameActive(false);
-      const snap = canvas.toDataURL('image/png');   /* 先抓結算畫面，等下實況會蓋掉 */
-      const prev = bests[gid] || 0;
-      const isBest = score > prev;
-      if (isBest) { bests[gid] = score; submitScore(gid, score); }
-      bestChip.style.display = ''; bsEl.textContent = bests[gid] || 0;
-      overlay.innerHTML = `
-        <div class="overlay-main">
-          <button class="author-link">${entry.author}</button>
-          <h2>${entry.title}</h2>
-          <div class="final"><span class="result-score-label">分數</span>${score}</div>
-          ${isBest && score > 0 ? '<div class="newbest">&#9733; 新紀錄</div>' : ''}
-          <div class="ov-btns">
-            <button class="go">重新玩</button>
-            <button class="share-score">分享</button>
-          </div>
-        </div>`;
-      overlay.classList.remove('hidden');
-      tapHint.classList.add('hidden');
-      wireStart(overlay);
-      let cardURL = null;
-      buildShareCard(snap, entry.title, score, u => cardURL = u);
-      overlay.querySelector('.share-score').addEventListener('click', () => {
-        if (cardURL) shareScoreCard(cardURL, entry, score);
-        else toast('成績圖產生中，再按一次');
+      await recommendationRequest('/playfeed_game_reports', {
+        method: 'POST',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          game_id: game.id,
+          game_url: new URL(game.url, location.origin + "/").href,
+          game_title: game.title.slice(0,300),
+          visitor_token: visitorToken,
+          reason: reportForm.elements.reason.value,
+          details: reportForm.elements.details.value.trim(),
+        }),
+      }).catch(error => {
+        if (error.message !== '409') throw error;
       });
-      startPreview();   /* 結算畫面後面繼續跑預覽，但不重複顯示開局提示 */
-      tapHint.classList.add('hidden');
+      try { localStorage.setItem('playfeed:reported:' + game.id,'1'); } catch {}
+      reportDialog.close();
+      notifyAction('已收到檢舉，會一併處理。');
+    } catch {
+      document.querySelector('#report-message').textContent = '檢舉未送出，請稍後再試。';
+    } finally { button.disabled = false; }
+  });
+  function renderSearch() {
+    const query = searchInput.value.trim().normalize('NFKC').toLocaleLowerCase();
+    const matches = query ? games.filter(game => {
+      const text = [game.title, game.author, game.creator?.name, game.url].join(' ').normalize('NFKC').toLocaleLowerCase();
+      return query.split(/\s+/).every(word => text.includes(word));
+    }) : [];
+    const list = document.querySelector('.search-results');
+    list.replaceChildren();
+    document.querySelector('#search-status').textContent = query ? (matches.length ? `${matches.length} 款遊戲` : '找不到符合的遊戲') : '';
+    for (const game of matches) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = '#' + game.id;
+      const title = document.createElement('span');
+      title.textContent = game.title;
+      const author = document.createElement('small');
+      author.textContent = game.creator?.name || game.author;
+      link.append(title, author);
+      link.addEventListener('click', () => {
+        searchDialog.close();
+        if (location.hash === link.hash) gameFromLink();
+      });
+      item.append(link);
+      list.append(item);
     }
-  };
-
-  function begin() {
-    stopPreview();
-    fitCanvas();
-    ensureAudio();
-    if (!state.game) state.game = entry.base.create(env);
-    scEl.textContent = '0';
-    overlay.classList.add('hidden');
-    stage.classList.add('playing');
-    setGameActive(true);
-    state.running = true;
-    tapHint.classList.add('hidden');
-    state.game.start();
   }
-  function wireStart(root) {
-    const go = root.querySelector('.go');
-    if (go) go.addEventListener('click', e => { e.stopPropagation(); begin(); });
-    const author = root.querySelector('.author-link');
-    if (author) author.addEventListener('click', e => {
-      e.stopPropagation();
-      stopPreview();
-      if (state.game && state.running) state.game.stop();
-      state.running = false;
-      stage.classList.remove('playing');
-      setGameActive(false);
-      openAuthorProfile(entry.authorId, entry.authorName || entry.author);
+  document.querySelector('.search-button').addEventListener('click', () => {
+    searchDialog.showModal();
+    searchInput.focus();
+    renderSearch();
+  });
+  searchInput.addEventListener('input', renderSearch);
+  searchDialog.querySelector('form').addEventListener('submit', event => {
+    if (event.submitter) return;
+    event.preventDefault();
+    document.querySelector('.search-results a')?.click();
+  });
+  function notifyAction(message) {
+    document.querySelector('.action-status').textContent = message;
+  }
+  const likeStates = new Map();
+  function renderLike(game, button, state) {
+    button.setAttribute('aria-pressed', String(state.liked));
+    button.querySelector('.heart').textContent = state.liked ? '♥' : '♡';
+    button.querySelector('.like-count').textContent = String(state.count);
+    button.setAttribute('aria-label', `${state.liked ? '取消喜歡' : '喜歡'}，${state.count} 個讚`);
+    likeStates.set(game.id, state);
+  }
+  async function loadLike(game, card) {
+    const button = card.querySelector('.like');
+    if (button.disabled) return;
+    try {
+      const key = new URL(game.url, location.origin + "/").href;
+      const state = await PlayFeedAuth.api('/api/account?action=state&gameKey=' + encodeURIComponent(key));
+      renderLike(game, button, state);
+      const saved = card.querySelector('[data-kind="saved"]');
+      saved.setAttribute('aria-pressed', String(state.saved));
+      saved.textContent = state.saved ? '★' : '☆';
+    } catch {
+      button.querySelector('.like-count').textContent = '–';
+    }
+  }
+  function renderProfile(profile) {
+    document.querySelector('#creator-name').textContent = profile.name;
+    document.querySelector('#creator-site').href = profile.url;
+    const works = document.querySelector('.works');
+    works.replaceChildren();
+    for (const game of profile.games) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = '#' + game.id;
+      if (game.cover) {
+        const cover = document.createElement('img');
+        cover.alt = '';
+        cover.addEventListener('error', () => {
+          cover.remove();
+          link.classList.add('text-cover');
+        }, { once: true });
+        cover.src = game.cover;
+        link.append(cover);
+      } else {
+        link.classList.add('text-cover');
+      }
+      const title = document.createElement('span');
+      title.className = 'work-title';
+      title.textContent = game.title;
+      link.append(title);
+      item.append(link);
+      works.append(item);
+    }
+  }
+  const template = document.querySelector('#card');
+  const cards = games.map((game, index) => {
+    const card = template.content.firstElementChild.cloneNode(true);
+    card.hidden = true;
+    card.setAttribute('aria-label', game.title);
+    card.querySelector('.game-more').addEventListener('click', () => {
+      reportGame = game;
+      let reported = false;
+      try { reported = localStorage.getItem('playfeed:reported:' + game.id) === '1'; } catch {}
+      openReport.textContent = reported ? '已檢舉' : '檢舉遊戲';
+      openReport.disabled = reported;
+      reportMenu.showModal();
+    });
+    card.querySelector('.comments-button').addEventListener('click', () => openComments(index));
+    const byline = card.querySelector('.byline');
+    byline.href = game.creator.hash;
+    byline.textContent = game.creator.name;
+    const like = card.querySelector('.like');
+    like.addEventListener('click', () => PlayFeedAuth.requireLogin(async () => {
+      if (like.disabled) return;
+      const desired = !likeStates.get(game.id)?.liked;
+      like.disabled = true;
+      notifyAction('');
+      try {
+        const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'like', gameKey: new URL(game.url, location.origin + "/").href, active: desired }) });
+        renderLike(game, like, state);
+      } catch (error) { notifyAction(error.message); }
+      finally { like.disabled = false; }
+    }));
+    for (const button of card.querySelectorAll('.reaction')) {
+      function renderReaction(active) {
+        button.setAttribute('aria-pressed', String(active));
+        button.textContent = button.dataset.kind === 'liked' ? (active ? '♥' : '♡') : (active ? '★' : '☆');
+      }
+      renderReaction(false);
+      button.addEventListener('click', () => PlayFeedAuth.requireLogin(async () => {
+        const active = button.getAttribute('aria-pressed') !== 'true';
+        button.disabled = true;
+        try {
+          await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
+          renderReaction(active);
+        } catch (error) { notifyAction(error.message); }
+        finally { button.disabled = false; }
+      }));
+    }
+    const share = card.querySelector('.share');
+    share.addEventListener('click', async () => {
+      const link = new URL('/g/' + encodeURIComponent(game.id), location.origin);
+      try {
+        if (navigator.share) await navigator.share({ title: game.title, url: link.href });
+        else {
+          await navigator.clipboard.writeText(link.href);
+          share.textContent = '已複製';
+          setTimeout(() => { share.textContent = '↗'; }, 1800);
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') window.prompt('複製遊戲連結', link.href);
+      }
+    });
+    feed.append(card);
+    return card;
+  });
+
+  const commentsSheet = document.querySelector('#comments-sheet');
+  const commentsForm = document.querySelector('.comments-form');
+  const commentsMessage = document.querySelector('.comments-message');
+  const commentsList = document.querySelector('.comments-list');
+  let commentsIndex = -1, commentsVersion = 0;
+  function closeComments(restoreFocus = true) {
+    const index = commentsIndex;
+    commentsVersion++;
+    commentsIndex = -1;
+    commentsSheet.hidden = true;
+    commentsSheet.style.removeProperty('--drag-y');
+    document.body.classList.remove('comments-open');
+    document.body.style.removeProperty('--comments-height');
+    if (index >= 0) {
+      cards[index].querySelector('.stage').removeAttribute('style');
+      const button = cards[index].querySelector('.comments-button');
+      button.setAttribute('aria-expanded','false');
+      if (restoreFocus) button.focus({preventScroll:true});
+    }
+  }
+  async function readComments(index) {
+    const version = ++commentsVersion;
+    commentsMessage.textContent = '載入留言中…';
+    try {
+      const key = new URL(games[index].url,location.origin + "/").href;
+      const { comments: rows } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key));
+      if (commentsIndex !== index || version !== commentsVersion) return;
+      commentsList.replaceChildren();
+      for (const row of rows.reverse()) {
+        const li = document.createElement('li');
+        const avatar = document.createElement('span'); avatar.className='comment-avatar'; avatar.textContent='P'; avatar.setAttribute('aria-hidden','true');
+        const content = document.createElement('div');
+        const name = document.createElement('span'); name.className='comment-name'; name.textContent=row.display_name;
+        const time = document.createElement('time'); time.className='comment-time'; time.dateTime=row.created_at; time.textContent=new Date(row.created_at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const body = document.createElement('p'); body.className='comment-body'; body.textContent=row.body;
+        content.append(name,time,body); li.append(avatar,content); commentsList.append(li);
+      }
+      commentsMessage.textContent = rows.length ? '' : '還沒有留言，來聊聊這款遊戲吧。';
+      const scroller = document.querySelector('.comments-content'); scroller.scrollTop=scroller.scrollHeight;
+    } catch {
+      if (version===commentsVersion) commentsMessage.textContent='留言暫時無法載入，請關閉後重試。';
+    }
+  }
+  function openComments(index) {
+    if (commentsIndex === index) { closeComments(); return; }
+    closeComments(false);
+    commentsIndex=index;
+    commentsForm.reset(); commentsList.replaceChildren();
+    const stage = cards[index].querySelector('.stage');
+    const width=stage.offsetWidth, height=stage.offsetHeight;
+    commentsSheet.hidden=false;
+    document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');
+    document.body.classList.add('comments-open');
+    const viewport=cards[index].querySelector('.game-viewport');
+    const scale=Math.min(viewport.clientWidth/width,viewport.clientHeight/height,1);
+    Object.assign(stage.style,{position:'absolute',width:width+'px',height:height+'px',left:'50%',top:'0',transformOrigin:'top center',transform:'translateX(-50%) scale('+scale+')'});
+    cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');
+    hideNavigation();
+    readComments(index);
+  }
+  document.querySelector('.comments-close').addEventListener('click',()=>closeComments());
+  window.addEventListener('resize',()=> { if(commentsIndex>=0) closeComments(false); });
+  document.addEventListener('keydown',event=> { if(event.key==='Escape'&&commentsIndex>=0)closeComments(); });
+  commentsForm.addEventListener('submit',async event=> {
+    event.preventDefault();
+    if (!PlayFeedAuth.user) { PlayFeedAuth.openLogin(() => commentsForm.requestSubmit()); return; }
+    const index=commentsIndex, input=commentsForm.elements.comment, body=input.value.trim();
+    const button=commentsForm.querySelector('button');
+    if(index<0||!body||button.disabled)return;
+    button.disabled=true; commentsMessage.textContent='送出中…';
+    try {
+      await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameKey:new URL(games[index].url,location.origin + "/").href,body})});
+      if(commentsIndex===index) { input.value=''; await readComments(index); }
+    } catch { if(commentsIndex===index)commentsMessage.textContent='留言未送出，請再試一次。'; }
+    finally {button.disabled=false;}
+  });
+  const grip=document.querySelector('.comments-grip');
+  let dragStart=null, dragDistance=0;
+  grip.addEventListener('pointerdown',event=> {
+    if(event.target.closest('button')||!event.isPrimary||event.button!==0)return;
+    dragStart=event.clientY; dragDistance=0; grip.setPointerCapture(event.pointerId);
+  });
+  grip.addEventListener('pointermove',event=> {
+    if(dragStart===null)return;
+    dragDistance=Math.max(0,event.clientY-dragStart);
+    commentsSheet.style.setProperty('--drag-y',dragDistance+'px');
+  });
+  function finishDrag(event) {
+    if(dragStart===null)return;
+    const dismiss=event.type!=='pointercancel'&&dragDistance>60;
+    dragStart=null; dragDistance=0;
+    commentsSheet.style.removeProperty('--drag-y');
+    if(dismiss)closeComments();
+  }
+  grip.addEventListener('pointerup',finishDrag);
+  grip.addEventListener('pointercancel',finishDrag);
+
+  let activeIndex = -1;
+  let gameResizeObserver;
+  let gameLoadFrame;
+  let gameLoadTimer;
+  let gameLoadVersion = 0;
+  function unmountGame() {
+    closeComments(false);
+    gameLoadVersion++;
+    cancelAnimationFrame(gameLoadFrame);
+    clearTimeout(gameLoadTimer);
+    gameResizeObserver?.disconnect();
+    if (activeIndex >= 0) {
+      const previous = cards[activeIndex].querySelector('.stage');
+      cards[activeIndex].hidden = true;
+      previous.classList.remove('native-viewport');
+      const placeholder = document.createElement('div');
+      placeholder.className = 'empty';
+      placeholder.textContent = '準備遊戲中';
+      previous.replaceChildren(placeholder);
+    }
+    activeIndex = -1;
+  }
+
+  function showGame(index) {
+    if (activeIndex === index) return;
+    unmountGame();
+    activeIndex = index;
+    cards[index].hidden = false;
+    previousButton.disabled = index === 0;
+    nextButton.disabled = index === games.length - 1;
+    notifyAction('');
+    const game = games[index];
+    loadLike(game, cards[index]);
+    const frame = document.createElement('iframe');
+    frame.title = game.title;
+    frame.setAttribute('sandbox', game.external && (!game.recommended || game.allowStorage) ? 'allow-scripts allow-same-origin' : 'allow-scripts');
+    frame.setAttribute('allow', 'fullscreen');
+    const stage = cards[index].querySelector('.stage');
+    if (game.viewport) {
+      const { width, height, nativeSize } = game.viewport;
+      if (nativeSize) {
+        stage.classList.add('native-viewport');
+      } else {
+        frame.classList.add('fitted');
+        frame.style.width = width + 'px';
+        frame.style.height = height + 'px';
+      }
+      const fit = () => {
+        const scale = Math.min(stage.clientWidth / width, stage.clientHeight / height, 1);
+        if (nativeSize) {
+          frame.style.width = Math.floor(width * scale) + 'px';
+          frame.style.height = Math.floor(height * scale) + 'px';
+        } else {
+          frame.style.setProperty('--game-scale', scale);
+        }
+      };
+      fit();
+      gameResizeObserver = new ResizeObserver(fit);
+      gameResizeObserver.observe(stage);
+    }
+    const version = gameLoadVersion;
+    stage.querySelector('.empty').textContent = '載入遊戲中…';
+    // Let the navigation paint first. A later choice cancels this pending load.
+    gameLoadFrame = requestAnimationFrame(() => {
+      gameLoadTimer = setTimeout(() => {
+        if (version !== gameLoadVersion || activeIndex !== index) return;
+        stage.replaceChildren(frame);
+        frame.src = new URL(game.url, location.origin + "/").href;
+      }, 0);
+    });
+    const url = new URL(location.href);
+    url.pathname = "/g/" + encodeURIComponent(game.id);
+    url.search = "";
+    url.hash = "";
+    if (location.href !== url.href) history.replaceState(null, '', url);
+  }
+
+  function gameFromLink() {
+    const profile = profiles.get(location.hash);
+    feed.hidden = Boolean(profile);
+    creatorPage.hidden = !profile;
+    switcher.hidden = Boolean(profile);
+    if (profile) {
+      backToFeed.href = '#' + (games[activeIndex]?.id ?? profile.games[0].id);
+      renderProfile(profile);
+      unmountGame();
+      return;
+    }
+    const requestedId = location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id'));
+    const index = games.findIndex(game => game.id === requestedId);
+    const target = Math.max(index, 0);
+    showGame(target);
+  }
+
+  gameFromLink();
+  window.addEventListener('hashchange', gameFromLink);
+  function switchGame(direction) {
+    const target = activeIndex + direction;
+    if (target < 0 || target >= games.length) return;
+    showGame(target);
+    revealNavigation();
+  }
+  for (const [button, direction] of [[previousButton, -1], [nextButton, 1]]) {
+    button.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      event.preventDefault();
+      button.focus({ preventScroll: true });
+      switchGame(direction);
+    });
+    button.addEventListener('click', event => {
+      if (event.detail === 0) switchGame(direction);
     });
   }
-  wireStart(overlay);
-
-  function toLogical(e) {
-    const r = canvas.getBoundingClientRect();
-    return [
-      (e.clientX - r.left) / r.width * viewport.W,
-      (e.clientY - r.top) / r.height * viewport.H
-    ];
-  }
-  /* 首頁交給瀏覽器原生 scroll-snap；單一遊戲視圖才使用互動式拖曳。 */
-  let gest = null;
-  stage.addEventListener('pointerdown', e => {
-    const interactive = e.target instanceof Element && e.target.closest('.rail, .go, .sound-toggle');
-    const exitRect = exitZone.getBoundingClientRect();
-    const exitOwned = state.running && e.clientY >= exitRect.top - 23 &&
-      e.clientX >= exitRect.left && e.clientX <= exitRect.right;
-    if (state.running || opts.standalone) {
-      try { stage.setPointerCapture(e.pointerId); } catch (_) {}
-    }
-    gest = {
-      id: e.pointerId, x0: e.clientX, y0: e.clientY, swiped: false,
-      claimed: false, gaveDown: false, exitOwned, platformDrag: false,
-      ignoreTapStart: !!interactive, startedAt: e.timeStamp
-    };
-    if (exitOwned) {
-      e.preventDefault();
-      return;
-    }
-    if (e.target === canvas && state.running && state.game) {
-      const [x, y] = toLogical(e);
-      state.game.input('down', x, y);
-      gest.gaveDown = true;
-    }
-  }, true);
-  stage.addEventListener('pointermove', e => {
-    if (!gest || e.pointerId !== gest.id) return;
-    const dx = e.clientX - gest.x0;
-    const dy = e.clientY - gest.y0;
-    if (gest.exitOwned) {
-      e.preventDefault();
-      const vertical = dy < -8 && Math.abs(dy) > Math.abs(dx) * 1.15;
-      gest.platformDrag = gest.platformDrag || vertical;
-      exitZone.style.setProperty('--exit-lift', `${Math.max(-14, Math.min(0, dy * .12))}px`);
-      if (vertical && opts.standalone) {
-        opts.onStandaloneDrag?.('move', dy, e.timeStamp, gest.startedAt);
-      }
-      return;
-    }
-    if (state.running) {
-      if (gest.gaveDown && state.game && (e.buttons || e.pointerType === 'touch')) {
-        const [x, y] = toLogical(e);
-        state.game.input('move', x, y);
-      }
-      return;
-    }
-    if (!gest.swiped && !gest.claimed) {
-      if (Math.abs(dx) > 14 && Math.abs(dx) >= Math.abs(dy)) {
-        gest.claimed = true;
-      } else if (opts.standalone && Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx) * 1.15) {
-        gest.swiped = true;
-        if (gest.gaveDown && state.game) {
-          const [x, y] = toLogical(e);
-          state.game.input('cancel', x, y);
-        }
-      }
-    }
-    if (gest.swiped) {
-      e.preventDefault();
-      opts.onStandaloneDrag?.('move', dy, e.timeStamp, gest.startedAt);
-      return;
-    }
-    if (gest.gaveDown && state.running && state.game && (e.buttons || e.pointerType === 'touch')) {
-      const [x, y] = toLogical(e);
-      state.game.input('move', x, y);
-    }
-  }, true);
-  function endGesture(e, cancelled) {
-    if (!gest || e.pointerId !== gest.id) return;
-    const finished = gest;
-    const dx = e.clientX - finished.x0;
-    const dy = e.clientY - finished.y0;
-    if (finished.exitOwned) {
-      exitZone.style.removeProperty('--exit-lift');
-      const elapsed = Math.max(1, e.timeStamp - finished.startedAt);
-      const velocity = dy / elapsed;
-      const threshold = Math.max(72, stage.clientHeight * .2);
-      const commit = !cancelled && dy < 0 && Math.abs(dy) > Math.abs(dx) * 1.15 &&
-        (Math.abs(dy) >= threshold || (Math.abs(dy) >= 38 && velocity <= -.55));
-      if (commit) {
-        if (state.game) {
-          const [x, y] = toLogical(e);
-          state.game.input('cancel', x, y);
-          state.game.stop();
-        }
-        state.running = false;
-        stage.classList.remove('playing');
-        setGameActive(false);
-        if (opts.standalone) {
-          opts.onStandaloneDrag?.('end', dy, e.timeStamp, finished.startedAt);
-        } else {
-          advanceFeedFrom(post);
-        }
-      } else if (finished.platformDrag && opts.standalone) {
-        opts.onStandaloneDrag?.('cancel', dy, e.timeStamp, finished.startedAt);
-      }
-      gest = null;
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    if (!cancelled && !state.running && overlay.classList.contains('hidden') &&
-        !finished.ignoreTapStart && Math.hypot(dx, dy) < 12 &&
-        e.timeStamp - finished.startedAt < 520) begin();
-    if (!finished.swiped && finished.gaveDown && state.running && state.game) {
-      const [x, y] = toLogical(e);
-      state.game.input(cancelled ? 'cancel' : 'up', x, y);
-    }
-    gest = null;
-    if (finished.swiped) {
-      e.preventDefault();
-      e.stopPropagation();
-      opts.onStandaloneDrag?.(cancelled ? 'cancel' : 'end', dy, e.timeStamp, finished.startedAt);
-    }
-  }
-  stage.addEventListener('pointerup', e => endGesture(e, false), true);
-  stage.addEventListener('pointercancel', e => endGesture(e, true), true);
-
-  const saveBtn = post.querySelector('.sv');
-  likeBtn.addEventListener('click', () => toggleReaction(gid, 'like'));
-  dislikeBtn.addEventListener('click', () => toggleReaction(gid, 'dislike'));
-  saveBtn.addEventListener('click', () => toggleSave(gid));
-  post.querySelector('.cmt').addEventListener('click', () => openComments(entry));
-  post.querySelector('.shr').addEventListener('click', () => shareGame(entry));
-  const rmxBtn = post.querySelector('.rmx');
-  if (rmxBtn) rmxBtn.addEventListener('click', () => openRemix(entry));
-
-  function refreshLike() {
-    const st = likeState[gid];
-    if (!st) return;
-    likeBtn.classList.toggle('liked', st.mine);
-    likeBtn.querySelector('.lc').textContent = st.count;
-    dislikeBtn.classList.toggle('disliked', st.disliked);
-    dislikeBtn.querySelector('.dc').textContent = st.dislikeCount;
-  }
-  function refreshSave() {
-    saveBtn.classList.toggle('saved', !!saveState[gid]);
-  }
-
-  return {
-    el: post, id: gid, entry, base: entry.base, remixOf: entry.remixOf, state, refreshLike, refreshSave,
-    activate() {
-      if (!state.running) startPreview();
-    },
-    deactivate() {
-      stopPreview();
-      stage.classList.remove('playing');
-      if (state.game && state.running) { state.game.stop(); state.running = false; setGameActive(false); }
-      if (!overlay.classList.contains('hidden')) return;
-      overlay.replaceChildren();
-    }
-  };
-}
-
-/* IntersectionObserver：滑到哪格就啟動哪格的實況預覽 */
-const io = new IntersectionObserver(ents => {
-  for (const en of ents) {
-    const p = posts.find(p => p.el === en.target);
-    if (!p) continue;
-    if (en.isIntersecting && en.intersectionRatio >= 0.5) p.activate();
-    else p.deactivate();
-  }
-}, { threshold: [0, 0.5, 1] });
-
-/* entry 建構 */
-function toBaseEntry(g) {
-  return { id: g.id, base: g, title: g.title, author: '@我',
-           authorId: officialOwner.id, authorName: officialOwner.name, isOfficial: true,
-           tip: g.tip, bg: g.bg, preview: g.preview || 'demo',
-           remixSlots: g.remixSlots, sprites: {}, spriteData: {} };
-}
-function toRemixEntry(r) {
-  if (String(r.base_id || '').startsWith('game:')) {
-    const base = window.PlayFeedCreator?.entryFor(r.base_id);
-    if (!base) return null;
-    return {
-      id: 'remix:' + r.id,
-      title: r.name,
-      author: '@' + (r.author || '玩家') + '·改造',
-      authorId: r.user_id,
-      authorName: r.author || '玩家',
-      tip: base.tip,
-      description: base.description,
-      bg: base.bg,
-      preview: base.preview || 'cover',
-      remixSlots: base.remixSlots || [],
-      sprites: {},
-      spriteData: r.sprites || {},
-      remixOf: r.base_id,
-      sourceGameId: r.base_id,
-      remixMeta: r,
-      userScript: true,
-      storageMode: 'remixes',
-      scoreKey: `remix:${r.id}`,
-    };
-  }
-  const base = (window.GAMES || []).find(g => g.id === r.base_id);
-  if (!base) return null;
-  return { id: 'remix:' + r.id, base, title: r.name,
-           author: '@' + (r.author || '玩家') + '·改造',
-           authorId: r.user_id, authorName: r.author || '玩家', tip: base.tip, bg: base.bg,
-           preview: base.preview || 'demo',
-           remixSlots: base.remixSlots, sprites: spritesFromData(r.sprites),
-           spriteData: r.sprites || {}, remixOf: r.base_id, remixMeta: r };
-}
-function addPost(po) { feed.appendChild(po.el); posts.push(po); io.observe(po.el); }
-
-/* 官方遊戲與使用者投稿統一由 Supabase 載入。
-   window.GAMES 只保留為官方 Runtime、換皮與一次性同步的來源。 */
-
-/* 已發佈的 remix：只快取資料，不放進首頁 feed。要看到某個 remix 一律透過
-   「個人頁的我做的」／「改造面板的版本列表」／分享連結，用 openStandalone() 開單一遊戲視圖。 */
-async function loadRemixGames() {
-  if (!online) return;
-  const { data, error } = await db.from('remixes').select('*').order('created_at', { ascending: false });
-  if (error || !data) return;
-  remixRows = data;
-  for (const r of data) cacheRemixEntry(r);
-  if (profileBox.classList.contains('open')) renderProfileGrid(profileTab);
-  if (activeRemix) renderRemixVersions();
-  goToHash(20);   /* 讓一開始就帶著 remix 分享連結進來的訪客能跳到那個版本 */
-}
-
-/* ---------- 單一遊戲視圖：remix 專用，不佔首頁的位置 ---------- */
-const remixView = document.getElementById('remixView');
-const remixViewStage = document.getElementById('remixViewStage');
-let standalonePost = null;
-let standaloneSequence = [];
-let standaloneIndex = 0;
-let standaloneTransitioning = false;
-let standaloneIncomingPost = null;
-let standaloneReturnContext = null;
-let standaloneDrag = null;
-function mountStandaloneEntry(entry) {
-  const drag = (phase, dy, timeStamp, startedAt) =>
-    handleStandaloneDrag(phase, dy, timeStamp, startedAt);
-  let record;
-  if (entry.userScript && window.PlayFeedCreator) {
-    record = window.PlayFeedCreator.mountStandalone(entry, remixViewStage, drag);
-  } else {
-    record = makePost(entry, { standalone: true, onStandaloneDrag: drag });
-    remixViewStage.appendChild(record.el);
-    record.activate();
-  }
-  record?.refreshLike?.();
-  record?.refreshSave?.();
-  return record;
-}
-function resetStandaloneElement(element) {
-  if (!element) return;
-  element.getAnimations().forEach(animation => animation.cancel());
-  element.style.position = '';
-  element.style.inset = '';
-  element.style.width = '';
-  element.style.transform = '';
-  element.style.willChange = '';
-}
-function positionStandaloneElement(element) {
-  element.style.position = 'absolute';
-  element.style.inset = '0';
-  element.style.width = '100%';
-  element.style.willChange = 'transform';
-}
-function discardStandaloneIncoming() {
-  if (!standaloneIncomingPost) return;
-  standaloneIncomingPost.deactivate();
-  standaloneIncomingPost.el.remove();
-  standaloneIncomingPost = null;
-}
-function prepareStandaloneDrag(direction, dy) {
-  if (!standalonePost || standaloneTransitioning) return null;
-  if (standaloneDrag?.direction === direction) return standaloneDrag;
-  discardStandaloneIncoming();
-  resetStandaloneElement(standalonePost.el);
-  const nextIndex = standaloneIndex + direction;
-  positionStandaloneElement(standalonePost.el);
-  if (nextIndex < 0 || nextIndex >= standaloneSequence.length) {
-    standaloneDrag = { direction, nextIndex: -1, incoming: null, dy };
-    return standaloneDrag;
-  }
-  const next = mountStandaloneEntry(standaloneSequence[nextIndex]);
-  if (!next) return null;
-  standaloneIncomingPost = next;
-  positionStandaloneElement(next.el);
-  standaloneDrag = { direction, nextIndex, incoming: next, dy };
-  return standaloneDrag;
-}
-function drawStandaloneDrag(dy) {
-  const direction = dy < 0 ? 1 : -1;
-  const drag = prepareStandaloneDrag(direction, dy);
-  if (!drag) return;
-  drag.dy = dy;
-  const height = Math.max(1, remixViewStage.clientHeight);
-  if (!drag.incoming) {
-    standalonePost.el.style.transform = `translate3d(0,${dy * .28}px,0)`;
-    return;
-  }
-  standalonePost.el.style.transform = `translate3d(0,${dy}px,0)`;
-  drag.incoming.el.style.transform =
-    `translate3d(0,${direction * height + dy}px,0)`;
-}
-function settleStandaloneDrag(commit) {
-  const drag = standaloneDrag;
-  if (!drag || standaloneTransitioning) return;
-  standaloneTransitioning = true;
-  const height = Math.max(1, remixViewStage.clientHeight);
-  const currentY = drag.incoming ? drag.dy : drag.dy * .28;
-  const targetCurrent = commit && drag.incoming ? -drag.direction * height : 0;
-  const animations = [
-    standalonePost.el.animate(
-      [{ transform: `translate3d(0,${currentY}px,0)` },
-       { transform: `translate3d(0,${targetCurrent}px,0)` }],
-      { duration: commit ? 230 : 210, easing: 'cubic-bezier(.2,.72,.25,1)', fill: 'forwards' }
-    )
-  ];
-  if (drag.incoming) {
-    const incomingStart = drag.direction * height + drag.dy;
-    const incomingEnd = commit ? 0 : drag.direction * height;
-    animations.push(drag.incoming.el.animate(
-      [{ transform: `translate3d(0,${incomingStart}px,0)` },
-       { transform: `translate3d(0,${incomingEnd}px,0)` }],
-      { duration: commit ? 230 : 210, easing: 'cubic-bezier(.2,.72,.25,1)', fill: 'forwards' }
-    ));
-  }
-  Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
-    if (commit && drag.incoming && remixView.classList.contains('open')) {
-      const previous = standalonePost;
-      standaloneIndex = drag.nextIndex;
-      standalonePost = drag.incoming;
-      standaloneIncomingPost = null;
-      previous.deactivate();
-      previous.el.remove();
-      resetStandaloneElement(standalonePost.el);
-    } else {
-      resetStandaloneElement(standalonePost?.el);
-      discardStandaloneIncoming();
-    }
-    standaloneDrag = null;
-    standaloneTransitioning = false;
-  });
-}
-function handleStandaloneDrag(phase, dy, timeStamp, startedAt) {
-  if (!remixView.classList.contains('open') || standaloneTransitioning) return;
-  if (phase === 'move') {
-    drawStandaloneDrag(dy);
-    return;
-  }
-  if (!standaloneDrag) return;
-  const elapsed = Math.max(1, timeStamp - startedAt);
-  const velocity = dy / elapsed;
-  const distance = Math.abs(dy);
-  const threshold = Math.max(72, remixViewStage.clientHeight * .2);
-  const commit = phase === 'end' && !!standaloneDrag.incoming &&
-    (distance >= threshold || (distance >= 32 && Math.abs(velocity) >= .55));
-  settleStandaloneDrag(commit);
-}
-function renderStandaloneEntry() {
-  const entry = standaloneSequence[standaloneIndex];
-  if (!entry) return;
-  standalonePost?.deactivate();
-  discardStandaloneIncoming();
-  remixViewStage.innerHTML = '';
-  standalonePost = mountStandaloneEntry(entry);
-}
-function navigateStandalone(direction) {
-  if (standaloneTransitioning) return;
-  const drag = prepareStandaloneDrag(direction, 0);
-  if (!drag?.incoming) {
-    if (standaloneSequence.length <= 1) returnFromStandalone();
-    else settleStandaloneDrag(false);
-    return;
-  }
-  settleStandaloneDrag(true);
-}
-function openStandalone(id, sequence = null, returnContext = null) {
-  const entry = entryFor(id);
-  if (!entry) { toast('找不到這個遊戲'); return; }
-  closeProfile(); closeSearch(); closeRemix(false); closeSheet();
-  standaloneSequence = (sequence || [entry]).map(item =>
-    typeof item === 'string' ? entryFor(item) : item
-  ).filter(Boolean);
-  standaloneIndex = Math.max(0, standaloneSequence.findIndex(item => item.id === entry.id));
-  standaloneReturnContext = returnContext;
-  remixView.classList.add('open');
-  setNavVisible(false);
-  renderStandaloneEntry();
-}
-function closeStandalone() {
-  if (!remixView.classList.contains('open')) return;
-  if (standalonePost) standalonePost.deactivate();
-  if (standaloneIncomingPost) standaloneIncomingPost.deactivate();
-  remixView.classList.remove('open');
-  remixViewStage.innerHTML = '';
-  standalonePost = null;
-  standaloneIncomingPost = null;
-  setNavVisible(true);
-  standaloneSequence = [];
-  standaloneTransitioning = false;
-  standaloneDrag = null;
-  standaloneReturnContext = null;
-}
-function returnFromStandalone() {
-  const context = standaloneReturnContext;
-  closeStandalone();
-  if (context?.owner) {
-    profileTab = context.tab || 'created';
-    openProfile(context.owner);
-    requestAnimationFrame(() => { document.getElementById('pgrid').scrollTop = context.scrollTop || 0; });
-  }
-}
-document.getElementById('remixViewBack').addEventListener('click', returnFromStandalone);
-
-/* 分享連結直達指定遊戲：base 遊戲在首頁 feed 裡找；remix 用單一遊戲視圖打開
-   （remix 資料是非同步載入，找不到就重試等它進來） */
-function goToHash(retries) {
-  if (!location.hash) return;
-  const id = decodeURIComponent(location.hash.slice(1));
-  if (id.indexOf('remix:') === 0) {
-    const entry = entryFor(id);
-    if (entry) { openStandalone(id); return; }
-    if (retries > 0) setTimeout(() => goToHash(retries - 1), 200);
-    return;
-  }
-  const target = posts.find(p => p.id === id);
-  if (target) {
-    const jump = () => target.el.scrollIntoView();
-    jump(); requestAnimationFrame(jump); setTimeout(jump, 250);   /* 打敗版面尚未穩定造成的回到頂端 */
-  } else if (retries > 0) {
-    setTimeout(() => goToHash(retries - 1), 200);
-  }
-}
-goToHash(20);
-window.addEventListener('hashchange', () => goToHash(20));
-
-/* 桌機鍵盤 */
-document.addEventListener('keydown', e => {
-  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-  const p = posts.find(p => {
-    const r = p.el.getBoundingClientRect();
-    return r.top > -window.innerHeight/2 && r.top < window.innerHeight/2;
-  });
-  if (!p || !p.state.running || !p.state.game) return;
-  if (e.key === 'ArrowLeft') { p.state.game.input('down', W*0.25, H/2); e.preventDefault(); }
-  if (e.key === 'ArrowRight') { p.state.game.input('down', W*0.75, H/2); e.preventDefault(); }
-  if (e.key === ' ' || e.key === 'ArrowUp') { p.state.game.input('down', W/2, H/2); e.preventDefault(); }
-});
-
-/* Toast */
-let toastT = null;
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = tr(msg); t.classList.add('show');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => t.classList.remove('show'), 2600);
-}
-
-loadLikes();
-loadSaves();
-loadRemixGames();
-
-/* 投稿工具與沙盒遊戲使用的最小平台介面。 */
-window.PlayFeedHost = {
-  get db() { return db; },
-  get user() { return user; },
-  get audioUnlocked() { return audioUnlocked; },
-  beep,
-  setAudioPlaybackActive,
-  sourceUsesSound,
-  createSoundToggle,
-  feed,
-  icons: ICONS,
-  get locale() { return i18n?.locale || 'zh-Hant'; },
-  t: tr,
-  applyI18n(root) { i18n?.apply(root); },
-  displayName,
-  requireLogin,
-  secureWrite,
-  toast,
-  setNavVisible,
-  setGameActive,
-  advanceFeedFrom,
-  setMainNavActive,
-  closeProfile,
-  closeSearch,
-  closeStandalone,
-  openAuthorProfile,
-  openRemix,
-  registerOfficialOwner,
-  finishBoot,
-  refreshProfile() {
-    if (profileBox.classList.contains('open')) {
-      renderProfileGrid(profileTab);
-      renderProfileSummary();
-    }
-  },
-  toggleReaction,
-  toggleSave,
-  openComments,
-  shareGame,
-  shareResult,
-  submitScore
-};
+  document.addEventListener('gesturestart', event => event.preventDefault(), { passive: false });
+  document.addEventListener('wheel', event => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
+  revealNavigation();
 </script>
-<script src="games/pack7.js"></script>
-<script src="games/pack8.js"></script>
-<script src="games/pack9.js"></script>
-<script src="games/pack10.js"></script>
-<script src="games/pack11.js"></script>
-<script type="module" src="creator.js"></script>
 </body>
 </html>

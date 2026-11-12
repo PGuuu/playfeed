@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlayFeed 測試遊戲</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 12px; background: #171b2f; color: #f5f6ff; font: 16px system-ui, sans-serif; }
+  main { width: min(100%, 280px); text-align: center; }
+  h1, p { margin: 0 0 10px; }
+  #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; color: #f5f6ff; background: #323953; }
+  button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+  #board button { aspect-ratio: 1; max-height: 13dvh; font-size: 1.4rem; }
+  #board .lit { background: #d6fb65; color: #161910; }
+  #start { padding: .65rem 1.2rem; background: #aebdff; color: #171b2f; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1></h1>
+  <p id="status" aria-live="polite"></p>
+  <div id="board"></div>
+  <button id="start" type="button">開始</button>
+</main>
+<script>
+  const memory = location.hash === '#memory';
+  document.querySelector('h1').textContent = memory ? '記憶方格' : '追光';
+  const status = document.querySelector('#status');
+  const start = document.querySelector('#start');
+  const board = document.querySelector('#board');
+  let active = false;
+  let target = -1;
+  let sequence = [];
+  let cursor = 0;
+  let score = 0;
+  let timer;
+  const tiles = Array.from({ length: 9 }, (_, index) => {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.setAttribute('aria-label', '第 ' + (index + 1) + ' 格');
+    tile.addEventListener('click', () => select(index));
+    board.append(tile);
+    return tile;
+  });
+
+  function highlight(index) {
+    tiles.forEach((tile, position) => {
+      tile.classList.toggle('lit', position === index);
+      tile.textContent = position === index ? '✦' : '';
+    });
+  }
+
+  function showTarget() {
+    target = (target + 1 + Math.floor(Math.random() * 8)) % tiles.length;
+    highlight(target);
+    status.textContent = '分數 ' + score;
+  }
+
+  async function showSequence() {
+    active = false;
+    cursor = 0;
+    sequence.push(Math.floor(Math.random() * tiles.length));
+    status.textContent = '記住亮起的順序';
+    for (const index of sequence) {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      highlight(index);
+      await new Promise(resolve => setTimeout(resolve, 450));
+      highlight(-1);
+    }
+    active = true;
+    status.textContent = '換你了';
+  }
+
+  function finish(message) {
+    active = false;
+    highlight(-1);
+    status.textContent = message;
+    start.disabled = false;
+    start.textContent = '再玩一次';
+  }
+
+  function select(index) {
+    if (!active) return;
+    if (!memory) {
+      if (index === target) {
+        score++;
+        showTarget();
+      }
+      return;
+    }
+    if (index !== sequence[cursor]) {
+      finish('答錯了。完成 ' + (sequence.length - 1) + ' 輪');
+    } else if (++cursor === sequence.length) {
+      showSequence();
+    }
+  }
+
+  status.textContent = memory ? '照順序點亮過的方格' : '10 秒內點擊亮起的格子';
+  start.addEventListener('click', () => {
+    start.disabled = true;
+    if (memory) {
+      sequence = [];
+      showSequence();
+    } else {
+      active = true;
+      score = 0;
+      showTarget();
+      clearTimeout(timer);
+      timer = setTimeout(() => finish('時間到！分數 ' + score), 10000);
+    }
+  });
+</script>
+</body>
+</html>
