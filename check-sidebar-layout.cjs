@@ -12,5 +12,7 @@ assert(css.includes('visibility:visible;pointer-events:auto'));
 assert(source.includes('feed-layout.css'));assert(!source.includes('rotate-cw'));
 assert(!/<nav id="top-controls"/.test(source));assert(source.includes('class="feed-logo" href="/"'));
 const template=source.match(/<template id="card">([\s\S]*?)<\/template>/)[1];
-assert(!template.match(/class="game-viewport"[\s\S]*?class="game-more"[\s\S]*?<footer>/));
+assert(template.includes('class="game-info"'));
+assert(source.includes("querySelector('.actions').append(switcher)"));
+assert(source.includes('translateX(${entrySource'));
 console.log('PASS: module syntax, persistent controls, external rail, isotropic iframe fit, tap/swipe distinction, keyboard and analytics hooks');
