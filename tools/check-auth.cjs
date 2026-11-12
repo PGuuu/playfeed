@@ -9,15 +9,16 @@ const auth=fs.readFileSync(path.join(__dirname,'..','auth.js'),'utf8');
  await context.route('**/*',async route=>{
   const request=route.request(),url=new URL(request.url());
   const json=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
-  if(url.hostname==='phuze.edato.me'){
-   if(url.pathname.endsWith('/auth/magic-link')){
-    sendCount++;receivedPending=request.postDataJSON().pending_id;
+  if(url.pathname==='/api/login'){
+   const body=request.postDataJSON();
+   if(body.action==='send'){
+    sendCount++;receivedPending=body.pendingId;
     if(mode==='limited')return json({error:{code:'rate_limited',message:'Too many',retry_after_seconds:1}},429);
     if(mode==='forbidden')return json({error:{code:'forbidden',message:'Origin rejected'}},403);
     return json({message:'Check email'});
    }
-   if(url.pathname.endsWith('/sessions/pickup'))return json(ready?{ready:true,session_token:'st_test_fixture'}:{ready:false});
-   if(url.pathname.endsWith('/sessions/logout'))return json({logged_out:true});
+   if(body.action==='pickup')return json(ready?{ready:true,session_token:'st_test_fixture'}:{ready:false});
+   if(body.action==='logout')return json({logged_out:true});
    throw Error('Unexpected provider request: '+url.pathname);
   }
   if(url.pathname==='/api/auth'){
@@ -56,9 +57,10 @@ const auth=fs.readFileSync(path.join(__dirname,'..','auth.js'),'utf8');
  await privateContext.route('**/*',async route=>{
   const url=new URL(route.request().url());
   const json=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
-  if(url.hostname==='phuze.edato.me'){
-   if(url.pathname.endsWith('/auth/magic-link'))return json({message:'Sent'});
-   if(url.pathname.endsWith('/sessions/pickup'))return json({ready:true,session_token:'st_test_fixture'});
+  if(url.pathname==='/api/login'){
+   const body=route.request().postDataJSON();
+   if(body.action==='send')return json({message:'Sent'});
+   if(body.action==='pickup')return json({ready:true,session_token:'st_test_fixture'});
   }
   if(url.pathname==='/api/auth')return json({user:{id:'u_fixture',email:'test@example.com'}});
   if(url.pathname==='/auth.js')return route.fulfill({contentType:'text/javascript; charset=utf-8',body:auth});

@@ -224,15 +224,19 @@
     }
   } catch { visitorToken = crypto.randomUUID(); }
   const controlsButton = document.querySelector('#toggle-controls');
-  function revealNavigation() {
+  let navigationTimer;
+  function revealNavigation(autoHide = false) {
+    clearTimeout(navigationTimer);
     if (feed.hidden) return;
     document.body.classList.add('controls-visible');
     feedBrand.classList.add('visible');
     feedBrand.inert = false;
     controlsButton.setAttribute('aria-expanded', 'true');
     controlsButton.setAttribute('aria-label', '隱藏控制板');
+    if (autoHide) navigationTimer = setTimeout(hideNavigation, 1000);
   }
   function hideNavigation() {
+    clearTimeout(navigationTimer);
     document.body.classList.remove('controls-visible');
     feedBrand.classList.remove('visible');
     feedBrand.inert = true;
@@ -630,7 +634,7 @@
     const target = activeIndex + direction;
     if (target < 0 || target >= games.length) return;
     showGame(target);
-    revealNavigation();
+    revealNavigation(true);
   }
   for (const [button, direction] of [[previousButton, -1], [nextButton, 1]]) {
     button.addEventListener('pointerdown', event => {
@@ -645,7 +649,7 @@
   }
   document.addEventListener('gesturestart', event => event.preventDefault(), { passive: false });
   document.addEventListener('wheel', event => { if (event.ctrlKey) event.preventDefault(); }, { passive: false });
-  revealNavigation();
+  revealNavigation(true);
 </script>
 </body>
 </html>

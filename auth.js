@@ -1,7 +1,5 @@
 (() => {
   // Phuze's documented custom login flow: /auth/magic-link + /sessions/pickup.
-  const publishableKey = 'pk_live_bzqxC3-qVXRR7AtDgMaTeXiapC-PMPVd';
-  const provider = 'https://phuze.edato.me/api/v1';
   const tokenKey = 'phuze_session';
   const pendingKey = 'playfeed:phuze-pending';
   const state = { user: null, token: '', ready: false, pending: null, listeners: new Set() };
@@ -39,6 +37,7 @@
     if (error.status === 403) return '登入服務拒絕這個網站的請求，請回報給管理者。';
     if (error.status === 401) return '登入已失效，請重新寄送登入連結。';
     if (error.name === 'AbortError') return '登入服務回應逾時，請稍後再試。';
+    if (error instanceof TypeError) return '無法連線登入服務，請稍後再試。';
     return error.message || '無法連線登入服務，請稍後再試。';
   }
   async function request(url, options = {}) {
@@ -59,11 +58,16 @@
     } finally { clearTimeout(timer); }
   }
   function phuze(path, options = {}) {
-    return request(provider + path, { ...options, headers: {
-      Authorization: 'Publishable ' + publishableKey,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers
-    } });
+    let body;
+    if (path === '/auth/magic-link') {
+      const values = JSON.parse(options.body);
+      body = { action: 'send', email: values.email, pendingId: values.pending_id };
+    } else if (path.startsWith('/sessions/pickup?')) {
+      body = { action: 'pickup', pendingId: new URLSearchParams(path.split('?')[1]).get('pending_id') };
+    } else if (path === '/sessions/logout') {
+      body = { action: 'logout', token: options.headers['X-Session-Token'] };
+    } else return Promise.reject(new Error('登入操作無效。'));
+    return request('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
   function clearPending() {
     clearTimeout(pickupTimer);

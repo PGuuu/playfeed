@@ -43,6 +43,12 @@ for (const file of ['index.html','account.html','submit.html']) {
  await page.locator('#toggle-controls').click();
  await page.locator('#next-game').click();
  assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'true');
+ await page.waitForTimeout(1100);
+ assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'false');
+ await page.locator('#toggle-controls').click();
+ await page.waitForTimeout(1100);
+ assert.equal(await page.locator('#toggle-controls').getAttribute('aria-expanded'),'true');
+ assert.equal((await page.locator('.game-switcher').boundingBox()).width,24);
  await page.goto('https://playfeed.test/account.html');
  await page.waitForSelector('.tile iframe');
  const tile=await page.locator('.tile').boundingBox();
