@@ -1,3 +1,4 @@
+const community = require('./_community');
 const { publicName, readJson, requestOriginAllowed, safeText, sendJson, supabaseRest, verifyPhuzeSession } = require('./_lib');
 
 function encoded(value) { return encodeURIComponent(String(value)); }
@@ -42,13 +43,7 @@ module.exports = async function handler(request, response) {
         return sendJson(response, 200, { comments: rows.data || [] });
       }
       const user = await userFromRequest(request);
-      if (action === 'me') return sendJson(response, 200, { user: { email: user.email, name: publicName(user) } });
-      if (action === 'collection') {
-        const actions = await supabaseRest('playfeed_user_actions', { query: `select=game_key,kind,created_at&user_id=eq.${encoded(user.id)}&order=created_at.desc` });
-        const recommendations = await supabaseRest('playfeed_recommendations', { query: `select=id,title,url,author,creator_url,created_at&submitted_by=eq.${encoded(user.id)}&order=created_at.desc` });
-        if (!actions.ok || !recommendations.ok) throw new Error(actions.error || recommendations.error);
-        return sendJson(response, 200, { user: { email: user.email, name: publicName(user) }, actions: actions.data || [], recommendations: recommendations.data || [] });
-      }
+      if (['me', 'collection', 'review'].includes(action)) return sendJson(response, 200, await community.get(user, action));
       throw Object.assign(new Error('未知的操作。'), { status: 400 });
     }
 
@@ -56,6 +51,8 @@ module.exports = async function handler(request, response) {
     const user = await userFromRequest(request);
     const body = await readJson(request, 30_000);
     const action = safeText(body.action, { name: 'action', max: 30 });
+
+    if (['profile', 'read-notifications', 'recommend', 'publish', 'review'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);
@@ -71,20 +68,12 @@ module.exports = async function handler(request, response) {
     }
 
     if (action === 'comment') {
-      const row = { id: crypto.randomUUID(), game_key: gameKey(body.gameKey), body: safeText(body.body, { name: '留言', max: 1000 }), display_name: publicName(user), user_id: user.id };
+      const row = { id: crypto.randomUUID(), game_key: gameKey(body.gameKey), body: safeText(body.body, { name: '留言', max: 1000 }), display_name: (await community.profileFor(user)).display_name, user_id: user.id };
       const write = await supabaseRest('playfeed_game_comments', { method: 'POST', body: row, prefer: 'return=minimal' });
       if (!write.ok) throw new Error(write.error);
       return sendJson(response, 201, { ok: true });
     }
 
-    if (action === 'publish') {
-      const url = new URL(safeText(body.url, { name: 'url', max: 1000 }));
-      if (url.protocol !== 'https:' || url.username || url.password || url.port) throw Object.assign(new Error('網址格式不正確。'), { status: 400 });
-      const id = crypto.randomUUID();
-      const write = await supabaseRest('playfeed_recommendations', { method: 'POST', body: { id, url: url.href, title: url.hostname, author: publicName(user), submitted_by: user.id }, prefer: 'resolution=ignore-duplicates,return=representation' });
-      if (!write.ok && write.status !== 409) throw new Error(write.error);
-      return sendJson(response, 201, { id: write.data?.[0]?.id || id });
-    }
 
     throw Object.assign(new Error('未知的操作。'), { status: 400 });
   } catch (error) {
