@@ -11,7 +11,9 @@ module.exports=async function handler(req,res){
   const {staticAsset,readAsset}=require('./_share-assets');
   const saved=staticAsset(game);
   if(saved){res.setHeader('Location',origin+saved);res.setHeader('Cache-Control','public, max-age=0, s-maxage=60');return res.status(302).end();}
-  const result=await readAsset(game);
+  let result;
+  try { result=await readAsset(game); }
+  catch { result=await require('./_render-card').renderCard(game); }
   res.setHeader('Content-Type','image/png');res.setHeader('Cache-Control','public, max-age=0, s-maxage=3600');res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method==='HEAD')return res.end();return res.send(result);
  }catch(error){console.error('OG image failed',error.message);res.setHeader('Cache-Control','no-store');return res.status(503).send('Preview temporarily unavailable');}
