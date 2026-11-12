@@ -48,3 +48,18 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 @container game-column (max-width:240px){#feed .actions .action-label{display:none}#feed .actions button{gap:3px;padding:0 2px}#feed .game-info .byline{max-width:40%}}
 @media(max-height:450px){.feed-rail{gap:5px}.rail-tools{gap:5px}.feed-rail .game-switcher button{gap:5px;padding:4px 0}.feed-rail .game-switcher .switch-label{display:none}}
 @media(prefers-reduced-motion:reduce){.feed-rail *{transition:none!important}}
+
+@media (orientation:landscape) and (max-height:600px){
+  .feed-shell{width:100%;grid-template-columns:minmax(0,1fr) var(--rail-width)}
+  #feed article,body.comments-open #feed article{grid-template-columns:76px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:8px}
+  #feed article>.game-viewport{grid-column:2;grid-row:1}
+  #feed article>footer,body.controls-visible #feed article>footer{grid-column:1;grid-row:1;justify-content:space-between;gap:6px;overflow:auto}
+  .game-info{flex-direction:column;align-items:flex-start;gap:0;height:auto;flex:none;padding:2px}
+  .game-info .game-title{white-space:normal;line-height:16px;max-height:48px}
+  #feed .game-info .byline{max-width:100%;width:100%;line-height:16px}
+  #feed .actions{flex-direction:column;justify-content:flex-start;gap:2px;height:auto;padding:3px;flex:none}
+  #feed .actions button{width:100%;flex:none;padding:0 3px;min-height:36px;height:36px}
+  #feed .actions .game-more,body.controls-visible #feed .game-more{width:100%;height:32px;min-height:32px;flex:none}
+  #feed .actions .action-label{display:inline}
+  .action-status{bottom:20px}
+}
