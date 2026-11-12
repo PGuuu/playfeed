@@ -524,6 +524,9 @@ module.exports = async function handler(request, response) {
 
     const verified = await verifyPhuzeSession(request);
     if (verified.error) return sendJson(response, verified.error.status, { error: verified.error.message });
+    if (['publish-game', 'remix', 'sync-official-games'].includes(action) && !await require('./_community').isAdmin(verified.user)) {
+      return sendJson(response, 403, { error: '請透過推薦新遊戲送出網址，等待管理者審核。' });
+    }
     if (!rateLimit(request, verified.user.id, action)) {
       return sendJson(response, 429, { error: 'Too many requests. Please wait a moment.' });
     }
