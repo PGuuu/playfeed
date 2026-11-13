@@ -1,11 +1,15 @@
 const assert=require('node:assert/strict');
 const libPath=require.resolve('../api/_lib'),real=require(libPath);
 const key='https://game.example/',saves=new Set();
+const guestSaves=new Set();process.env.SUPABASE_SERVICE_ROLE_KEY='fixture';
 let commentCount=1110,verificationCalls=0;
 require.cache[libPath].exports={
  ...real,
  verifyPhuzeSession:async()=>{verificationCalls++;return {user:{id:'member',email:'test@example.com'}}},
  supabaseRest:async(table,options={})=>{
+  if(table==='rpc/playfeed_engagement_counts')return {ok:true,data:{saveCount:1400+saves.size+guestSaves.size,commentCount,shareCount:2,guestSaved:guestSaves.has(key)}};
+  if(table==='rpc/playfeed_guest_save_batch'){for(const row of options.body.p_changes){if(row.active)guestSaves.add(row.gameKey);else guestSaves.delete(row.gameKey)}return {ok:true,data:{ok:true}}}
+  if(table==='rpc/playfeed_merge_guest_saves'){assert.equal(options.body.p_user_id,'member');if(options.body.p_games.length)saves.add('member');guestSaves.clear();return {ok:true,data:{ok:true}}}
   if(options.method==='HEAD'){
    assert.equal(options.prefer,'count=exact');
    assert.ok(options.query.includes(encodeURIComponent(key)));
@@ -32,8 +36,19 @@ async function call(method,action,body={}){
  assert.ok(status<300,JSON.stringify(payload));return payload;
 }
 (async()=>{
- assert.deepEqual(await call('GET','counts'),{saveCount:1400,displaySaveCount:1400,commentCount:1110});
+ assert.deepEqual(await call('GET','counts'),{saveCount:1400,displaySaveCount:1400,commentCount:1110,shareCount:2,guestSaved:false});
  assert.equal(verificationCalls,0,'Public counts must not require authentication');
+ await call('POST','guest-save',{changes:[{gameKey:key,active:true}]});
+ await call('POST','guest-save',{changes:[{gameKey:key,active:true}]});
+ assert.equal((await call('GET','counts')).saveCount,1401);
+ assert.equal(verificationCalls,0,'Guest saves must not invoke login');
+ await assert.rejects(require('../api/_guest-saves').saveGuest({headers:{}},{setHeader(){}},{changes:[{gameKey:'javascript:alert(1)',active:true}]}),error=>error.status===400);
+ await call('POST','merge-saves',{gameKeys:[key],user_id:'spoofed'});
+ assert.equal(guestSaves.size,0);assert(saves.has('member'));
+ await call('POST','save',{active:false});
+ await call('POST','guest-save',{changes:[{gameKey:key,active:true}]});
+ await call('POST','guest-save',{changes:[{gameKey:key,active:false}]});
+ assert.equal((await call('GET','counts')).saveCount,1400);
  let result=await call('POST','save',{active:true});
  assert.equal(result.saveCount,1401);assert.equal(result.saved,true);
  result=await call('POST','save',{active:true});assert.equal(result.saveCount,1401);

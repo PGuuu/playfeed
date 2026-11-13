@@ -203,6 +203,7 @@
  <a class="feed-logo" href="/" aria-label="PlayFeed，重新整理遊戲"><span>playfeed<span class="logo-dot">.</span></span></a>
 </aside></div>
 <div class="action-status" role="status" aria-live="polite"></div>
+<div id="save-feedback" class="save-feedback" role="status" aria-live="polite" hidden></div>
 <main id="creator" class="creator-page" aria-labelledby="creator-name" hidden>
   <header><span class="brand">Play<span>Feed</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
   <span class="label">創作者作品集</span>
@@ -225,14 +226,14 @@
     <footer>
       <div class="actions">
         <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
-        <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span></button>
+        <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span><span class="action-count" data-count="shares" aria-hidden="true">–</span></button>
         <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">save</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
       </div>
     </footer>
   </article>
 </template>
-<aside id="save-hint" class="save-hint" hidden aria-labelledby="save-hint-title"><button type="button" class="hint-close" aria-label="關閉儲存提示">×</button><h2 id="save-hint-title">儲存的遊戲在這裡</h2><p id="save-hint-copy"></p><button type="button" id="save-hint-action">免密碼信箱登入</button></aside>
-<script src="/auth.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+
+<script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const games = orderPlayfeedGames(await loadPlayfeedGames().catch(()=>{catalogError=true;return[]}));
   let ignoreGameLinkOnReload=performance.getEntriesByType('navigation')[0]?.type==='reload';
@@ -268,7 +269,7 @@
     const account = document.querySelector('.account-link');
     account.textContent = user?.email ? user.email[0].toUpperCase() : '';
     account.classList.toggle('signed-in',Boolean(user));
-    account.title = user?.email || '免密碼信箱登入';
+    account.title = user?.email || '我的收藏（此瀏覽器）';
     const version=++ownerCheckVersion;canDeleteGame=false;document.querySelector('#delete-game').hidden=true;
     if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame}).catch(()=>{});
   });
@@ -294,20 +295,6 @@
     try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'delete-game',gameId:game.id})});try{sessionStorage.removeItem('playfeed:catalog:v1')}catch{}location.assign('/')}
     catch(error){notifyAction(error.message)}finally{button.disabled=false}
   });
-  const saveHint=document.querySelector('#save-hint');let pendingHintSave=null;
-  function closeSaveHint(){saveHint.hidden=true;document.querySelector('.account-link').classList.remove('save-highlight');pendingHintSave=null;}
-  saveHint.querySelector('.hint-close').addEventListener('click',closeSaveHint);
-  document.querySelector('.account-link').addEventListener('click',closeSaveHint);
-  document.querySelector('#save-hint-action').addEventListener('click',()=>{const save=pendingHintSave;closeSaveHint();if(PlayFeedAuth.user)location.assign('/account.html');else PlayFeedAuth.openLogin(save)});
-  function showSaveHint(save){
-    try{if(localStorage.getItem('playfeed:save-hint:v1'))return false;localStorage.setItem('playfeed:save-hint:v1','1')}catch{if(showSaveHint.shown)return false}showSaveHint.shown=true;
-    pendingHintSave=save;saveHint.hidden=false;
-    const account=document.querySelector('.account-link');account.classList.add('save-highlight');
-    const rect=account.getBoundingClientRect();saveHint.style.top=(rect.bottom+18)+'px';saveHint.style.right=Math.max(16,innerWidth-rect.right+rect.width/2-26)+'px';
-    document.querySelector('#save-hint-copy').textContent=PlayFeedAuth.user?'點右上角的會員頭像，就能查看你儲存的遊戲。':'加入會員即可儲存遊戲，再點右上角的頭像查看收藏。';
-    document.querySelector('#save-hint-action').textContent=PlayFeedAuth.user?'查看儲存的遊戲':'免密碼信箱登入';return true;
-  }
-  window.addEventListener('resize',()=>{if(!saveHint.hidden)closeSaveHint()});
   for (const dialog of [reportMenu, reportDialog]) {
     dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => {
@@ -394,6 +381,18 @@
   function notifyAction(message) {
     document.querySelector('.action-status').textContent = message;
   }
+  let saveFeedbackTimer;
+  function showSavedFeedback(){
+    const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
+    clearTimeout(saveFeedbackTimer);hint.textContent='已儲存至我的收藏';hint.hidden=false;
+    hint.style.top=Math.max(8,rect.bottom+9)+'px';
+    const right=Math.min(Math.max(8,innerWidth-rect.right),Math.max(8,innerWidth-hint.offsetWidth-8));
+    hint.style.right=right+'px';
+    hint.style.setProperty('--save-arrow-right',Math.max(8,Math.min(hint.offsetWidth-16,innerWidth-right-rect.left-rect.width/2-4))+'px');
+    account.classList.add('saved-feedback');
+    saveFeedbackTimer=setTimeout(()=>{hint.hidden=true;account.classList.remove('saved-feedback')},2200);
+  }
+  window.addEventListener('resize',()=>{document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')});
   const engagementVersions = new WeakMap();
   function invalidateEngagement(card) {
     const version = (engagementVersions.get(card) || 0) + 1;
@@ -402,24 +401,31 @@
   }
   function renderSaved(card, active) {
     const button = card.querySelector('[data-kind="saved"]');
-    button.setAttribute('aria-pressed', String(active));
+    card.dataset.memberSaved=String(active);
+    button.setAttribute('aria-pressed', String(active || PlayFeedSaves.has(card.dataset.gameKey)));
     button.querySelector('.action-label').textContent = 'save';
   }
   function renderCounts(card, counts) {
     for (const [field, selector, label] of [
       ['commentCount', '.comments-button', '留言'],
-      ['saveCount', '[data-kind="saved"]', '儲存']
+      ['saveCount', '[data-kind="saved"]', '儲存'],
+      ['shareCount', '.share', '分享']
     ]) {
       const count = field === 'saveCount' ? (counts.displaySaveCount ?? counts.saveCount) : counts[field];
       if (!Number.isSafeInteger(count) || count < 0) continue;
       const button = card.querySelector(selector);
-      button.querySelector('.action-count').textContent = count.toLocaleString('zh-TW');
-      button.setAttribute('aria-label', label + '，共 ' + count + (field === 'commentCount' ? ' 則留言' : ' 人儲存'));
+      const countElement=button.querySelector('.action-count');
+      const previous=Number(countElement.dataset.value);
+      countElement.dataset.value=String(count);
+      countElement.textContent=count>=10000?(count/10000).toFixed(count>=100000?0:1)+'萬':count.toLocaleString('zh-TW');
+      button.dataset.hasCount=String(count>0);
+      if(previous<count&&!matchMedia('(prefers-reduced-motion: reduce)').matches)countElement.animate([{transform:'scale(1)'},{transform:'scale(1.2)'},{transform:'scale(1)'}],{duration:240});
+      button.setAttribute('aria-label', label + '，共 ' + count + (field === 'commentCount' ? ' 則留言' : ' 次'+label));
     }
   }
   async function loadEngagement(game, card) {
     const version = invalidateEngagement(card);
-    const key = encodeURIComponent(new URL(game.url, location.origin + '/').href);
+    const key = encodeURIComponent(new URL(game.url, location.origin + '/').href)+'&gameId='+encodeURIComponent(game.id);
     try {
       // Totals are public; checking login is unnecessary to read them.
       const counts = await PlayFeedAuth.api('/api/account?action=counts&gameKey=' + key);
@@ -477,6 +483,7 @@
     const card = template.content.firstElementChild.cloneNode(true);
     card.hidden = true;
     card.setAttribute('aria-label', game.title);
+    card.dataset.gameKey=new URL(game.url,location.origin+'/').href;
     const sourceToggle = card.querySelector('.source-toggle');
     const sourcePanel = card.querySelector('.game-info');
     sourcePanel.id = 'game-source-' + index;
@@ -501,22 +508,23 @@
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
       renderSaved(card, false);
-      const saveGame = async () => {
-        const active = button.getAttribute('aria-pressed') !== 'true';
-        button.disabled = true;
-        invalidateEngagement(card);
-        try {
-          const state = await PlayFeedAuth.api('/api/account', { method: 'POST', body: JSON.stringify({ action: 'save', gameKey: new URL(game.url, location.origin + "/").href, active }) });
-          renderSaved(card, state.saved);
-          window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
-          renderCounts(card, state);
-          if(state.saved)showSaveHint();
-        } catch (error) { notifyAction(error.message); }
-        finally { button.disabled = false; }
-      };
-      button.addEventListener('click',()=>{
-        if(!PlayFeedAuth.user&&showSaveHint(saveGame))return;
-        PlayFeedAuth.requireLogin(saveGame);
+      button.addEventListener('click',async()=>{
+        const active=button.getAttribute('aria-pressed')!=='true';
+        button.disabled=true;invalidateEngagement(card);
+        try{
+          if(!PlayFeedAuth.user){
+            PlayFeedSaves.set(game,active);renderSaved(card,false);
+            const count=Number(button.querySelector('.action-count').dataset.value);
+            if(Number.isSafeInteger(count))renderCounts(card,{displaySaveCount:Math.max(0,count+(active?1:-1))});
+            if(active)showSavedFeedback();else notifyAction('已取消儲存');
+          }else{
+            if(!await PlayFeedSaves.merge())throw Error(PlayFeedSaves.error);
+            const state=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'save',gameKey:card.dataset.gameKey,gameId:game.id,active})});
+            renderSaved(card,state.saved);renderCounts(card,state);
+            window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
+            if(state.saved)showSavedFeedback();else notifyAction('已取消儲存');
+          }
+        }catch(error){notifyAction(error.message)}finally{button.disabled=false}
       });
     }
     const share = card.querySelector('.share');
@@ -530,12 +538,26 @@
           notifyAction('已複製分享連結');
         }
         window.PlayFeedAnalytics?.event('share_success',{game:game.id,title:game.title});
+        window.PlayFeedAnalytics?.flush();
+        const count=Number(share.querySelector('.action-count').dataset.value);
+        if(Number.isSafeInteger(count))renderCounts(card,{shareCount:count+1});
       } catch (error) {
         if (error.name !== 'AbortError') window.prompt('複製遊戲連結', link.href);
       }
     });
     feed.append(card);
     return card;
+  });
+
+  window.addEventListener('playfeed:saves-change',event=>{
+    for(const card of cards)renderSaved(card,card.dataset.memberSaved==='true');
+    if(['synced','merged','storage'].includes(event.detail.reason)&&activeIndex>=0)loadEngagement(games[activeIndex],cards[activeIndex]);
+  });
+  let engagementUser=PlayFeedAuth.user?.id||'';
+  PlayFeedAuth.onChange(user=>{
+    const nextUser=user?.id||'';if(nextUser===engagementUser)return;engagementUser=nextUser;
+    if(!user)for(const card of cards)renderSaved(card,false);
+    PlayFeedSaves.merge().then(()=>{if(activeIndex>=0)loadEngagement(games[activeIndex],cards[activeIndex])});
   });
 
   const commentsSheet = document.querySelector('#comments-sheet');
@@ -564,7 +586,7 @@
     commentsMessage.textContent = '載入留言中…';
     try {
       const key = new URL(games[index].url,location.origin + "/").href;
-      const { comments: rows, ...counts } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key));
+      const { comments: rows, ...counts } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key)+'&gameId='+encodeURIComponent(games[index].id));
       if (commentsIndex !== index || version !== commentsVersion) return;
       renderCounts(cards[index], counts);
       commentsList.replaceChildren();
@@ -608,7 +630,7 @@
     button.disabled=true; commentsMessage.textContent='送出中…';
     try {
       invalidateEngagement(cards[index]);
-      const counts = await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameKey:new URL(games[index].url,location.origin + "/").href,body})});
+      const counts = await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameId:games[index].id,gameKey:new URL(games[index].url,location.origin + "/").href,body})});
       window.PlayFeedAnalytics?.event('comment_success',{game:games[index].id,title:games[index].title});
       renderCounts(cards[index], counts);
       if(commentsIndex===index) { input.value=''; await readComments(index); }

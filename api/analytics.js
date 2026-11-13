@@ -3,20 +3,10 @@ const {readJson,sendJson,requestOriginAllowed,supabaseRest,verifyPhuzeSession}=r
 const OWNERS=new Set(['paulvongulla@gmail.com','paulwu.hs10@nycu.edu.tw']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ENTRIES=new Set(['next','previous','search_selection','saved_selection','creator_selection','internal_selection','external_entry','direct_entry','feed_initial','reload','unknown']);
-const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','unsave_success','comments_open','comment_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open']);
+const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','guest_save_success','save_sync_success','unsave_success','guest_unsave_success','comments_open','comment_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open']);
 const { saveCountSummary } = require('./_save-counts');
 const rates=new Map();
-function secret(){const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.supabase_service_role_key;if(!key)throw Error('Analytics unavailable');return key;}
-function signature(id){return crypto.createHmac('sha256',secret()).update('playfeed-analytics-device:'+id).digest('hex');}
-function deviceId(req,res){
- const match=String(req.headers.cookie||'').match(/(?:^|;\s*)pf_device=([^;]+)/);
- if(match){const [id,sig]=match[1].split('.');if(UUID.test(id)&&/^[a-f0-9]{64}$/.test(sig||'')&&crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(signature(id))))return id;}
- const id=crypto.randomUUID();res.setHeader('Set-Cookie',`pf_device=${id}.${signature(id)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`);return id;
-}
-function deviceInfo(req){
- const ua=String(req.headers['user-agent']||'');
- return {family:/iPhone/i.test(ua)?'iPhone':/iPad/i.test(ua)?'iPad':/Android/i.test(ua)?'Android':/Macintosh/i.test(ua)?'Mac':'Windows / Desktop',browser:/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'Other',is_bot:/bot|crawler|spider|headless|facebookexternalhit|preview|slurp/i.test(ua)};
-}
+const {deviceId,deviceInfo}=require('./_device');
 async function db(table,options){const r=await supabaseRest(table,options);if(!r.ok)throw Error('Analytics database unavailable');return r.data;}
 async function ensureDevice(id,info){
  await db('playfeed_analytics_devices',{method:'POST',query:'on_conflict=id',body:{id,family:info.family,browser:info.browser},prefer:'resolution=ignore-duplicates,return=minimal'});

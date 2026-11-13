@@ -12,18 +12,15 @@ async function userFromRequest(request, required = true) {
   throw Object.assign(new Error(auth.error?.message || '登入已失效。'), { status: auth.error?.status || 401 });
 }
 
-async function publicCounts(game) {
-  const [saves, comments] = await Promise.all([
-    supabaseRest('playfeed_user_actions', { method: 'HEAD', query: `select=game_key&game_key=eq.${encoded(game)}&kind=eq.save`, prefer: 'count=exact' }),
-    supabaseRest('playfeed_game_comments', { method: 'HEAD', query: `select=id&game_key=eq.${encoded(game)}`, prefer: 'count=exact' }),
-  ]);
-  for (const result of [saves, comments]) {
-    if (!result.ok || !Number.isSafeInteger(result.count)) throw new Error('Could not load engagement counts.');
-  }
-  return { saveCount: saves.count, displaySaveCount: saves.count + initialSaveCount(game), commentCount: comments.count };
+async function publicCounts(game, gameId = '', request) {
+  const device = request ? require('./_device').deviceId(request, null, false) : null;
+  const result = await supabaseRest('rpc/playfeed_engagement_counts', {method:'POST',body:{p_game_key:game,p_game_id:String(gameId).slice(0,200),p_device_id:device}});
+  const counts=result.data;
+  if(!result.ok||!counts||!['saveCount','commentCount','shareCount'].every(key=>Number.isSafeInteger(counts[key])&&counts[key]>=0))throw Error('Could not load engagement counts.');
+  return {...counts,displaySaveCount:counts.saveCount+initialSaveCount(game)};
 }
 
-async function stateFor(game, userId) {
+async function stateFor(game, userId, gameId = '', request) {
   const [legacyLikes, accountLikes, saves] = await Promise.all([
     supabaseRest('playfeed_game_likes', { query: `select=game_key&game_key=eq.${encoded(game)}` }),
     supabaseRest('playfeed_user_actions', { query: `select=kind&game_key=eq.${encoded(game)}${userId ? `&user_id=eq.${encoded(userId)}` : ''}` }),
@@ -36,7 +33,7 @@ async function stateFor(game, userId) {
     count: (legacyLikes.data?.length || 0) + (allAccountLikes.data?.length || 0),
     liked: Boolean(userId && accountLikes.data?.some(row => row.kind === 'like')),
     saved: Boolean(userId && saves.data?.length),
-    ...await publicCounts(game),
+    ...await publicCounts(game, gameId, request),
   };
 }
 
@@ -45,16 +42,16 @@ module.exports = async function handler(request, response) {
   try {
     if (request.method === 'GET') {
       const action = String(request.query?.action || 'state');
-      if (action === 'counts') return sendJson(response, 200, await publicCounts(gameKey(request.query?.gameKey)));
+      if (action === 'counts') return sendJson(response, 200, await publicCounts(gameKey(request.query?.gameKey),request.query?.gameId,request));
       if (action === 'state') {
         const user = await userFromRequest(request, false);
-        return sendJson(response, 200, await stateFor(gameKey(request.query?.gameKey), user?.id));
+        return sendJson(response, 200, await stateFor(gameKey(request.query?.gameKey), user?.id,request.query?.gameId,request));
       }
       if (action === 'comments') {
         const game = gameKey(request.query?.gameKey);
         const rows = await supabaseRest('playfeed_game_comments', { query: `select=id,body,display_name,created_at&game_key=eq.${encoded(game)}&order=created_at.asc,id.asc&limit=100` });
         if (!rows.ok) throw new Error(rows.error);
-        return sendJson(response, 200, { comments: rows.data || [], ...await publicCounts(game) });
+        return sendJson(response, 200, { comments: rows.data || [], ...await publicCounts(game,request.query?.gameId,request) });
       }
       const user = await userFromRequest(request);
       if (['me', 'collection', 'review'].includes(action)) return sendJson(response, 200, await community.get(user, action));
@@ -62,9 +59,11 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
-    const user = await userFromRequest(request);
-    const body = await readJson(request, 30_000);
+    const body = await readJson(request, 300_000);
     const action = safeText(body.action, { name: 'action', max: 30 });
+    if(action==='guest-save')return sendJson(response,200,await require('./_guest-saves').saveGuest(request,response,body));
+    const user = await userFromRequest(request);
+    if(action==='merge-saves')return sendJson(response,200,await require('./_guest-saves').mergeGuest(request,response,user,body));
 
     if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
@@ -78,14 +77,14 @@ module.exports = async function handler(request, response) {
         const write = await supabaseRest('playfeed_user_actions', { method: 'DELETE', query: `user_id=eq.${encoded(user.id)}&game_key=eq.${encoded(game)}&kind=eq.${kind}` });
         if (!write.ok) throw new Error(write.error);
       }
-      return sendJson(response, 200, await stateFor(game, user.id));
+      return sendJson(response, 200, await stateFor(game, user.id,body.gameId,request));
     }
 
     if (action === 'comment') {
       const row = { id: crypto.randomUUID(), game_key: gameKey(body.gameKey), body: safeText(body.body, { name: '留言', max: 1000 }), display_name: (await community.profileFor(user)).display_name, user_id: user.id };
       const write = await supabaseRest('playfeed_game_comments', { method: 'POST', body: row, prefer: 'return=minimal' });
       if (!write.ok) throw new Error(write.error);
-      return sendJson(response, 201, { ok: true, ...await publicCounts(row.game_key) });
+      return sendJson(response, 201, { ok: true, ...await publicCounts(row.game_key,body.gameId,request) });
     }
 
 

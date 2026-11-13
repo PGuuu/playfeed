@@ -121,3 +121,16 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 @media (orientation:landscape) and (max-height:600px){
  #feed article,body.comments-open #feed article{grid-template-rows:minmax(0,1fr)}
 }
+/* Keep the number beside its action, with enough contrast to read at a glance. */
+#feed .actions .action-count{position:static;display:inline-flex;align-items:center;justify-content:center;min-width:1ch;font-size:13px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums;color:#593418;padding:0;background:none;flex:none}
+#feed .actions button{gap:5px}
+#feed .actions .share svg{width:18px;height:18px}
+#feed .actions .reaction .action-count{font-size:14px;font-weight:800;min-width:22px;min-height:24px;padding:3px 5px;border-radius:7px;background:#fff7eb70;color:inherit}
+#feed .actions .share[data-has-count=true]{background:#e7bd91;color:#593418}
+#feed .actions .share[data-has-count=true] .action-count{font-size:14px;font-weight:800}
+#feed .actions button[data-has-count=false] .action-count{color:#846b55;font-weight:600}
+#feed .actions .reaction[aria-pressed=true] .action-count{background:#fff7eb33;color:inherit}
+@media(orientation:landscape) and (max-height:600px){#feed .actions .share{width:40px}#feed .actions .comments-button{width:26px}#feed .actions .share svg{width:15px;height:15px}#feed .actions .share .action-count{font-size:12px}#feed .actions .reaction{gap:3px;font-size:14px}#feed .actions .reaction .action-count{font-size:12px;min-width:17px;padding:3px}}
+.save-feedback{position:fixed;z-index:20;max-width:calc(100vw - 24px);padding:9px 13px;border:1px solid #d8b28c;border-radius:12px;background:#fff7eb;color:#593418;box-shadow:0 4px 16px #44332320;font-size:12px;font-weight:650;pointer-events:none}
+.save-feedback::before{content:'';position:absolute;top:-5px;right:var(--save-arrow-right,12px);width:8px;height:8px;transform:rotate(45deg);border-top:1px solid #d8b28c;border-left:1px solid #d8b28c;background:#fff7eb}
+.feed-rail .account-link.saved-feedback{box-shadow:0 0 0 3px #d9874470}
