@@ -6,7 +6,7 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
 (async () => {
   const browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
   try {
-    for (const scenario of ['home', 'link', 'saved', 'failure', 'timeout']) {
+    for (const scenario of ['home', 'link', 'saved', 'failure', 'timeout', 'legacy-script']) {
       const context = await browser.newContext({ viewport: { width: 390, height: 740 } });
       const page = await context.newPage(), errors = []; let rankingRequests = 0;
       page.on('pageerror', error => errors.push(error.message));
@@ -26,6 +26,7 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
         if (url.pathname === '/api/account') return json({ saveCount: 0, commentCount: 0, shareCount: 0, guestSaved: false, saved: false });
         if (url.pathname === '/auth.js') return route.fulfill({ contentType: 'text/javascript', body: "window.PlayFeedAuth={user:null,checking:false,token:'',onChange(fn){fn(null)},async api(url,options){return (await fetch(url,options)).json()},openLogin(){}}" });
         if (url.pathname === '/catalog.js') return route.fulfill({ contentType: 'text/javascript', body: 'async function loadPlayfeedGames(){return ' + JSON.stringify(games) + '}' });
+        if (scenario === 'legacy-script' && url.pathname === '/feed-order.js') return route.fulfill({ contentType: 'text/javascript', body: 'function orderPlayfeedGames(games){return games}' });
         if (url.pathname === '/recommendations.js' || url.pathname === '/analytics-owner-link.js') return route.fulfill({ body: '' });
         if (url.hostname !== 'playfeed.test') return route.fulfill({ contentType: 'text/html', body: '<body>Game</body>' });
         const name = url.pathname === '/' || url.pathname.startsWith('/g/') ? 'index.html' : url.pathname.slice(1);

@@ -244,7 +244,7 @@
 <script src="/game-frame.js"></script><script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
-  const popularIdsPromise=savedMode?Promise.resolve([]):loadPlayfeedPopularIds();
+  const popularIdsPromise=!savedMode&&typeof loadPlayfeedPopularIds==='function'?loadPlayfeedPopularIds():Promise.resolve([]);
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let requestedGameId='';
