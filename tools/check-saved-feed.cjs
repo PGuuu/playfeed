@@ -33,21 +33,21 @@ const games=['one','two','three','four'].map(id=>({id,title:id[0].toUpperCase()+
   const card=page.locator('article:not([hidden])'),title=card.locator('.game-title'),label=page.locator('.saved-list-label');
   const active=async text=>{await page.waitForFunction(expected=>document.querySelector('article:not([hidden]) .game-title')?.textContent===expected,text)};
   await page.goto('https://playfeed.test/account.html');await page.locator('.grid .tile').filter({hasText:'Three'}).waitFor();assert.equal(await page.locator('.grid .tile').count(),3);
-  const selected=page.locator('.grid .tile').filter({hasText:'Three'});assert((await selected.getAttribute('href')).includes('?list=saved'));reverseCatalog=true;await selected.click();await active('Three');assert.equal(await label.innerText(),'儲存清單（3）');
-  await page.locator('#next-game').click();await active('Four');assert(await page.locator('#next-game').isDisabled());
-  await page.locator('#previous-game').click();await active('Three');await page.locator('#previous-game').click();await active('One');assert(await page.locator('#previous-game').isDisabled());
+  const selected=page.locator('.grid .tile').filter({hasText:'Three'});assert((await selected.getAttribute('href')).includes('?list=saved'));reverseCatalog=true;await selected.click();await active('Three');assert.equal(await label.innerText(),'儲存清單（2/3）');
+  await page.locator('#next-game').click();await active('Four');assert(!await page.locator('#next-game').isDisabled());await page.locator('#next-game').click();await active('One');assert.equal(await label.innerText(),'儲存清單（1/3）');await page.locator('#previous-game').click();await active('Four');
+  await page.locator('#previous-game').click();await active('Three');await page.locator('#previous-game').click();await active('One');assert(!await page.locator('#previous-game').isDisabled());await page.locator('#previous-game').click();await active('Four');await page.locator('#next-game').click();await active('One');
   await page.locator('#next-game').click();await active('Three');await page.reload();await active('Three');assert(page.url().includes('list=saved'));
   await page.locator('.search-button').click();await page.locator('#game-search').fill('Two');assert.equal(await page.locator('.search-results a').count(),0);await page.getByRole('button',{name:'關閉搜尋'}).click();
-  await card.locator('.reaction').click();await active('Four');assert.equal(await label.innerText(),'儲存清單（2）');
+  await card.locator('.reaction').click();await active('Four');assert.equal(await label.innerText(),'儲存清單（2/2）');
   for(const size of [{width:320,height:568},{width:844,height:390},{width:390,height:740}]){await page.setViewportSize(size);await page.waitForTimeout(150);const r=await label.boundingBox();assert(r&&r.x>=0&&r.x+r.width<=size.width);assert(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))}
   await page.screenshot({path:path.join(__dirname,'../../.vanilla-test/saved-feed-'+(member?'member':'guest')+'.png')});
-  await card.locator('.reaction').click();await active('One');assert.equal(await label.innerText(),'儲存清單（1）');assert(await page.locator('#previous-game').isDisabled());assert(await page.locator('#next-game').isDisabled());
-  await card.locator('.reaction').click();await page.locator('.collection-empty').waitFor();assert.equal(await label.innerText(),'儲存清單（0）');assert.equal(await page.locator('article:not([hidden]) iframe').count(),0);
+  await card.locator('.reaction').click();await active('One');assert.equal(await label.innerText(),'儲存清單（1/1）');assert(!await page.locator('#previous-game').isDisabled());assert(!await page.locator('#next-game').isDisabled());await page.locator('#next-game').click();await active('One');
+  await card.locator('.reaction').click();await page.locator('.collection-empty').waitFor();assert.equal(await label.innerText(),'儲存清單（0/0）');assert.equal(await page.locator('article:not([hidden]) iframe').count(),0);
   await page.reload();await page.locator('.collection-empty').waitFor();assert.equal(await page.locator('article:not([hidden]) iframe').count(),0);
-  reverseCatalog=false;await page.locator('.feed-logo').click();await active('Four');assert.equal(await label.isVisible(),false);assert.equal(new URL(page.url()).searchParams.has('list'),false);
+  reverseCatalog=false;await page.locator('.feed-logo').click();await active('Four');await page.locator('#previous-game').click();await active('One');await page.locator('#next-game').click();await active('Four');assert.equal(await label.isVisible(),false);assert.equal(new URL(page.url()).searchParams.has('list'),false);
   await page.locator('.search-button').click();await page.locator('#game-search').fill('Two');await page.locator('.search-results a').filter({hasText:'Two'}).waitFor();await page.getByRole('button',{name:'關閉搜尋'}).click();
   await page.goto('https://playfeed.test/g/two?list=saved');await page.locator('.collection-empty').waitFor();assert.equal(await page.locator('article:not([hidden]) iframe').count(),0);
-  assert.deepEqual(errors,[]);console.log('PASS '+(member?'member':'guest')+': selected saved game, saved-only order, navigation limits, reload, filtered search, remove-current advance, live total, empty list, responsive heading, logo exit and fresh homepage');await context.close();
+  assert.deepEqual(errors,[]);console.log('PASS '+(member?'member':'guest')+': selected saved game, saved-only order, cyclic navigation and position/total, reload, filtered search, remove-current advance, live total, empty list, responsive heading, logo exit and fresh homepage');await context.close();
  }
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

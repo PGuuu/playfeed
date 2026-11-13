@@ -11,7 +11,7 @@ async function get(req){
 }
 async function post(req,res,body){
  const game=key(body.gameKey),stars=body.stars;
- if(!Number.isInteger(stars)||stars<1||stars>3)throw Object.assign(Error('請選擇 1 至 3 顆星。'),{status:400});
+ if(stars!==null&&(!Number.isInteger(stars)||stars<1||stars>3))throw Object.assign(Error('請選擇不評分，或 1 至 3 顆星。'),{status:400});
  const review=safeText(body.body,{name:'評語',min:1,max:1000}),identity=await user(req),id=deviceId(req,res),minute=Math.floor(Date.now()/60000),previous=rates.get(id),count=previous?.minute===minute?previous.count+1:1;
  rates.set(id,{minute,count});if(rates.size>5000)for(const [key,value]of rates)if(value.minute<minute)rates.delete(key);
  if(count>20)throw Object.assign(Error('評分送出太頻繁，請稍後再試。'),{status:429});
