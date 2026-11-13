@@ -21,12 +21,13 @@ async function main(){
  }
  const game={id:'balcony-blanket',title:'陽台上的小被被',author:'sansword',url:'https://sansword.github.io/balcony-blanket/'};
  const saved=assets.staticAsset(game);assert(saved);assert(fs.existsSync('.'+saved));
- const png=fs.readFileSync('.'+saved);assert.equal(png.readUInt32BE(16),1200);assert.equal(png.readUInt32BE(20),630);
+ const png=fs.readFileSync('.'+saved);assert.equal(png.readUInt32BE(16),720);assert.equal(png.readUInt32BE(20),1280);
  const catalog=require('./catalog');catalog.loadPlayfeedGames=async()=>[game];
  const handler=require('./api/share');
  const res={headers:{},setHeader(k,v){this.headers[k]=v},status(s){this.code=s;return this},send(body){this.body=body;return this}};
  await handler({method:'GET',query:{id:game.id}},res);
  assert(res.body.includes('陽台上的小被被 by sansword'));assert(res.body.includes(saved));assert(!res.body.includes('/api/og?id='));
+ assert(res.body.includes('property="og:image:width" content="720"'));assert(res.body.includes('property="og:image:height" content="1280"'));
  console.log('PASS: saved PNG, attribution, static metadata, publication gating for admin and review');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

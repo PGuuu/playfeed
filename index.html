@@ -522,7 +522,7 @@
     const share = card.querySelector('.share');
     share.addEventListener('click', async () => {
       const link = new URL('/g/' + encodeURIComponent(game.id), location.origin);
-        link.searchParams.set('v','3');
+        link.searchParams.set('v','4');
       try {
         if (navigator.share) await navigator.share({ title: game.title, url: link.href });
         else {

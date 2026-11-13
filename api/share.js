@@ -27,12 +27,12 @@ module.exports = async function handler(request, response) {
     const link = origin + '/g/' + encodeURIComponent(id);
     const gameUrl = new URL(game.url, origin + '/');
     if (!['https:', 'http:'].includes(gameUrl.protocol)) throw new Error('Invalid game URL');
-    // Use the same static screenshot source as the account grid, including new recommendations.
+    // Share a portrait screenshot; the title and creator stay in the link metadata.
     const saved = require('./_share-assets').staticAsset(game);
-    const image = escape(saved ? origin + saved : origin + '/api/og?id=' + encodeURIComponent(id) + '&v=3');
+    const image = escape(saved ? origin + saved : origin + '/api/og?id=' + encodeURIComponent(id) + '&v=4');
     const shareTitle = title + ' by ' + author;
     const description = shareTitle + ' — Play on PlayFeed.';
-    const metadata = `<meta property="og:type" content="website"><meta property="og:site_name" content="PlayFeed"><meta property="og:locale" content="zh_TW"><meta property="og:title" content="${shareTitle}"><meta property="og:description" content="${description}"><meta property="og:url" content="${link}"><link rel="canonical" href="${link}"><meta property="og:image" content="${image}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${shareTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${shareTitle}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`;
+    const metadata = `<meta property="og:type" content="website"><meta property="og:site_name" content="PlayFeed"><meta property="og:locale" content="zh_TW"><meta property="og:title" content="${shareTitle}"><meta property="og:description" content="${description}"><meta property="og:url" content="${link}"><link rel="canonical" href="${link}"><meta property="og:image" content="${image}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="720"><meta property="og:image:height" content="1280"><meta property="og:image:alt" content="${shareTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${shareTitle}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`;
     // Serve the actual feed here: redirects and hash URLs can lose per-game preview metadata.
     const page = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8')
       .replace(/<meta\b[^>]*(?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>/g, '')
