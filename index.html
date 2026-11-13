@@ -443,10 +443,10 @@
     }
     plane.animate(frames,{duration:5000,easing:'linear'}).finished.catch(()=>{}).finally(()=>plane.remove());
   }
-  function showSavedFeedback(source){
+  function showSavedFeedback(source,pending=false){
     clearTimeout(actionStatusTimer);document.querySelector('.action-status').textContent='';
     const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
-    clearTimeout(saveFeedbackTimer);hint.textContent='已儲存至我的收藏';hint.hidden=false;
+    clearTimeout(saveFeedbackTimer);hint.textContent=pending?'正在儲存至我的收藏…':'已儲存至我的收藏';hint.hidden=false;
     hint.style.top=Math.max(8,rect.bottom+9)+'px';
     const right=Math.min(Math.max(8,innerWidth-rect.right),Math.max(8,innerWidth-hint.offsetWidth-8));
     hint.style.right=right+'px';
@@ -477,6 +477,7 @@
     return version;
   }
   function renderSaved(card, active) {
+    if(card.dataset.savePending==='true')return;
     const button = card.querySelector('[data-kind="saved"]');
     const memberSaved=Boolean(PlayFeedAuth.user)&&active===true;
     card.dataset.memberSaved=String(memberSaved);
@@ -488,6 +489,7 @@
       ['saveCount', '[data-kind="saved"]', '儲存'],
       ['shareCount', '.share', '分享']
     ]) {
+      if(field==='saveCount'&&card.dataset.savePending==='true')continue;
       const count = field === 'saveCount' ? (counts.displaySaveCount ?? counts.saveCount) : counts[field];
       if (!Number.isSafeInteger(count) || count < 0) continue;
       const button = card.querySelector(selector);
@@ -587,23 +589,36 @@
     for (const button of card.querySelectorAll('.reaction')) {
       renderSaved(card, memberSavedKeys.has(card.dataset.gameKey));
       button.addEventListener('click',async()=>{
+        if(button.disabled)return;
         const active=button.getAttribute('aria-pressed')!=='true';
+        const previousMember=card.dataset.memberSaved==='true';
+        const previousCount=Number(button.querySelector('.action-count').dataset.value);
         button.disabled=true;invalidateEngagement(card);
+        button.setAttribute('aria-pressed',String(active));
+        if(Number.isSafeInteger(previousCount))renderCounts(card,{displaySaveCount:Math.max(0,previousCount+(active?1:-1))});
+        card.dataset.savePending='true';
+        if(active)showSavedFeedback(button,Boolean(PlayFeedAuth.user));else notifyAction('已取消儲存');
         try{
           if(!PlayFeedAuth.user){
-            PlayFeedSaves.set(game,active);renderSaved(card,false);
-            const count=Number(button.querySelector('.action-count').dataset.value);
-            if(Number.isSafeInteger(count))renderCounts(card,{displaySaveCount:Math.max(0,count+(active?1:-1))});
-            if(active)showSavedFeedback(button);else notifyAction('已取消儲存');
+            PlayFeedSaves.set(game,active);delete card.dataset.savePending;renderSaved(card,false);
           }else{
             if(!await PlayFeedSaves.merge())throw Error(PlayFeedSaves.error);
             const state=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'save',gameKey:card.dataset.gameKey,gameId:game.id,active})});
+            delete card.dataset.savePending;invalidateEngagement(card);
             renderSaved(card,state.saved);renderCounts(card,state);
             window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
             if(savedMode){if(state.saved)memberSavedKeys.add(card.dataset.gameKey);else memberSavedKeys.delete(card.dataset.gameKey);refreshSavedMode()}
-            if(state.saved===true)showSavedFeedback(button);else notifyAction('已取消儲存');
+            const hint=document.querySelector('#save-feedback');
+            if(state.saved===true&&!hint.hidden)hint.textContent='已儲存至我的收藏';
           }
-        }catch(error){notifyAction(error.message)}finally{button.disabled=false}
+        }catch(error){
+          delete card.dataset.savePending;invalidateEngagement(card);renderSaved(card,previousMember);
+          if(Number.isSafeInteger(previousCount))renderCounts(card,{displaySaveCount:previousCount});
+          clearTimeout(saveFeedbackTimer);document.querySelector('#save-feedback').hidden=true;
+          document.querySelector('.account-link').classList.remove('saved-feedback');
+          document.querySelectorAll('.save-laser').forEach(beam=>beam.remove());
+          notifyAction('未能完成儲存變更：'+error.message);
+        }finally{delete card.dataset.savePending;button.disabled=false}
       });
     }
     const share = card.querySelector('.share');
