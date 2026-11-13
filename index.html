@@ -416,11 +416,15 @@
     event.preventDefault();
     document.querySelector('.search-results a')?.click();
   });
+  let actionStatusTimer;
   function notifyAction(message) {
-    document.querySelector('.action-status').textContent = message;
+    const status=document.querySelector('.action-status');
+    clearTimeout(actionStatusTimer);status.textContent=message;
+    actionStatusTimer=setTimeout(()=>{status.textContent=''},2400);
+    if(message==='已取消儲存'){clearTimeout(saveFeedbackTimer);document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')}
   }
   let saveFeedbackTimer;
-  function showSavedFeedback(){
+  function showSavedFeedback(source){
     const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
     clearTimeout(saveFeedbackTimer);hint.textContent='已儲存至我的收藏';hint.hidden=false;
     hint.style.top=Math.max(8,rect.bottom+9)+'px';
@@ -428,6 +432,16 @@
     hint.style.right=right+'px';
     hint.style.setProperty('--save-arrow-right',Math.max(8,Math.min(hint.offsetWidth-16,innerWidth-right-rect.left-rect.width/2-4))+'px');
     account.classList.add('saved-feedback');
+    if(source&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+      const start=source.getBoundingClientRect(),x=start.left+start.width/2,y=start.top+start.height/2;
+      const dx=rect.left+rect.width/2-x,dy=rect.top+rect.height/2-y;
+      const beam=document.createElement('span');beam.className='save-laser';beam.setAttribute('aria-hidden','true');
+      beam.style.cssText=`position:fixed;pointer-events:none;z-index:10000;left:${x}px;top:${y}px;width:40px;height:4px;border-radius:99px;background:#ffe6a3;box-shadow:0 0 8px #ffb347,0 0 18px #ff8c00;transform-origin:center`;
+      document.body.append(beam);
+      const angle=Math.atan2(dy,dx)*180/Math.PI;
+      const animation=beam.animate([{transform:`translate(-50%,-50%) rotate(${angle}deg) scaleX(.3)`,opacity:0},{offset:.15,transform:`translate(${dx*.15}px,${dy*.15}px) rotate(${angle}deg)`,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.3)`,opacity:0}],{duration:550,easing:'ease-in-out'});
+      animation.finished.catch(()=>{}).finally(()=>beam.remove());
+    }
     saveFeedbackTimer=setTimeout(()=>{hint.hidden=true;account.classList.remove('saved-feedback')},2200);
   }
   window.addEventListener('resize',()=>{document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')});
@@ -439,8 +453,9 @@
   }
   function renderSaved(card, active) {
     const button = card.querySelector('[data-kind="saved"]');
-    card.dataset.memberSaved=String(active);
-    button.setAttribute('aria-pressed', String(active || PlayFeedSaves.has(card.dataset.gameKey)));
+    const memberSaved=Boolean(PlayFeedAuth.user)&&active===true;
+    card.dataset.memberSaved=String(memberSaved);
+    button.setAttribute('aria-pressed', String(memberSaved || PlayFeedSaves.has(card.dataset.gameKey)));
     button.querySelector('.action-label').textContent = 'save';
   }
   function renderCounts(card, counts) {
@@ -554,14 +569,14 @@
             PlayFeedSaves.set(game,active);renderSaved(card,false);
             const count=Number(button.querySelector('.action-count').dataset.value);
             if(Number.isSafeInteger(count))renderCounts(card,{displaySaveCount:Math.max(0,count+(active?1:-1))});
-            if(active)showSavedFeedback();else notifyAction('已取消儲存');
+            if(active)showSavedFeedback(button);else notifyAction('已取消儲存');
           }else{
             if(!await PlayFeedSaves.merge())throw Error(PlayFeedSaves.error);
             const state=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'save',gameKey:card.dataset.gameKey,gameId:game.id,active})});
             renderSaved(card,state.saved);renderCounts(card,state);
             window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
             if(savedMode){if(state.saved)memberSavedKeys.add(card.dataset.gameKey);else memberSavedKeys.delete(card.dataset.gameKey);refreshSavedMode()}
-            if(state.saved)showSavedFeedback();else notifyAction('已取消儲存');
+            if(state.saved===true)showSavedFeedback(button);else notifyAction('已取消儲存');
           }
         }catch(error){notifyAction(error.message)}finally{button.disabled=false}
       });

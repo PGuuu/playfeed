@@ -36,7 +36,19 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
       });
       const active = title => page.waitForFunction(expected => document.querySelector('article:not([hidden]) .game-title')?.textContent === expected, title);
       await page.goto('https://playfeed.test/' + (scenario === 'link' ? 'g/cold' : scenario === 'saved' ? 'g/cold?list=saved' : ''));
-      if (scenario === 'home') { await active('best'); await page.locator('#next-game').click(); await active('second'); await page.reload(); await active('best'); }
+      if (scenario === 'home') {
+        await active('best');
+        const save=page.locator('article:not([hidden]) [data-kind="saved"]');
+        assert.equal(await save.getAttribute('aria-pressed'),'false');
+        await save.click();assert.equal(await save.getAttribute('aria-pressed'),'true');
+        await page.locator('.save-laser').waitFor();
+        await save.click();assert.equal(await save.getAttribute('aria-pressed'),'false');
+        assert.equal(await page.locator('#save-feedback').isVisible(),false);
+        await page.waitForFunction(()=>document.querySelector('.action-status').textContent==='');
+        await page.locator('#next-game').click();await active('second');
+        assert.equal(await save.getAttribute('aria-pressed'),'false');
+        await page.reload();await active('best');
+      }
       else if (scenario === 'link') { await active('cold'); await page.locator('#next-game').click(); await active('best'); await page.locator('#previous-game').click(); await active('cold'); }
       else if (scenario === 'saved') { await active('cold'); await page.locator('#next-game').click(); await active('cold'); assert.equal(rankingRequests, 0); }
       else await page.waitForFunction(() => Boolean(document.querySelector('article:not([hidden]) .game-title')));

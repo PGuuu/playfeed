@@ -64,7 +64,7 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 #feed .actions svg{width:20px;height:20px}
 #feed .actions .comments-button{grid-column:1;grid-row:1}
 #feed .actions .share{grid-column:2;grid-row:1}
-#feed .actions .reaction{grid-column:3;grid-row:1;background:#efad73;color:#593418;font-size:16px;font-weight:750;gap:5px}
+#feed .actions .reaction{grid-column:3;grid-row:1;background:#fff3e4;color:#79502f;font-size:16px;font-weight:750;gap:5px}
 #feed .actions .reaction[aria-pressed=true]{background:#d98744;color:#fff7eb}
 #feed .actions .action-label{display:none}
 #feed .actions .reaction .action-label{display:inline}
