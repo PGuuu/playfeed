@@ -19,12 +19,18 @@ function orderPlayfeedGames(games, options = {}) {
     const other = Math.floor(random() * (index + 1));
     [ordered[index], ordered[other]] = [ordered[other], ordered[index]];
   }
-  const popular = new Map((Array.isArray(options.popularIds) ? options.popularIds : []).map((id, index) => [id, index]));
-  if (popular.size) ordered.sort((a, b) => (popular.get(a.id) ?? Infinity) - (popular.get(b.id) ?? Infinity));
-  // Good performers lead; retain one discovery slot for a recent, unseen game.
-  if (fresh) ordered.splice(popular.size ? Math.min(4, ordered.length) : 0, 0, fresh);
+  // Shuffle every visit and move the previous opening batch back for freshness.
+  let previous=[];
+  try{previous=JSON.parse(storage?.getItem('playfeed:last-opening:v1')||'[]');if(!Array.isArray(previous))previous=[]}catch{}
+  if(ordered.length>previous.length+3){
+    const recent=new Set(previous),tail=ordered.filter(game=>recent.has(game.id));
+    const unseen=ordered.filter(game=>!recent.has(game.id));
+    ordered.splice(0,ordered.length,...unseen,...tail);
+  }
+  if (fresh) ordered.splice(Math.min(4, ordered.length), 0, fresh);
   const requestedIndex = ordered.findIndex(game => game.id === options.requestedId);
   if (requestedIndex > 0) ordered.unshift(...ordered.splice(requestedIndex, 1));
+  try{storage?.setItem('playfeed:last-opening:v1',JSON.stringify(ordered.slice(0,4).map(game=>game.id)))}catch{}
   try { storage?.setItem(key, JSON.stringify(games.map(game => game.id))); } catch {}
   return ordered;
 }

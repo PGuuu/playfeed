@@ -244,7 +244,7 @@
 <script src="/game-frame.js"></script><script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
-  const popularIdsPromise=!savedMode&&typeof loadPlayfeedPopularIds==='function'?loadPlayfeedPopularIds():Promise.resolve([]);
+  const popularIdsPromise=Promise.resolve([]);
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let requestedGameId='';
@@ -420,11 +420,12 @@
   function notifyAction(message) {
     const status=document.querySelector('.action-status');
     clearTimeout(actionStatusTimer);status.textContent=message;
-    actionStatusTimer=setTimeout(()=>{status.textContent=''},2400);
+    actionStatusTimer=setTimeout(()=>{status.textContent=''},message==='已取消儲存'?500:2400);
     if(message==='已取消儲存'){clearTimeout(saveFeedbackTimer);document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')}
   }
   let saveFeedbackTimer;
   function showSavedFeedback(source){
+    clearTimeout(actionStatusTimer);document.querySelector('.action-status').textContent='';
     const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
     clearTimeout(saveFeedbackTimer);hint.textContent='已儲存至我的收藏';hint.hidden=false;
     hint.style.top=Math.max(8,rect.bottom+9)+'px';
@@ -435,12 +436,17 @@
     if(source&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       const start=source.getBoundingClientRect(),x=start.left+start.width/2,y=start.top+start.height/2;
       const dx=rect.left+rect.width/2-x,dy=rect.top+rect.height/2-y;
+      for(let shot=0;shot<3;shot++){
       const beam=document.createElement('span');beam.className='save-laser';beam.setAttribute('aria-hidden','true');
       beam.style.cssText=`position:fixed;pointer-events:none;z-index:10000;left:${x}px;top:${y}px;width:40px;height:4px;border-radius:99px;background:#ffe6a3;box-shadow:0 0 8px #ffb347,0 0 18px #ff8c00;transform-origin:center`;
       document.body.append(beam);
       const angle=Math.atan2(dy,dx)*180/Math.PI;
-      const animation=beam.animate([{transform:`translate(-50%,-50%) rotate(${angle}deg) scaleX(.3)`,opacity:0},{offset:.15,transform:`translate(${dx*.15}px,${dy*.15}px) rotate(${angle}deg)`,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.3)`,opacity:0}],{duration:550,easing:'ease-in-out'});
-      animation.finished.catch(()=>{}).finally(()=>beam.remove());
+      const animation=beam.animate([{transform:`translate(-50%,-50%) rotate(${angle}deg) scaleX(.3)`,opacity:0},{offset:.15,transform:`translate(${dx*.15}px,${dy*.15}px) rotate(${angle}deg)`,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.3)`,opacity:0}],{duration:420,delay:shot*140,fill:'backwards',easing:'ease-in-out'});
+      animation.finished.then(()=>{
+        if(hint.hidden)return;
+        account.animate([{filter:'brightness(1)',boxShadow:'0 0 0 0 #ffda70'},{offset:.25,filter:'brightness(1.8)',boxShadow:'0 0 12px 8px #ffd563,0 0 28px 12px #ff9c4499'},{filter:'brightness(1)',boxShadow:'0 0 0 3px #d9874470'}],{duration:380});
+      }).catch(()=>{}).finally(()=>beam.remove());
+      }
     }
     saveFeedbackTimer=setTimeout(()=>{hint.hidden=true;account.classList.remove('saved-feedback')},2200);
   }

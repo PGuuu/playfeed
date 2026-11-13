@@ -11,9 +11,13 @@ const storage = () => { const values = new Map(); return { getItem: key => value
   const games = ['cold', 'best', 'second', 'third', 'fourth', 'new'].map(id => ({ id, published_at: id === 'new' ? '2026-11-13T00:00:00Z' : null }));
   const opts = { now: Date.parse('2026-11-13T01:00:00Z'), storage: storage(), random: () => 0.5, popularIds: ['removed', 'best', 'second', 'third', 'fourth'] };
   const ordered = orderPlayfeedGames(games, opts);
-  assert.deepEqual(ordered.slice(0, 5).map(g => g.id), ['best', 'second', 'third', 'fourth', 'new']);
+  assert.equal(ordered[4].id,'new');
+  const pool=Array.from({length:20},(_,i)=>({id:'g'+i})), memory=storage();
+  const first=orderPlayfeedGames(pool,{storage:memory,random:()=>.5});
+  const again=orderPlayfeedGames(pool,{storage:memory,random:()=>.5});
+  assert(again.slice(0,4).every(g=>!first.slice(0,4).some(old=>old.id===g.id)));
   const linked = orderPlayfeedGames(games, { ...opts, requestedId: 'cold' });
-  assert.deepEqual(linked.slice(0, 3).map(g => g.id), ['cold', 'best', 'second']);
+  assert.equal(linked[0].id,'cold');
   assert.equal(new Set(linked.map(g => g.id)).size, games.length);
   assert.deepEqual(games.map(g => g.id), ['cold', 'best', 'second', 'third', 'fourth', 'new']);
   const cache = storage(); let requests = 0;
