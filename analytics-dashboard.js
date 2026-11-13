@@ -8,10 +8,11 @@
  async function load(){
   const run=++version;status.textContent='正在讀取統計…';$('#refresh').disabled=true;
   try{
-   const {report:r,devices,saveCounts=[],memberProfiles=[]}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
+   const {report:r,devices,saveCounts=[],memberProfiles=[],impact={}}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
    if(run!==version)return;
    $('#dashboard').hidden=false;$('#summary').replaceChildren();
-   for(const [label,value]of [['不同瀏覽器訪客',number(r.summary.visitors)],['造訪',number(r.summary.sessions)],['遊戲瀏覽',number(r.summary.game_views)],['遊戲停留總計',duration(r.summary.duration_ms)]]){const box=document.createElement('div');box.className='card';const name=document.createElement('div');name.textContent=label;const val=document.createElement('div');val.className='value';val.textContent=value;box.append(name,val);$('#summary').append(box)}
+   const total=value=>Number.isSafeInteger(value)?number(value):'—';
+   for(const [label,value]of [['會員數（已建檔）',total(impact.memberProfiles)],['儲存成功（陌生訪客累計）',total(impact.externalSaves)],['分享完成（陌生訪客累計）',total(impact.externalShares)],['不同瀏覽器訪客',number(r.summary.visitors)],['造訪',number(r.summary.sessions)],['遊戲瀏覽',number(r.summary.game_views)],['遊戲停留總計',duration(r.summary.duration_ms)]]){const box=document.createElement('div');box.className='card'+(label.includes('已建檔')||label.includes('陌生訪客累計')?' impact-card':'');const name=document.createElement('div');name.textContent=label;const val=document.createElement('div');val.className='value';val.textContent=value;box.append(name,val);$('#summary').append(box)}
    $('#since').textContent='頁面瀏覽 '+number(r.summary.page_views)+' 次。'+(r.started_at?'開始累積：'+new Date(r.started_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})+'。':'尚未收到瀏覽紀錄。');
    table('#member-profiles',memberProfiles.map(p=>[p.display_name,new Date(p.updated_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})]));
    table('#save-counts',saveCounts.map(g=>[g.title||g.url,number(g.initialCount),number(g.realCount),number(g.displayCount)]));
