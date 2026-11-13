@@ -42,6 +42,7 @@ const {chromium}=require(process.env.NODE_REPL_NODE_MODULE_DIRS+'/playwright');
  assert.equal(inits,1,'saves and analytics must share one device initialization');
  await page.screenshot({path:path.join(root,'../.vanilla-test/guest-save-feedback.png')});
  await page.waitForTimeout(2300);assert.equal(await page.locator('#save-feedback').isVisible(),false);
+ assert.equal(await save.locator('.action-count').textContent(),'7','visitor count must remain increased after server refresh');
  await page.reload();await save.waitFor();await page.waitForFunction(()=>document.querySelector('article:not([hidden]) .reaction').getAttribute('aria-pressed')==='true');
  await page.locator('.account-link').click();await page.locator('.grid .tile').waitFor();assert.equal(await page.locator('.identity h1').innerText(),'我的收藏');assert.equal(await page.locator('#login-dialog').isVisible(),false);
  await page.reload();await page.locator('.grid .tile').waitFor();

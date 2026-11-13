@@ -15,8 +15,9 @@
   const state=read(),key=keyFor(game);
   if(active){if(!state.entries[key]&&Object.keys(state.entries).length>=500)throw Error('此瀏覽器已收藏 500 款遊戲，請先登入備份。');state.entries[key]={id:game.id,title:game.title,url:key,cover:game.cover,savedAt:crypto.randomUUID()}}
   else delete state.entries[key];
-  state.pending[key]={active,revision:crypto.randomUUID()};write(state);changed('local');
+  state.pending[key]={active,revision:crypto.randomUUID()};write(state);
   window.PlayFeedAnalytics?.event(active?'guest_save_success':'guest_unsave_success',{game:game.id,title:game.title});
+  changed('local');
   sync();return active;
  }
  async function sync(){

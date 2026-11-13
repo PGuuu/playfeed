@@ -201,6 +201,7 @@
   <button id="next-game" type="button" aria-label="下一款"><span class="switch-label">下一款</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
  </nav>
  <a class="feed-logo" href="/" aria-label="PlayFeed，重新整理遊戲"><span>playfeed<span class="logo-dot">.</span></span></a>
+ <span class="saved-list-label" aria-live="polite" hidden></span>
 </aside></div>
 <div class="action-status" role="status" aria-live="polite"></div>
 <div id="save-feedback" class="save-feedback" role="status" aria-live="polite" hidden></div>
@@ -235,8 +236,33 @@
 
 <script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
-  const games = orderPlayfeedGames(await loadPlayfeedGames().catch(()=>{catalogError=true;return[]}));
-  let ignoreGameLinkOnReload=performance.getEntriesByType('navigation')[0]?.type==='reload';
+  const savedMode=new URLSearchParams(location.search).get('list')==='saved';
+  const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
+  const games=savedMode?catalog:orderPlayfeedGames(catalog);
+  let memberSavedKeys=new Set(),savedListError=false,savedMembershipVersion=0;
+  async function readMemberSavedKeys(){
+    if(PlayFeedAuth.checking)await new Promise(resolve=>{let stop=()=>{};stop=PlayFeedAuth.onChange(()=>{if(!PlayFeedAuth.checking){resolve();queueMicrotask(stop)}})});
+    if(!PlayFeedAuth.user)return new Set();
+    await PlayFeedSaves.merge();
+    const collection=PlayFeedAuth.takeCollection?.()||await PlayFeedAuth.api('/api/account?action=collection');
+    return new Set(collection.actions.filter(row=>row.kind==='save').map(row=>row.game_key));
+  }
+  if(savedMode)try{memberSavedKeys=await readMemberSavedKeys()}catch{savedListError=true}
+  let savedOrder=[];
+  try{const order=JSON.parse(sessionStorage.getItem('playfeed:saved-order:v1')||'[]');if(Array.isArray(order))savedOrder=order.filter(key=>typeof key==='string').slice(0,500)}catch{}
+  const savedRanks=new Map(savedOrder.map((key,index)=>[key,index]));
+  function savedKeys(){return new Set([...memberSavedKeys,...PlayFeedSaves.list().map(game=>game.url)])}
+  function navigationQueue(){
+    const keys=savedMode?savedKeys():null;
+    return games.map((game,index)=>({index,key:new URL(game.url,location.origin+'/').href})).filter(item=>!keys||keys.has(item.key)).sort((a,b)=>savedMode?(savedRanks.get(a.key)??savedRanks.size+a.index)-(savedRanks.get(b.key)??savedRanks.size+b.index):a.index-b.index).map(item=>item.index);
+  }
+  async function refreshSavedMembership(){
+    if(!savedMode)return;
+    const version=++savedMembershipVersion;
+    try{const keys=await readMemberSavedKeys();if(version!==savedMembershipVersion)return;memberSavedKeys=keys;savedListError=false;for(const card of cards)renderSaved(card,keys.has(card.dataset.gameKey));refreshSavedMode()}
+    catch{if(version===savedMembershipVersion)savedListError=true}
+  }
+  let ignoreGameLinkOnReload=!savedMode&&performance.getEntriesByType('navigation')[0]?.type==='reload';
   try { sessionStorage.setItem('playfeed:catalog:v1', JSON.stringify({ time: Date.now(), games })); } catch {}
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
@@ -343,6 +369,7 @@
   function renderSearch() {
     const query = searchInput.value.trim().normalize('NFKC').toLocaleLowerCase();
     const matches = query ? games.filter(game => {
+      if(savedMode&&!savedKeys().has(new URL(game.url,location.origin+'/').href))return false;
       const text = [game.title, game.author, game.creator?.name, game.url].join(' ').normalize('NFKC').toLocaleLowerCase();
       return query.split(/\s+/).every(word => text.includes(word));
     }) : [];
@@ -446,6 +473,7 @@
     const works = document.querySelector('.works');
     works.replaceChildren();
     for (const game of profile.games) {
+      if(savedMode&&!savedKeys().has(new URL(game.url,location.origin+'/').href))continue;
       const item = document.createElement('li');
       const link = document.createElement('a');
       link.href = '#' + game.id;
@@ -507,7 +535,7 @@
     byline.textContent = game.creator.name.startsWith('來源：') ? game.creator.name : 'by '+game.creator.name;
     byline.title = game.creator.name;
     for (const button of card.querySelectorAll('.reaction')) {
-      renderSaved(card, false);
+      renderSaved(card, memberSavedKeys.has(card.dataset.gameKey));
       button.addEventListener('click',async()=>{
         const active=button.getAttribute('aria-pressed')!=='true';
         button.disabled=true;invalidateEngagement(card);
@@ -522,6 +550,7 @@
             const state=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'save',gameKey:card.dataset.gameKey,gameId:game.id,active})});
             renderSaved(card,state.saved);renderCounts(card,state);
             window.PlayFeedAnalytics?.event(state.saved?'save_success':'unsave_success',{game:game.id,title:game.title});
+            if(savedMode){if(state.saved)memberSavedKeys.add(card.dataset.gameKey);else memberSavedKeys.delete(card.dataset.gameKey);refreshSavedMode()}
             if(state.saved)showSavedFeedback();else notifyAction('已取消儲存');
           }
         }catch(error){notifyAction(error.message)}finally{button.disabled=false}
@@ -551,12 +580,14 @@
 
   window.addEventListener('playfeed:saves-change',event=>{
     for(const card of cards)renderSaved(card,card.dataset.memberSaved==='true');
+    if(savedMode){if(event.detail.reason==='merged')refreshSavedMembership();else refreshSavedMode()}
     if(['synced','merged','storage'].includes(event.detail.reason)&&activeIndex>=0)loadEngagement(games[activeIndex],cards[activeIndex]);
   });
   let engagementUser=PlayFeedAuth.user?.id||'';
   PlayFeedAuth.onChange(user=>{
     const nextUser=user?.id||'';if(nextUser===engagementUser)return;engagementUser=nextUser;
     if(!user)for(const card of cards)renderSaved(card,false);
+    if(savedMode){if(!user){memberSavedKeys.clear();refreshSavedMode()}refreshSavedMembership()}
     PlayFeedSaves.merge().then(()=>{if(activeIndex>=0)loadEngagement(games[activeIndex],cards[activeIndex])});
   });
 
@@ -659,6 +690,7 @@
   grip.addEventListener('pointercancel',finishDrag);
 
   let activeIndex = -1;
+  let lastNavigationQueue=[];
   let firstGameEntry=true,pendingEntrySource=null;
   let gameResizeObserver;
   let gameLoadFrame;
@@ -708,6 +740,25 @@
     activeIndex = -1;
   }
 
+  function updateNavigation(){
+    const queue=navigationQueue(),position=queue.indexOf(activeIndex);
+    lastNavigationQueue=queue;
+    previousButton.disabled=position<=0;nextButton.disabled=position<0||position===queue.length-1;
+    const label=document.querySelector('.saved-list-label');label.hidden=!savedMode;
+    if(savedMode)label.textContent='儲存清單（'+queue.length+'）';
+  }
+  function refreshSavedMode(){
+    if(!savedMode)return;
+    const previousPosition=lastNavigationQueue.indexOf(activeIndex),queue=navigationQueue();updateNavigation();
+    if(shell.hidden)return;
+    if(!queue.length){
+      unmountGame();
+      if(!feed.querySelector('.collection-empty')){const empty=document.createElement('p');empty.className='empty collection-empty';empty.textContent=savedListError?'儲存清單暫時無法載入，請重新整理。':'儲存清單已空，點左上 PlayFeed 回首頁探索新遊戲。';feed.append(empty)}
+    }else{
+      feed.querySelector('.collection-empty')?.remove();
+      if(!queue.includes(activeIndex))showGame(queue[Math.min(Math.max(previousPosition,0),queue.length-1)],'saved_selection');
+    }
+  }
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
     unmountGame();
@@ -722,8 +773,7 @@
       ],{duration:230,easing:'cubic-bezier(.2,.7,.2,1)'});
     }
     layoutFeed();
-    previousButton.disabled = index === 0;
-    nextButton.disabled = index === games.length - 1;
+    updateNavigation();
     notifyAction('');
     const game = games[index];
     window.PlayFeedAnalytics?.setGame(game,entrySource);
@@ -787,7 +837,7 @@
     });
     const url = new URL(location.href);
     url.pathname = "/g/" + encodeURIComponent(game.id);
-    url.search = "";
+    url.search = savedMode?'?list=saved':'';
     url.hash = "";
     if (location.href !== url.href) history.replaceState(null, '', url);
   }
@@ -804,11 +854,13 @@
       return;
     }
     if(!games.length){feed.replaceChildren();const empty=document.createElement('p');empty.className='empty';empty.textContent=catalogError?'遊戲清單暫時無法載入，請重新整理。':'目前沒有可遊玩的遊戲';feed.append(empty);return;}
+    const queue=navigationQueue();
+    if(savedMode&&!queue.length){refreshSavedMode();return;}
     const requestedId = ignoreGameLinkOnReload ? '' : (location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id')));
     ignoreGameLinkOnReload=false;
     const index = games.findIndex(game => game.id === requestedId);
-    const target = Math.max(index, 0);
-    const source=typeof entrySource==='string'?entrySource:pendingEntrySource||(firstGameEntry?undefined:'internal_selection');
+    const target = savedMode?(queue.includes(index)?index:queue[0]):Math.max(index, 0);
+    const source=typeof entrySource==='string'?entrySource:pendingEntrySource||(firstGameEntry?(savedMode?'saved_selection':undefined):'internal_selection');
     pendingEntrySource=null;firstGameEntry=false;
     showGame(target,source);
   }
@@ -817,8 +869,8 @@
   window.addEventListener('hashchange', gameFromLink);
   document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed'))pendingEntrySource='creator_selection';},true);
   function switchGame(direction) {
-    const target = activeIndex + direction;
-    if (target < 0 || target >= games.length) return;
+    const queue=navigationQueue(),position=queue.indexOf(activeIndex),target=queue[position+direction];
+    if (position<0||target===undefined) return;
     window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
     showGame(target,direction<0?'previous':'next');
 

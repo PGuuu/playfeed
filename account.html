@@ -39,7 +39,8 @@ function render(){
     const a=document.createElement('a');a.className='tile';
     const match=games.find(entry=>new URL(entry.url,location.origin).href===new URL(game.url,location.origin).href);
     const preview=match||game;
-    a.href=tab==='recommended'?game.url:'/#'+encodeURIComponent(preview.id);
+    a.href=tab==='recommended'?game.url:'/g/'+encodeURIComponent(preview.id)+'?list=saved';
+    if(tab==='saved')a.addEventListener('click',()=>{try{sessionStorage.setItem('playfeed:saved-order:v1',JSON.stringify(entries.map(entry=>new URL(entry.url,location.origin+'/').href)))}catch{}});
     if(tab==='recommended'){a.target='_blank';a.rel='noopener noreferrer';}
     a.setAttribute('aria-label',game.title);
     const img=document.createElement('img');
