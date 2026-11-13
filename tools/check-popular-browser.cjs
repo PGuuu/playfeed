@@ -8,9 +8,10 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
   try {
     for (const scenario of ['home', 'link', 'saved', 'failure', 'timeout', 'legacy-script']) {
       const context = await browser.newContext({ viewport: { width: 390, height: 740 } });
-      const page = await context.newPage(), errors = []; let rankingRequests = 0;
+      const page = await context.newPage(), errors = []; let rankingRequests = 0, completedShares=0;
       page.on('pageerror', error => errors.push(error.message));
       await context.addInitScript(scenario => {
+        Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{}});
         if(scenario==='home')return;
         localStorage.setItem('playfeed:guest-saves:v1', JSON.stringify({ entries: { 'https://game.test/cold': { id: 'cold', title: 'cold', url: 'https://game.test/cold', savedAt: '1' } }, pending: {} }));
       },scenario);
@@ -23,8 +24,8 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
           if (scenario === 'timeout') { await new Promise(resolve => setTimeout(resolve, 1600)); return route.fulfill({ body: '{}' }).catch(() => {}); }
           return json({ ids: ['best', 'second', 'third'] });
         }
-        if (url.pathname === '/api/analytics') return json({ ok: true });
-        if (url.pathname === '/api/account') return json({ saveCount: 0, commentCount: 0, shareCount: 0, guestSaved: false, saved: false });
+        if (url.pathname === '/api/analytics') {let body={};try{body=route.request().postDataJSON()||{}}catch{} completedShares+=(body.events||[]).filter(e=>e.action==='share_success').length;await new Promise(resolve=>setTimeout(resolve,80));return json({ok:true});}
+        if (url.pathname === '/api/account') return json({ saveCount: 0, commentCount: 0, shareCount: completedShares, guestSaved: false, saved: false });
         if (url.pathname === '/auth.js') return route.fulfill({ contentType: 'text/javascript', body: "window.PlayFeedAuth={user:null,checking:false,token:'',onChange(fn){fn(null)},async api(url,options){return (await fetch(url,options)).json()},openLogin(){}}" });
         if (url.pathname === '/catalog.js') return route.fulfill({ contentType: 'text/javascript', body: 'async function loadPlayfeedGames(){return ' + JSON.stringify(games) + '}' });
         if (scenario === 'legacy-script' && url.pathname === '/feed-order.js') return route.fulfill({ contentType: 'text/javascript', body: 'function orderPlayfeedGames(games){return games}' });
@@ -51,6 +52,14 @@ const games = ['cold', 'best', 'second', 'third'].map(id => ({ id, title: id, au
         await page.locator('#next-game').click();await page.waitForFunction(()=>Boolean(document.querySelector('article:not([hidden]) .game-title')?.textContent));
         assert.equal(await save.getAttribute('aria-pressed'),'false');
         await page.reload();await page.waitForFunction(()=>Boolean(document.querySelector('article:not([hidden]) .game-title')?.textContent));
+        await page.locator('article:not([hidden]) .share').click();
+        await page.locator('.share-plane').waitFor();
+        assert.equal(await page.locator('.share-plane').evaluate(el=>el.getAnimations()[0].effect.getTiming().duration),5000);
+        await page.waitForFunction(()=>document.querySelector('article:not([hidden]) [data-count=shares]')?.textContent==='1');
+        await page.locator('.share-plane').waitFor({state:'detached',timeout:7000});
+        assert.equal(completedShares,1);
+        assert.equal(await page.locator('article:not([hidden]) [data-count=shares]').textContent(),'1');
+
       }
       else if (scenario === 'link') { await active('cold'); await page.locator('#next-game').click(); await page.waitForFunction(()=>location.pathname!=='/g/cold'&&Boolean(document.querySelector('article:not([hidden]) .game-title')?.textContent)); await page.locator('#previous-game').click(); await active('cold'); }
       else if (scenario === 'saved') { await active('cold'); await page.locator('#next-game').click(); await active('cold'); assert.equal(rankingRequests, 0); }

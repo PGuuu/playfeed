@@ -43,7 +43,13 @@
   const source=entry||(!seenGame?initialEntry():'internal_selection');
   current={id:String(game.id),title:String(game.title),entry:source,previous:seenGame?lastViewed:''};
   seenGame=true;lastViewed=current.id;last=performance.now();event('game_view');flush();
- },flush};
+ },async flush(){
+   // Wait for initialization and an existing batch before sending newly queued events.
+   await initialize();
+   for(let attempt=0;attempt<100&&(!ready||busy);attempt++)await new Promise(resolve=>setTimeout(resolve,50));
+   if(!ready||busy)return false;
+   await flush();return queue.length===0;
+ }};
  event('page_view',{game:'',title:''});
  async function initialize(){if(starting)return;starting=true;try{
   if(!window.PlayFeedDeviceReady)window.PlayFeedDeviceReady=fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init'})}).then(r=>r.ok).catch(()=>false);

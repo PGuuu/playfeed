@@ -424,6 +424,23 @@
     if(message==='已取消儲存'){clearTimeout(saveFeedbackTimer);document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')}
   }
   let saveFeedbackTimer;
+  function showShareFlight(source){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    document.querySelectorAll('.share-plane').forEach(plane=>plane.remove());
+    const rect=source.getBoundingClientRect(),plane=document.createElement('span');
+    plane.className='share-plane';plane.setAttribute('aria-hidden','true');
+    plane.style.cssText='position:fixed;left:0;top:0;width:32px;height:32px;z-index:10001;pointer-events:none;color:#ff326c;filter:drop-shadow(0 0 5px #ff8fb3)';
+    plane.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" stroke="#fff3e4" stroke-width="1"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg>';
+    document.body.append(plane);
+    let x=Math.min(innerWidth-36,Math.max(4,rect.left)),y=Math.min(innerHeight-36,Math.max(4,rect.top));
+    const frames=[{transform:`translate(${x}px,${y}px) rotate(0deg)`,opacity:1}];
+    for(let i=1;i<=16;i++){
+      const nx=8+Math.random()*Math.max(0,innerWidth-48),ny=8+Math.random()*Math.max(0,innerHeight-48);
+      const angle=Math.atan2(ny-y,nx-x)*180/Math.PI+45;
+      frames.push({transform:`translate(${nx}px,${ny}px) rotate(${angle}deg)`,opacity:i===16?0:1});x=nx;y=ny;
+    }
+    plane.animate(frames,{duration:5000,easing:'linear'}).finished.catch(()=>{}).finally(()=>plane.remove());
+  }
   function showSavedFeedback(source){
     clearTimeout(actionStatusTimer);document.querySelector('.action-status').textContent='';
     const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
@@ -438,13 +455,13 @@
       const dx=rect.left+rect.width/2-x,dy=rect.top+rect.height/2-y;
       for(let shot=0;shot<3;shot++){
       const beam=document.createElement('span');beam.className='save-laser';beam.setAttribute('aria-hidden','true');
-      beam.style.cssText=`position:fixed;pointer-events:none;z-index:10000;left:${x}px;top:${y}px;width:40px;height:4px;border-radius:99px;background:#ffe6a3;box-shadow:0 0 8px #ffb347,0 0 18px #ff8c00;transform-origin:center`;
+      beam.style.cssText=`position:fixed;pointer-events:none;z-index:10000;left:${x}px;top:${y}px;width:64px;height:9px;border-radius:99px;background:#ff174f;border:2px solid #ffb3ca;box-shadow:0 0 10px 3px #ff174f,0 0 26px 7px #ff005c;transform-origin:center`;
       document.body.append(beam);
       const angle=Math.atan2(dy,dx)*180/Math.PI;
       const animation=beam.animate([{transform:`translate(-50%,-50%) rotate(${angle}deg) scaleX(.3)`,opacity:0},{offset:.15,transform:`translate(${dx*.15}px,${dy*.15}px) rotate(${angle}deg)`,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.3)`,opacity:0}],{duration:420,delay:shot*140,fill:'backwards',easing:'ease-in-out'});
       animation.finished.then(()=>{
         if(hint.hidden)return;
-        account.animate([{filter:'brightness(1)',boxShadow:'0 0 0 0 #ffda70'},{offset:.25,filter:'brightness(1.8)',boxShadow:'0 0 12px 8px #ffd563,0 0 28px 12px #ff9c4499'},{filter:'brightness(1)',boxShadow:'0 0 0 3px #d9874470'}],{duration:380});
+        account.animate([{filter:'brightness(1)',boxShadow:'0 0 0 0 #ff005c'},{offset:.25,filter:'brightness(2.2)',boxShadow:'0 0 16px 10px #ff2b68,0 0 40px 20px #ff005cbb',transform:'scale(1.16)'},{filter:'brightness(1)',boxShadow:'0 0 0 3px #d9874470',transform:'scale(1)'}],{duration:450});
       }).catch(()=>{}).finally(()=>beam.remove());
       }
     }
@@ -598,9 +615,10 @@
           notifyAction('已複製分享連結');
         }
         window.PlayFeedAnalytics?.event('share_success',{game:game.id,title:game.title});
-        window.PlayFeedAnalytics?.flush();
-        const count=Number(share.querySelector('.action-count').dataset.value);
-        if(Number.isSafeInteger(count))renderCounts(card,{shareCount:count+1});
+        showShareFlight(share);
+        invalidateEngagement(card);
+        await window.PlayFeedAnalytics?.flush();
+        await loadEngagement(game,card);
       } catch (error) {
         if (error.name !== 'AbortError') window.prompt('複製遊戲連結', link.href);
       }
