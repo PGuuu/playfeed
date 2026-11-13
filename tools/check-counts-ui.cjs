@@ -20,6 +20,7 @@ const {chromium}=require(process.env.NODE_REPL_NODE_MODULE_DIRS+'/playwright');
   if(url.pathname==='/feed-order.js')return route.fulfill({contentType:'text/javascript',body:'function orderPlayfeedGames(games){return games}'});
   if(url.pathname==='/feed-layout.css')return route.fulfill({contentType:'text/css',body:fs.readFileSync(path.join(__dirname,'..','feed-layout.css'),'utf8')});
   if(url.pathname==='/saves.js')return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'..','saves.js'),'utf8')});
+  if(url.pathname==='/game-frame.js')return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'..','game-frame.js'),'utf8')});
   if(['/recommendations.js','/analytics.js'].includes(url.pathname))return route.fulfill({body:''});
   if(url.hostname==='game.example')return route.fulfill({contentType:'text/html',body:'Game'});
   return route.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8')});
