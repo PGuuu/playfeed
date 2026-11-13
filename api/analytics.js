@@ -24,8 +24,8 @@ module.exports=async(req,res)=>{
    await owner(req);
    const days=Math.min(90,Math.max(1,Number(req.query?.days)||7));
    const audience=['external','owner','all'].includes(req.query?.audience)?req.query.audience:'external';
-   const [report,devices,saveCounts]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'}),saveCountSummary()]);
-   return sendJson(res,200,{report,devices,saveCounts,audience,days});
+   const [report,devices,saveCounts,memberProfiles]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'}),saveCountSummary(),db('playfeed_profiles',{query:'select=display_name,updated_at&order=updated_at.desc&limit=500'})]);
+   return sendJson(res,200,{report,devices,saveCounts,memberProfiles,audience,days});
   }
   if(req.method!=='POST')return sendJson(res,405,{error:'Method not allowed'});
   const body=await readJson(req,40000),action=body.action;

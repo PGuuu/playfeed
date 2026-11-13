@@ -429,15 +429,17 @@
     document.querySelectorAll('.share-plane').forEach(plane=>plane.remove());
     const rect=source.getBoundingClientRect(),plane=document.createElement('span');
     plane.className='share-plane';plane.setAttribute('aria-hidden','true');
-    plane.style.cssText='position:fixed;left:0;top:0;width:32px;height:32px;z-index:10001;pointer-events:none;color:#ff326c;filter:drop-shadow(0 0 5px #ff8fb3)';
+    plane.style.cssText='position:fixed;left:0;top:0;width:32px;height:32px;z-index:10001;pointer-events:none;color:#fff;filter:drop-shadow(0 2px 4px #5b403b88)';
     plane.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" stroke="#fff3e4" stroke-width="1"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg>';
     document.body.append(plane);
     let x=Math.min(innerWidth-36,Math.max(4,rect.left)),y=Math.min(innerHeight-36,Math.max(4,rect.top));
     const frames=[{transform:`translate(${x}px,${y}px) rotate(0deg)`,opacity:1}];
-    for(let i=1;i<=16;i++){
-      const nx=8+Math.random()*Math.max(0,innerWidth-48),ny=8+Math.random()*Math.max(0,innerHeight-48);
+    const startX=x,startY=y,bend=(Math.random()-.5)*90;
+    for(let i=1;i<=12;i++){
+      const progress=i/12;
+      const nx=Math.min(innerWidth-36,Math.max(4,startX+Math.sin(progress*Math.PI*2)*bend)),ny=startY-(startY+64)*progress;
       const angle=Math.atan2(ny-y,nx-x)*180/Math.PI+45;
-      frames.push({transform:`translate(${nx}px,${ny}px) rotate(${angle}deg)`,opacity:i===16?0:1});x=nx;y=ny;
+      frames.push({transform:`translate(${nx}px,${ny}px) rotate(${angle}deg)`,opacity:1});x=nx;y=ny;
     }
     plane.animate(frames,{duration:5000,easing:'linear'}).finished.catch(()=>{}).finally(()=>plane.remove());
   }

@@ -8,11 +8,12 @@
  async function load(){
   const run=++version;status.textContent='正在讀取統計…';$('#refresh').disabled=true;
   try{
-   const {report:r,devices,saveCounts=[]}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
+   const {report:r,devices,saveCounts=[],memberProfiles=[]}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
    if(run!==version)return;
    $('#dashboard').hidden=false;$('#summary').replaceChildren();
    for(const [label,value]of [['不同瀏覽器訪客',number(r.summary.visitors)],['造訪',number(r.summary.sessions)],['遊戲瀏覽',number(r.summary.game_views)],['遊戲停留總計',duration(r.summary.duration_ms)]]){const box=document.createElement('div');box.className='card';const name=document.createElement('div');name.textContent=label;const val=document.createElement('div');val.className='value';val.textContent=value;box.append(name,val);$('#summary').append(box)}
    $('#since').textContent='頁面瀏覽 '+number(r.summary.page_views)+' 次。'+(r.started_at?'開始累積：'+new Date(r.started_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})+'。':'尚未收到瀏覽紀錄。');
+   table('#member-profiles',memberProfiles.map(p=>[p.display_name,new Date(p.updated_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})]));
    table('#save-counts',saveCounts.map(g=>[g.title||g.url,number(g.initialCount),number(g.realCount),number(g.displayCount)]));
    table('#games',r.games.map(g=>{const link=document.createElement('a');link.className='game-title';link.href='/g/'+encodeURIComponent(g.game_id);link.textContent=g.title||g.game_id;link.target='_blank';link.rel='noopener';const saved=document.createElement('span');saved.textContent=number(g.saves);const detail=document.createElement('small');detail.style.cssText='display:block;font-size:10px;white-space:nowrap;color:#8b6a4e';detail.textContent='訪客 '+number(g.guest_saves)+' · 會員 '+number(g.member_saves);saved.append(detail);return [link,number(g.views),number(g.visitors),duration(g.duration_ms),g.views?duration(g.duration_ms/g.views):'—',number(g.save_clicks),saved,number(g.unsaves),number(g.comments_open),number(g.comments),number(g.share_clicks),number(g.shares),number(g.reports),number(g.creator_opens)]}));
    const entryNames={next:'站內 · 下一款',previous:'站內 · 上一款',search_selection:'站內 · 搜尋選擇',saved_selection:'站內 · 個人收藏',creator_selection:'站內 · 作者頁',internal_selection:'站內 · 其他選擇',external_entry:'外部進站',direct_entry:'直接連結／來源不明',feed_initial:'首頁 · 首次顯示',reload:'重新整理',unknown:'未記錄（舊資料）'};
