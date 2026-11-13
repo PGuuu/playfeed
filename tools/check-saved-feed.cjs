@@ -23,7 +23,7 @@ const games=['one','two','three','four'].map(id=>({id,title:id[0].toUpperCase()+
    if(url.hostname==='game.test')return route.fulfill({contentType:'text/html',body:'<body style="margin:0;background:#e7bd91;font:30px system-ui;padding:20px">'+url.pathname.slice(1)+'</body>'});
    if(url.pathname==='/auth.js')return route.fulfill({contentType:'text/javascript',body:`window.PlayFeedAuth={user:${member?JSON.stringify({id:'member',email:'member@example.com'}):'null'},checking:false,token:'',onChange(fn){fn(this.user)},takeCollection(){return null},async api(url,options){const r=await fetch(url,options);if(!r.ok)throw Error('API');return r.json()},openLogin(){document.querySelector('#login-dialog')?.showModal()}}`});
    if(url.pathname==='/catalog.js')return route.fulfill({contentType:'text/javascript',body:'async function loadPlayfeedGames(){return '+JSON.stringify(reverseCatalog?[...games].reverse():games)+'}'});
-   if(url.pathname==='/feed-order.js')return route.fulfill({contentType:'text/javascript',body:'function orderPlayfeedGames(games){return [...games].reverse()}'});
+   if(url.pathname==='/feed-order.js')return route.fulfill({contentType:'text/javascript',body:'async function loadPlayfeedPopularIds(){return []} function orderPlayfeedGames(games){return [...games].reverse()}'});
    if(url.pathname==='/recommendations.js'||url.pathname==='/analytics-owner-link.js')return route.fulfill({body:''});
    if(url.hostname!=='playfeed.test')return route.fulfill({body:''});
    const name=url.pathname==='/'||url.pathname.startsWith('/g/')?'index.html':url.pathname.slice(1),file=path.join(__dirname,'..',name);

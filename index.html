@@ -244,8 +244,12 @@
 <script src="/game-frame.js"></script><script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
+  const popularIdsPromise=savedMode?Promise.resolve([]):loadPlayfeedPopularIds();
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
-  const games=savedMode?catalog:orderPlayfeedGames(catalog);
+  const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
+  let requestedGameId='';
+  if(!reload)try{requestedGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}
+  const games=savedMode?catalog:orderPlayfeedGames(catalog,{popularIds:await popularIdsPromise,requestedId:requestedGameId});
   let memberSavedKeys=new Set(),savedListError=false,savedMembershipVersion=0;
   async function readMemberSavedKeys(){
     if(PlayFeedAuth.checking)await new Promise(resolve=>{let stop=()=>{};stop=PlayFeedAuth.onChange(()=>{if(!PlayFeedAuth.checking){resolve();queueMicrotask(stop)}})});
