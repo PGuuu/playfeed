@@ -11,7 +11,7 @@
   <header class="top"><a class="brand" href="/">Play<span>Feed</span></a><button id="session-action" class="button" type="button">登入</button></header>
   <section class="profile"><div class="avatar">?</div><div class="identity"><h1>我的頁面</h1><p>收藏保存在此瀏覽器</p></div><button id="edit-profile" class="profile-settings" type="button" aria-label="編輯個人資料" title="編輯個人資料" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.7 2.1-1.4.8-2.2-.4-2.5 4.3 1.5 1.7v1.6l-1.5 1.7 2.5 4.3 2.2-.4 1.4.8.7 2.1h5l.7-2.1 1.4-.8 2.2.4 2.5-4.3-1.5-1.7v-1.6l1.5-1.7-2.5-4.3-2.2.4-1.4-.8-.7-2.1z"/><circle cx="12" cy="12" r="3.5"/></svg></button></section>
   <aside class="backup-note" id="backup-note"><p id="backup-copy">收藏保存在此瀏覽器；清除網站資料或換瀏覽器後無法取回。登入可備份、跨裝置使用。</p><button class="button" id="backup-action" type="button">登入備份收藏</button></aside>
-  <p><a class="recommend-button" href="/submit.html">＋ 推薦新遊戲</a></p><section id="notifications" aria-label="通知"></section><section id="review" hidden><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
+  <p><a class="recommend-button" href="/submit.html">＋ 推薦新遊戲</a></p><section id="notifications" aria-label="通知"></section><button id="open-review" class="button" type="button" hidden aria-expanded="false" aria-controls="review">待審核</button><section id="review" hidden><button id="close-review" class="button" type="button">返回我的頁面</button><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
   <section class="grid" aria-live="polite"><p class="empty">正在載入…</p></section>
 </main>
 <dialog id="login-dialog"><h2>免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。</p><div id="phuze-widget"></div><button class="cancel" type="button" data-close-login>取消</button></dialog>
@@ -81,14 +81,16 @@ async function loadCollection(){
   for(const item of result.notifications){const a=document.createElement('a');const recommended=result.recommendations.find(r=>r.id===item.game_id);const listed=recommended&&games.find(g=>new URL(g.url,location.origin).href===recommended.url);a.href='/#'+encodeURIComponent(listed?.id||item.game_id);a.textContent='你的推薦「'+item.title+'」已上架！';if(!item.read_at)a.className='unread';a.addEventListener('click',()=>PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'read-notifications'})}).catch(()=>{}));notifications.append(a)}
   const pending=result.requests.filter(row=>row.status==='pending').length;
   if(pending){const p=document.createElement('p');p.textContent=pending+' 款推薦等待管理者審核。';notifications.append(p)}
-  document.querySelector('#review').hidden=!result.isAdmin;
+  document.querySelector('#open-review').hidden=!result.isAdmin;
+  if(!result.isAdmin)document.querySelector('#review').hidden=true;
+  else if(new URLSearchParams(location.search).get('review')==='1'){document.querySelector('#review').hidden=false;document.querySelector('#open-review').setAttribute('aria-expanded','true')}
   if(result.isAdmin)loadReview();
   render();
  }catch(error){if(version!==loadVersion)return;const p=document.createElement('p');p.className='empty';p.textContent=error.message;grid.replaceChildren(p)}
 }
 for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelector('.tabs .active').classList.remove('active');button.classList.add('active');render()});
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
-PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'登入';avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'登入後查看收藏與推薦';loadVersion++;collection=null;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=!user;updateBackup();render();if(user)loadCollection()});
+PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'登入';avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'登入後查看收藏與推薦';loadVersion++;collection=null;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=!user;updateBackup();render();if(user)loadCollection()});
 loadPlayfeedGames().then(value=>{games=value;try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render()});
 
 const profileDialog=document.querySelector('#profile-dialog'),profileForm=document.querySelector('#profile-form');
@@ -105,10 +107,13 @@ profileForm.addEventListener('submit',async event=>{
  try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'profile',displayName:profileForm.elements.displayName.value,bio:profileForm.elements.bio.value,website:profileForm.elements.website.value})});profileDialog.close();await loadCollection()}
  catch(error){document.querySelector('#profile-status').textContent=error.message}finally{button.disabled=false}
 });
+document.querySelector('#open-review').addEventListener('click',()=>{document.querySelector('#review').hidden=false;document.querySelector('#open-review').setAttribute('aria-expanded','true');loadReview();document.querySelector('#review').scrollIntoView({block:'start'})});
+document.querySelector('#close-review').addEventListener('click',()=>{document.querySelector('#review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');history.replaceState(null,'',location.pathname);document.querySelector('#open-review').focus()});
 async function loadReview(){
  try{
  const result=await PlayFeedAuth.api('/api/account?action=review');
  if(!collection?.isAdmin)return;
+ document.querySelector('#open-review').textContent='待審核（'+result.requests.length+'）';
  const list=document.querySelector('#review-list');list.replaceChildren();
  for(const request of result.requests){
   const row=document.createElement('div');row.className='review-row';
@@ -116,7 +121,7 @@ async function loadReview(){
   const preview=document.createElement('a');preview.href='/submit.html?request='+encodeURIComponent(request.id)+'&game='+encodeURIComponent(request.url);preview.textContent='預覽試玩與審核';preview.className='button';row.append(preview);
   for(const [decision,label]of[['reject','不予上架']]){
    const button=document.createElement('button');button.className='button';button.textContent=label;
-   button.addEventListener('click',async()=>{row.querySelectorAll('button').forEach(b=>b.disabled=true);try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'review',requestId:request.id,decision,title:input.value})});await loadCollection()}catch(error){const status=document.createElement('p');status.textContent=error.message;row.append(status);row.querySelectorAll('button').forEach(b=>b.disabled=false)}});row.append(button)
+   button.addEventListener('click',async()=>{row.querySelectorAll('button').forEach(b=>b.disabled=true);try{await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'review',requestId:request.id,decision})});await loadCollection()}catch(error){const status=document.createElement('p');status.textContent=error.message;row.append(status);row.querySelectorAll('button').forEach(b=>b.disabled=false)}});row.append(button)
   }
   list.append(row)
  }
