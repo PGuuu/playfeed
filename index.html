@@ -165,7 +165,7 @@
 <link rel="canonical" href="https://playfeed-gilt.vercel.app/">
 </head>
 <body>
-<dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。登入後可以留言及儲存遊戲。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
+<dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。登入後可備份收藏，並跨裝置管理評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
 <dialog class="search-dialog" aria-label="搜尋遊戲">
   <form method="dialog"><input type="search" id="game-search" aria-label="遊戲關鍵字" placeholder="搜尋遊戲、作者" autocomplete="off"><button aria-label="關閉搜尋">關閉</button></form>
   <p id="search-status" role="status"></p>
@@ -189,9 +189,16 @@
   </form>
 </dialog>
 <section id="comments-sheet" class="comments-sheet" role="region" aria-labelledby="comments-heading" hidden>
-  <div class="comments-grip" aria-label="向下拖曳收起留言"><h2 id="comments-heading">留言</h2><button class="comments-close" type="button" aria-label="關閉留言">×</button></div>
-  <div class="comments-content"><p class="comments-message" role="status"></p><ul class="comments-list"></ul></div>
-  <form class="comments-form"><input name="comment" aria-label="新增留言" placeholder="登入後留言…" maxlength="1000" required autocomplete="off"><button type="submit">發送</button></form>
+  <div class="comments-grip" aria-label="向下拖曳收起評分"><h2 id="comments-heading">遊戲評分</h2><button class="comments-close" type="button" aria-label="關閉評分">×</button></div>
+  <div class="comments-content">
+    <div class="rating-summary" aria-label="星等分布"><p id="rating-total">讀取評分中…</p><div class="rating-row" data-stars="3"><span class="rating-stars" aria-hidden="true">★★★</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div><div class="rating-row" data-stars="2"><span class="rating-stars" aria-hidden="true">★★☆</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div><div class="rating-row" data-stars="1"><span class="rating-stars" aria-hidden="true">★☆☆</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div></div>
+    <p class="comments-message" role="status"></p><button type="button" id="ratings-reload" hidden>重新載入</button><ul class="comments-list"></ul>
+  </div>
+  <form class="comments-form">
+    <fieldset class="rating-choice"><legend>你的評分</legend><label><input type="radio" name="stars" value="1" aria-label="1 顆星" required><span>★</span><small>1 星</small></label><label><input type="radio" name="stars" value="2" aria-label="2 顆星" required><span>★★</span><small>2 星</small></label><label><input type="radio" name="stars" value="3" aria-label="3 顆星" required><span>★★★</span><small>3 星</small></label></fieldset>
+    <label class="review-label" for="rating-review">評語</label><textarea id="rating-review" name="comment" aria-label="評語" placeholder="這款遊戲玩起來如何？" maxlength="1000" rows="2" required></textarea>
+    <div class="rating-submit-row"><p class="rating-form-status" role="status"></p><button type="submit">送出評分</button></div>
+  </form>
 </section>
 <div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"></main>
 <aside class="feed-rail" aria-label="會員、搜尋與遊戲切換">
@@ -226,7 +233,7 @@
     </div>
     <footer>
       <div class="actions">
-        <button class="comments-button" type="button" aria-label="留言" aria-expanded="false" aria-controls="comments-sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg><span class="action-label">留言</span><span class="action-count" data-count="comments" aria-hidden="true">–</span></button>
+        <button class="comments-button" type="button" aria-label="評分" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">評分</span></button>
         <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span><span class="action-count" data-count="shares" aria-hidden="true">–</span></button>
         <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">save</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
       </div>
@@ -434,7 +441,6 @@
   }
   function renderCounts(card, counts) {
     for (const [field, selector, label] of [
-      ['commentCount', '.comments-button', '留言'],
       ['saveCount', '[data-kind="saved"]', '儲存'],
       ['shareCount', '.share', '分享']
     ]) {
@@ -612,61 +618,80 @@
       if (restoreFocus) button.focus({preventScroll:true});
     }
   }
-  async function readComments(index) {
-    const version = ++commentsVersion;
-    commentsMessage.textContent = '載入留言中…';
-    try {
-      const key = new URL(games[index].url,location.origin + "/").href;
-      const { comments: rows, ...counts } = await PlayFeedAuth.api('/api/account?action=comments&gameKey=' + encodeURIComponent(key)+'&gameId='+encodeURIComponent(games[index].id));
-      if (commentsIndex !== index || version !== commentsVersion) return;
-      renderCounts(cards[index], counts);
-      commentsList.replaceChildren();
-      for (const row of rows.reverse()) {
-        const li = document.createElement('li');
-        const avatar = document.createElement('span'); avatar.className='comment-avatar'; avatar.textContent='P'; avatar.setAttribute('aria-hidden','true');
-        const content = document.createElement('div');
-        const name = document.createElement('span'); name.className='comment-name'; name.textContent=row.display_name;
-        const time = document.createElement('time'); time.className='comment-time'; time.dateTime=row.created_at; time.textContent=new Date(row.created_at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-        const body = document.createElement('p'); body.className='comment-body'; body.textContent=row.body;
-        content.append(name,time,body); li.append(avatar,content); commentsList.append(li);
-      }
-      commentsMessage.textContent = rows.length ? '' : '還沒有留言，來聊聊這款遊戲吧。';
-      const scroller = document.querySelector('.comments-content'); scroller.scrollTop=scroller.scrollHeight;
-    } catch {
-      if (version===commentsVersion) commentsMessage.textContent='留言暫時無法載入，請關閉後重試。';
+  let ratingDirty=false;
+  const ratingStatus=commentsForm.querySelector('.rating-form-status');
+  const ratingSubmit=commentsForm.querySelector('[type=submit]');
+  commentsForm.addEventListener('input',()=>{ratingDirty=true;ratingStatus.textContent=''});
+  function renderRatings(data,populate=true){
+    const total=Number(data.ratingCount)||0;
+    document.querySelector('#rating-total').textContent=total?total+' 人評分':'尚無評分，成為第一位評分的人';
+    for(const row of document.querySelectorAll('.rating-row')){
+      const stars=Number(row.dataset.stars),count=Number(data.distribution?.[stars])||0;
+      row.querySelector('.rating-count').textContent=count+' 人';row.querySelector('.rating-bar i').style.width=(total?count/total*100:0)+'%';
+      row.setAttribute('aria-label',stars+' 星，'+count+' 人');
     }
+    commentsList.replaceChildren();
+    for(const review of [...(data.reviews||[]),...(data.legacyComments||[]).map(row=>({...row,legacy:true}))]){
+      const li=document.createElement('li'),avatar=document.createElement('span'),content=document.createElement('div');
+      avatar.className='comment-avatar';avatar.textContent=Array.from(review.display_name||'訪客')[0];avatar.setAttribute('aria-hidden','true');
+      const name=document.createElement('span');name.className='comment-name';name.textContent=review.display_name||'訪客';
+      const stars=document.createElement('span');stars.className='comment-stars';stars.textContent=review.legacy?'舊留言・未評分':'★'.repeat(review.stars)+'☆'.repeat(3-review.stars);if(!review.legacy)stars.setAttribute('aria-label',review.stars+' 顆星');
+      const time=document.createElement('time');time.className='comment-time';time.dateTime=review.updated_at||review.created_at;time.textContent=new Date(time.dateTime).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      const body=document.createElement('p');body.className='comment-body';body.textContent=review.body;
+      content.append(name,stars,time,body);li.append(avatar,content);commentsList.append(li);
+    }
+    commentsMessage.textContent=(data.reviews?.length||data.legacyComments?.length)?'':'還沒有評語，分享你的遊玩感受吧。';
+    if(populate&&!ratingDirty){
+      commentsForm.elements.stars.value=data.ownRating?String(data.ownRating.stars):'';
+      commentsForm.elements.comment.value=data.ownRating?.body||'';
+      ratingStatus.textContent=data.ownRating?'你已評過分，可以修改星等與評語。':'';
+    }
+    ratingSubmit.textContent=data.ownRating?'更新評分':'送出評分';
   }
-  function openComments(index) {
-    if (commentsIndex === index) { closeComments(); return; }
-    closeComments(false);
-    commentsIndex=index;
-    commentsForm.reset(); commentsList.replaceChildren();
-    commentsSheet.hidden=false;
-    document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');
-    document.body.classList.add('comments-open');
-    layoutFeed();
-    cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');
-
-    readComments(index);
+  async function readComments(index){
+    const version=++commentsVersion;commentsMessage.textContent='載入評分中…';document.querySelector('#ratings-reload').hidden=true;
+    try{
+      await window.PlayFeedDeviceReady;
+      const key=new URL(games[index].url,location.origin+'/').href;
+      const data=await PlayFeedAuth.api('/api/account?action=ratings&gameKey='+encodeURIComponent(key));
+      if(commentsIndex!==index||version!==commentsVersion)return;
+      renderRatings(data);
+    }catch{if(version===commentsVersion){commentsMessage.textContent='評分暫時無法載入，請稍後重試。';document.querySelector('#ratings-reload').hidden=false}}
+  }
+  function layoutRatingSheet(){
+    if(commentsIndex<0)return;
+    const height=Math.min(innerHeight,window.visualViewport?.height||innerHeight);
+    commentsSheet.style.bottom=Math.max(0,innerHeight-(window.visualViewport?visualViewport.height+visualViewport.offsetTop:innerHeight))+'px';
+    commentsSheet.style.height=Math.min(540,Math.max(260,height*.62))+'px';
+    commentsSheet.style.maxHeight=Math.max(180,height-100)+'px';
+    document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');layoutFeed();
+  }
+  function openComments(index){
+    if(commentsIndex===index){closeComments();return}
+    closeComments(false);commentsIndex=index;ratingDirty=false;commentsForm.reset();ratingStatus.textContent='';ratingSubmit.textContent='送出評分';commentsList.replaceChildren();
+    document.querySelector('#rating-total').textContent='讀取評分中…';
+    for(const row of document.querySelectorAll('.rating-row')){row.querySelector('.rating-count').textContent='– 人';row.querySelector('.rating-bar i').style.width='0%'}
+    commentsSheet.hidden=false;document.body.classList.add('comments-open');layoutRatingSheet();
+    cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');setSourceOpen(cards[index],false);readComments(index);
   }
   document.querySelector('.comments-close').addEventListener('click',()=>closeComments());
-  window.addEventListener('resize',()=> { if(commentsIndex>=0) closeComments(false); });
-  document.addEventListener('keydown',event=> { if(event.key==='Escape'&&commentsIndex>=0)closeComments(); });
-  commentsForm.addEventListener('submit',async event=> {
+  document.querySelector('#ratings-reload').addEventListener('click',()=>{if(commentsIndex>=0)readComments(commentsIndex)});
+  window.addEventListener('resize',layoutRatingSheet);window.visualViewport?.addEventListener('resize',layoutRatingSheet);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&commentsIndex>=0)closeComments()});
+  commentsForm.addEventListener('submit',async event=>{
     event.preventDefault();
-    if (!PlayFeedAuth.user) { PlayFeedAuth.openLogin(() => commentsForm.requestSubmit()); return; }
-    const index=commentsIndex, input=commentsForm.elements.comment, body=input.value.trim();
-    const button=commentsForm.querySelector('button');
-    if(index<0||!body||button.disabled)return;
-    button.disabled=true; commentsMessage.textContent='送出中…';
-    try {
-      invalidateEngagement(cards[index]);
-      const counts = await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'comment',gameId:games[index].id,gameKey:new URL(games[index].url,location.origin + "/").href,body})});
-      window.PlayFeedAnalytics?.event('comment_success',{game:games[index].id,title:games[index].title});
-      renderCounts(cards[index], counts);
-      if(commentsIndex===index) { input.value=''; await readComments(index); }
-    } catch { if(commentsIndex===index)commentsMessage.textContent='留言未送出，請再試一次。'; }
-    finally {button.disabled=false;}
+    const index=commentsIndex,version=commentsVersion,stars=Number(commentsForm.elements.stars.value),body=commentsForm.elements.comment.value.trim();
+    if(index<0||!body||!Number.isInteger(stars)||stars<1||stars>3||ratingSubmit.disabled)return;
+    ratingSubmit.disabled=true;ratingStatus.textContent='正在送出評分…';
+    try{
+      await window.PlayFeedDeviceReady;
+      const data=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'rate',gameKey:new URL(games[index].url,location.origin+'/').href,stars,body})});
+      window.PlayFeedAnalytics?.event('rating_success',{game:games[index].id,title:games[index].title});
+      if(commentsIndex===index&&commentsVersion===version){
+        const unchanged=commentsForm.elements.comment.value.trim()===body&&Number(commentsForm.elements.stars.value)===stars;
+        if(unchanged)ratingDirty=false;renderRatings(data,unchanged);ratingStatus.textContent='評分已儲存，可隨時修改。';
+      }
+    }catch(error){if(commentsIndex===index&&commentsVersion===version)ratingStatus.textContent=error.message||'評分未送出，請再試一次。'}finally{ratingSubmit.disabled=false}
   });
   const grip=document.querySelector('.comments-grip');
   let dragStart=null, dragDistance=0;

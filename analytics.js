@@ -14,7 +14,7 @@
  function event(action,extra={}){
   queue.push({id:uuid(),session:visit(),action,game:current?.id||'',title:current?.title||'',entry:current?.entry||'unknown',previous:current?.previous||'',path:location.pathname,referrer:document.referrer,...extra});
   if(queue.length>200)queue.splice(0,queue.length-200);
-  if(['guest_save_success','guest_unsave_success','save_sync_success'].includes(action))Promise.resolve().then(flush);
+  if(['guest_save_success','guest_unsave_success','save_sync_success','rating_success'].includes(action))Promise.resolve().then(flush);
  }
  function elapsed(){const now=performance.now(),ms=Math.min(60000,Math.max(0,Math.round(now-last)));last=now;if(current&&document.visibilityState==='visible'&&ms)event('game_time',{ms});}
  async function flush(){
@@ -57,7 +57,7 @@
   // Authenticated identity is checked only on login, never on each heartbeat.
   boot.then(()=>fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({action:'identify'})})).catch(()=>{identified=''});
  });
- const clicks=[['[data-kind="saved"]','save_click'],['.comments-button','comments_open'],['.share','share_click'],['.byline','creator_open'],['.account-link','account_open'],['.search-button','search_open'],['.search-results a','search_select'],['.game-more','menu_open'],['#open-report','report_open'],['.recommend-button','recommend_open'],['a[href="/submit.html"]','recommend_open'],['#edit-profile','settings_open']];
+ const clicks=[['[data-kind="saved"]','save_click'],['.comments-button','rating_open'],['.share','share_click'],['.byline','creator_open'],['.account-link','account_open'],['.search-button','search_open'],['.search-results a','search_select'],['.game-more','menu_open'],['#open-report','report_open'],['.recommend-button','recommend_open'],['a[href="/submit.html"]','recommend_open'],['#edit-profile','settings_open']];
  document.addEventListener('click',e=>{const target=e.target instanceof Element?e.target:null;if(!target)return;for(const [selector,action]of clicks)if(target.closest(selector)){event(action);break;}},true);
  // Deliberately do not inspect iframe contents or record input/search/comment text.
 })();
