@@ -689,7 +689,8 @@
         const landscape = landscapeFeed.matches;
         const frameWidth = landscape ? Math.max(width,height) : width;
         const frameHeight = landscape ? Math.min(width,height) : height;
-        const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, 1);
+        // Fitted games can grow with the stage; native games retain their viewport size.
+        const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, nativeSize ? 1 : Infinity);
         if (nativeSize) {
           frame.style.width = Math.floor(frameWidth * scale) + 'px';
           frame.style.height = Math.floor(frameHeight * scale) + 'px';

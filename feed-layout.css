@@ -50,16 +50,17 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 @media(prefers-reduced-motion:reduce){.feed-rail *{transition:none!important}}
 
 /* Compact top and bottom panels leave the full middle width to the game. */
-.feed-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(0,1fr);gap:8px}
+.feed-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:36px minmax(0,1fr);gap:4px;padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))}
 .feed-rail{grid-row:1;grid-column:1;flex-direction:row;align-items:center;justify-content:space-between}
-.feed-logo{order:-1;width:auto;font-size:27px;letter-spacing:-1.4px;padding:0 8px}
+.feed-logo{order:-1;width:auto;height:36px;min-height:36px;font-size:24px;letter-spacing:-1.4px;padding:0 6px}
+.feed-rail .account-link,.feed-rail .search-button{width:36px;height:36px;min-width:36px;min-height:36px}
 .rail-tools{flex-direction:row-reverse;gap:8px}
 #feed{grid-row:2;grid-column:1;min-height:0}
 #feed article,body.comments-open #feed article{grid-template-rows:minmax(0,1fr) 73px;gap:6px}
 #feed article>footer,body.controls-visible #feed article>footer{position:relative;gap:4px}
 .game-info{padding-right:28px}
-#feed .actions{display:grid;grid-template-columns:1fr 1fr 2fr 2fr;gap:6px;padding:0;background:none;height:48px;width:100%}
-#feed .actions button{height:48px;min-height:44px;padding:0;flex:none;border-radius:15px;background:#f4dfc9}
+#feed .actions{display:grid;grid-template-columns:1fr 1fr 2fr 2fr;gap:6px;padding:0;background:none;height:44px;width:100%}
+#feed .actions button{height:44px;min-height:44px;padding:0;flex:none;border-radius:13px;background:#f4dfc9}
 #feed .actions svg{width:20px;height:20px}
 #feed .actions .comments-button{grid-column:1;grid-row:1}
 #feed .actions .share{grid-column:2;grid-row:1}
@@ -70,8 +71,8 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 #feed .action-count{position:absolute;top:3px;right:6px;font-size:10px}
 #feed .actions .game-more,body.controls-visible #feed .game-more{position:absolute;top:0;right:0;width:24px;min-width:24px;height:21px;min-height:21px;border-radius:6px;background:none}
 #feed .actions .game-more svg{width:17px;height:17px}
-.feed-shell .game-switcher,body.comments-open .feed-shell .game-switcher{position:static;inset:auto;transform:none;grid-column:4;grid-row:1;display:flex;flex-direction:row;width:100%;height:48px;min-height:44px;margin:0;border:0;border-radius:16px;background:#edc29c;box-shadow:none;overflow:hidden;touch-action:none}
-.feed-shell .game-switcher button{display:grid;place-items:center;flex:1;min-width:0;width:50%;height:48px;min-height:44px;border:0;border-radius:0;background:#e7b58a;color:#79502f;padding:0;touch-action:none}
+.feed-shell .game-switcher,body.comments-open .feed-shell .game-switcher{position:static;inset:auto;transform:none;grid-column:4;grid-row:1;display:flex;flex-direction:row;width:100%;height:44px;min-height:44px;margin:0;border:0;border-radius:13px;background:#edc29c;box-shadow:none;overflow:hidden;touch-action:none}
+.feed-shell .game-switcher button{display:grid;place-items:center;flex:1;min-width:0;width:50%;height:44px;min-height:44px;border:0;border-radius:0;background:#e7b58a;color:#79502f;padding:0;touch-action:none}
 .feed-shell .game-switcher #next-game{background:#ffcc94;border-left:1px solid #9f61252b;border-top:0}
 .feed-shell .game-switcher .switch-label{display:none}
 .feed-shell .game-switcher svg{width:24px;height:24px;pointer-events:none}
@@ -108,7 +109,7 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 .game-info .byline::before{content:'·';margin-right:6px}
 .game-info .game-more{position:absolute;right:0;top:0;width:24px;height:20px;min-height:20px;border:0;border-radius:5px;background:none;color:var(--feed-ink);padding:0}
 .game-info .game-more svg{width:16px;height:16px}
-#feed article,body.comments-open #feed article{grid-template-rows:minmax(0,1fr) 48px}
+#feed article,body.comments-open #feed article{grid-template-rows:minmax(0,1fr) 44px;gap:4px}
 @media (orientation:landscape) and (max-height:600px){
  #feed article,body.comments-open #feed article{grid-template-rows:minmax(0,1fr)}
 }
