@@ -192,4 +192,6 @@ body.game-expanded #feed article>.game-viewport{grid-row:1;grid-column:1;border-
 body.game-expanded .game-viewport>.stage{border-radius:0}
 body.game-expanded #feed article>footer,body.game-expanded #feed .source-dock,body.game-expanded #feed .game-expand{display:none}
 body.game-expanded #feed .game-exit{grid-row:2;grid-column:1;display:flex;justify-content:center;align-items:center;width:100%;height:calc(30px + env(safe-area-inset-bottom));min-height:30px;border:0;border-top:1px solid #dcc6ae;border-radius:0;background:#fff7eb;color:#79502f;padding:0 12px env(safe-area-inset-bottom);font:600 12px system-ui;letter-spacing:.1em;touch-action:manipulation}
-body.game-expanded #feed .game-exit:hover{background:#f4dfc9}
+body.game-expanded #feed .game-exit span{display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:24px;padding:0 20px;border-radius:8px;background:#593d2a;color:#fff7eb;font-weight:750;box-shadow:0 1px 3px #44332325}
+body.game-expanded #feed .game-exit:hover span{background:#3e291b}
+body.game-expanded #feed .game-exit:active span{background:#2e1e14}
