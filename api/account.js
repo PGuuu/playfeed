@@ -55,7 +55,7 @@ module.exports = async function handler(request, response) {
         return sendJson(response, 200, { comments: rows.data || [], ...await publicCounts(game,request.query?.gameId,request) });
       }
       const user = await userFromRequest(request);
-      if (['me', 'collection', 'review'].includes(action)) return sendJson(response, 200, await community.get(user, action));
+      if (['me', 'collection', 'review', 'reports'].includes(action)) return sendJson(response, 200, await community.get(user, action));
       throw Object.assign(new Error('未知的操作。'), { status: 400 });
     }
 
@@ -67,7 +67,7 @@ module.exports = async function handler(request, response) {
     const user = await userFromRequest(request);
     if(action==='merge-saves')return sendJson(response,200,await require('./_guest-saves').mergeGuest(request,response,user,body));
 
-    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
+    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);

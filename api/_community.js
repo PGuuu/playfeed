@@ -22,6 +22,18 @@ function validUrl(value) {
 }
 async function get(user, action) {
  if (action === 'me') return { user: { email: user.email, name: publicName(user) }, profile: await profileFor(user), isAdmin: await isAdmin(user) };
+ if (action === 'reports') {
+  if (!await isAdmin(user)) throw Object.assign(new Error('僅管理員可以查看檢舉。'), { status: 403 });
+  const [reports, games] = await Promise.all([
+   db('playfeed_game_reports', { query: 'select=id,game_id,game_url,game_title,reason,details,created_at,status&order=created_at.desc&limit=1000' }),
+   catalogGames()
+  ]);
+  const byUrl = new Map(games.map(game => [new URL(game.url, PLAYFEED_BASE).href, game]));
+  return { reports: reports.map(report => {
+   const game = byUrl.get(report.game_url);
+   return { ...report, game_id: game?.id || report.game_id, game_title: game?.title || report.game_title, available: Boolean(game) };
+  }) };
+ }
  if (action === 'review') {
   if (!await isAdmin(user)) throw Object.assign(new Error('僅管理者可以審核。'), { status: 403 });
   return { requests: await db('playfeed_requests', { query: 'select=*&status=eq.pending&order=created_at.asc' }) };
@@ -44,19 +56,33 @@ async function get(user, action) {
 }
 
 const PLAYFEED_BASE = 'https://playfeed-gilt.vercel.app/';
-async function listedGame(url) {
+async function catalogGames() {
  const { loadPlayfeedGames } = require('../catalog');
  const games = await loadPlayfeedGames(async resource => {
   const offset = resource.indexOf('?');
   return db(resource.slice(1, offset), { query: resource.slice(offset + 1) });
  }, PLAYFEED_BASE);
- return games.find(game => new URL(game.url, PLAYFEED_BASE).href === url);
+ return games;
+}
+async function listedGame(url) {
+ return (await catalogGames()).find(game => new URL(game.url, PLAYFEED_BASE).href === url);
 }
 function existingResult(game) {
  return { status: 'existing', id: game.id, title: game.title, gamePath: '/g/' + encodeURIComponent(game.id), message: '這款遊戲已經上架，點下方按鈕即可在 PlayFeed 確認。' };
 }
 
 async function post(user, body) {
+ if (body.action === 'remove-reported-game') {
+  if (String(user.email || '').toLowerCase() !== 'paulvongulla@gmail.com' || !await isAdmin(user)) throw Object.assign(new Error('只有管理員可以下架遊戲。'), { status: 403 });
+  if (body.reviewConfirmed !== true) throw Object.assign(new Error('請先查看遊戲與檢舉內容，再確認下架。'), { status: 400 });
+  const reportId = safeText(body.reportId, { pattern: /^[0-9a-f-]{36}$/i, max: 36 });
+  const report = (await db('playfeed_game_reports', { query: 'select=id,game_url,status&id=eq.' + eq(reportId) }))[0];
+  if (!report || report.status !== 'pending') throw Object.assign(new Error('這筆檢舉已處理或不存在，請重新整理。'), { status: 409 });
+  const game = await listedGame(report.game_url);
+  if (!game) throw Object.assign(new Error('這款遊戲已下架或不存在。'), { status: 404 });
+  // Resolve the game from the stored report, never a client-supplied game ID or URL.
+  return post(user, { action: 'delete-game', gameId: game.id });
+ }
  if(body.action==='delete-game'){
   if(String(user.email||'').toLowerCase()!=='paulvongulla@gmail.com'||!await isAdmin(user))throw Object.assign(new Error('只有管理員可以刪除遊戲。'),{status:403});
   const id=safeText(body.gameId,{name:'gameId',max:200,pattern:/^[a-zA-Z0-9_-]+$/});
