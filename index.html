@@ -1092,9 +1092,11 @@
     const target=queue[(position+direction+queue.length)%queue.length];
     const source=gameExpanded?cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next'):(direction<0?previousButton:nextButton);
     showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
+    const wasExpanded = gameExpanded;
+    if (wasExpanded) setGameExpanded(false, false);
     window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
     showGame(target,direction<0?'previous':'next');
-    if(gameExpanded)cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next').focus({preventScroll:true});
+    if(wasExpanded)(direction<0?previousButton:nextButton).focus({preventScroll:true});
 
   }
   let gesture=null,suppressClickUntil=0;
