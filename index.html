@@ -243,7 +243,7 @@
   </article>
 </template>
 
-<script src="/game-frame.js"></script><script src="/auth.js?v=20261114-motion"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-surfaces.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-motion"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -995,6 +995,10 @@
     frame.title = game.title;
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
     const stage = cards[index].querySelector('.stage');
+    const viewport = cards[index].querySelector('.game-viewport');
+    const surfaceColor = window.PlayFeedGameSurfaces?.[new URL(game.url, 'https://playfeed-gilt.vercel.app/').href] || '#ded7ca';
+    viewport.style.setProperty('--surface-color', surfaceColor);
+    frame.style.backgroundColor = surfaceColor;
     {
       const { width, height, nativeSize } = game.viewport || {width:390,height:700};
       if (nativeSize) {
@@ -1006,6 +1010,8 @@
       }
       const fit = () => {
         if (gameExpanded) {
+          viewport.style.setProperty('--surface-width', stage.clientWidth + 'px');
+          viewport.style.setProperty('--surface-height', stage.clientHeight + 'px');
           frame.style.width = stage.clientWidth + 'px';
           frame.style.height = stage.clientHeight + 'px';
           frame.style.setProperty('--game-scale', 1);
@@ -1016,6 +1022,8 @@
         const frameHeight = landscape ? Math.min(width,height) : height;
         // Fitted games can grow with the stage; native games retain their viewport size.
         const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, nativeSize ? 1 : Infinity);
+        viewport.style.setProperty('--surface-width', (nativeSize ? Math.floor(frameWidth * scale) : frameWidth * scale) + 'px');
+        viewport.style.setProperty('--surface-height', (nativeSize ? Math.floor(frameHeight * scale) : frameHeight * scale) + 'px');
         const gutter = Math.max(0, (stage.clientWidth - frameWidth * scale) / 2);
         const dock = cards[index].querySelector('.source-dock');
         dock.style.setProperty('--source-left', (gutter >= 34 ? (gutter - 28) / 2 : 6) + 'px');
@@ -1047,7 +1055,7 @@
         if (!cards[index].querySelector('.game-info').contains(document.activeElement)) setSourceOpen(cards[index], false);
       }, 1000 + enterDuration);
     }, { once: true });
-    stage.querySelector('.empty').textContent = '載入遊戲中…';
+    stage.querySelector('.empty').textContent = '';
     // Let the navigation paint first. A later choice cancels this pending load.
     gameLoadFrame = requestAnimationFrame(() => {
       gameLoadTimer = setTimeout(() => {
