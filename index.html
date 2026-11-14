@@ -165,7 +165,7 @@
 <link rel="canonical" href="https://playfeed-gilt.vercel.app/">
 </head>
 <body>
-<dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">免密碼信箱登入</h2><p>輸入 Email，點信裡的連結就完成登入。登入後可備份收藏，並跨裝置管理評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
+<dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">Email 認證</h2><p>輸入 Email，點信中的認證連結，就能跨瀏覽器同步收藏與評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
 <dialog class="search-dialog" aria-label="搜尋遊戲">
   <form method="dialog"><input type="search" id="game-search" aria-label="遊戲關鍵字" placeholder="搜尋遊戲、作者" autocomplete="off"><button aria-label="關閉搜尋">關閉</button></form>
   <p id="search-status" role="status"></p>
@@ -201,7 +201,7 @@
   </form>
 </section>
 <div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"></main>
-<aside class="feed-rail" aria-label="會員、搜尋與遊戲切換">
+<aside class="feed-rail" aria-label="我的收藏、搜尋與遊戲切換">
  <nav class="rail-tools" aria-label="帳號與搜尋"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button></nav>
  <nav class="game-switcher" aria-label="切換遊戲">
   <button id="previous-game" type="button" aria-label="上一款"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span class="switch-label">上一款</span></button>
@@ -243,7 +243,7 @@
   </article>
 </template>
 
-<script src="/game-frame.js"></script><script src="/auth.js"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-frame.js"></script><script src="/auth.js?v=20261114-email"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);

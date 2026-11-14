@@ -21,7 +21,7 @@
     if (!button) return;
     const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
     button.disabled = Boolean(form?.dataset.sending) || remaining > 0;
-    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '免密碼信箱登入';
+    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '寄送認證連結';
     if (remaining) cooldownTimer = setTimeout(renderButton, 1000);
   }
   function cooldown(seconds) {
@@ -31,14 +31,14 @@
   }
   function errorMessage(error) {
     if (error.status === 429) {
-      if (error.code === 'quota_exceeded') return '登入服務今日寄信額度已滿，請稍後再試。';
+      if (error.code === 'quota_exceeded') return '認證服務今日寄信額度已滿，請稍後再試。';
       return '寄信次數暫時受限，請等待 ' + (error.retryAfter || 60) + ' 秒再試。';
     }
-    if (error.status === 403) return '登入服務拒絕這個網站的請求，請回報給管理者。';
-    if (error.status === 401) return '登入已失效，請重新寄送登入連結。';
-    if (error.name === 'AbortError') return '登入服務回應逾時，請稍後再試。';
-    if (error instanceof TypeError) return '無法連線登入服務，請稍後再試。';
-    return error.message || '無法連線登入服務，請稍後再試。';
+    if (error.status === 403) return '認證服務拒絕這個網站的請求，請回報給管理者。';
+    if (error.status === 401) return '認證已失效，請重新寄送認證連結。';
+    if (error.name === 'AbortError') return '認證服務回應逾時，請稍後再試。';
+    if (error instanceof TypeError) return '無法連線認證服務，請稍後再試。';
+    return error.message || '無法連線認證服務，請稍後再試。';
   }
   async function request(url, options = {}) {
     const controller = new AbortController();
@@ -48,7 +48,7 @@
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const detail = data.error;
-        const error = new Error(typeof detail === 'string' ? detail : detail?.message || '登入服務暫時無法回應。');
+        const error = new Error(typeof detail === 'string' ? detail : detail?.message || '認證服務暫時無法回應。');
         error.status = response.status;
         error.code = detail?.code;
         error.retryAfter = Number(detail?.retry_after_seconds || data.retry_after_seconds || response.headers.get('Retry-After')) || 60;
@@ -66,7 +66,7 @@
       body = { action: 'pickup', pendingId: new URLSearchParams(path.split('?')[1]).get('pending_id') };
     } else if (path === '/sessions/logout') {
       body = { action: 'logout', token: options.headers['X-Session-Token'] };
-    } else return Promise.reject(new Error('登入操作無效。'));
+    } else return Promise.reject(new Error('認證操作無效。'));
     return request('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
   function clearPending() {
@@ -93,7 +93,7 @@
     state.ready = true;
     const persisted = write(tokenKey, token);
     clearPending();
-    message(persisted ? '登入成功。' : '登入成功；此瀏覽器無法保存登入狀態，關閉分頁後可能需要重新登入。');
+    message(persisted ? 'Email 認證完成。' : 'Email 認證完成；此瀏覽器無法保存認證狀態，關閉分頁後可能需要重新認證。');
     if (changed) emit();
     document.querySelector('#login-dialog')?.close();
     const action = pendingLogin; pendingLogin = null;
@@ -119,7 +119,7 @@
     if (pickupBusy || !state.pending) return;
     const pending = state.pending, turn = revision;
     if (Date.now() - pending.created >= 600000) {
-      clearPending(); message('這次登入等待已逾時，請重新寄送連結。'); return;
+      clearPending(); message('這次認證等待已逾時，請重新寄送連結。'); return;
     }
     pickupBusy = true;
     let delay = 2200;
@@ -149,8 +149,8 @@
   async function send(event) {
     event.preventDefault();
     if (button.disabled || !form.reportValidity()) return;
-    if (!crypto.randomUUID) { message('此瀏覽器不支援安全登入，請更新瀏覽器後再試。'); return; }
-    form.dataset.sending = 'true'; renderButton(); message('正在向 Phuze 請求登入信…');
+    if (!crypto.randomUUID) { message('此瀏覽器不支援安全認證，請更新瀏覽器後再試。'); return; }
+    form.dataset.sending = 'true'; renderButton(); message('正在寄送認證連結…');
     const previous = state.pending;
     const pending = { id: crypto.randomUUID(), created: Date.now() };
     try {
@@ -161,7 +161,7 @@
       }) });
       state.pending = pending;
       const persisted = write(pendingKey, JSON.stringify(pending));
-      message('登入信已送出，請去收信。點完連結後，回到這個遊戲分頁即可完成登入。'
+      message('認證信已送出，請去收信。點完連結後，回到這個分頁即可同步收藏。'
         + (persisted ? '' : '請保留此分頁，不要重新整理。'));
       cooldown(60);
       pickup();
@@ -214,7 +214,7 @@
       form = document.createElement('form'); form.className = 'phuze-form';
       input = document.createElement('input'); input.type = 'email'; input.required = true;
       input.placeholder = 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
-      input.setAttribute('aria-label', '登入 Email'); input.className = 'phuze-input';
+      input.setAttribute('aria-label', '認證 Email'); input.className = 'phuze-input';
       button = document.createElement('button'); button.type = 'submit'; button.className = 'phuze-btn';
       status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
       status.style.cssText = 'white-space:normal;line-height:1.6;font-size:14px;overflow-wrap:anywhere';
