@@ -10,12 +10,5 @@
   frame.referrerPolicy = 'no-referrer';
   return url.href;
  }
- function stop(frame) {
-  if (!frame) return;
-  // Navigate away before detaching to cancel pending documents and resources.
-  frame.removeAttribute('srcdoc');
-  frame.removeAttribute('src');
-  frame.remove();
- }
- window.PlayFeedFrame = { configure, stop };
+ window.PlayFeedFrame = { configure };
 })();

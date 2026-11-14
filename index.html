@@ -144,17 +144,6 @@
   .save-hint h2{font-size:18px;margin-right:20px}.save-hint p{font-size:14px;line-height:1.6;margin:10px 0 16px}.save-hint button{border:0;background:var(--orange);color:var(--ink);font-weight:700;font-size:14px}
   .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
-  :root { view-transition-name: none; }
-  article:not([hidden]) .game-viewport { view-transition-name: playfeed-game; }
-  ::view-transition { pointer-events: none; }
-  ::view-transition-group(playfeed-game) { animation-duration: 300ms; overflow: clip; }
-  ::view-transition-old(playfeed-game), ::view-transition-new(playfeed-game) { animation-duration:300ms; animation-timing-function:cubic-bezier(.22,.7,.25,1); mix-blend-mode:normal; }
-  ::view-transition-old(playfeed-game) { animation-name:game-slide-out; }
-  ::view-transition-new(playfeed-game) { animation-name:game-slide-in; }
-  html[data-game-direction="previous"] { --game-exit:100%; --game-enter:-100%; }
-  html[data-game-direction="next"] { --game-exit:-100%; --game-enter:100%; }
-  @keyframes game-slide-out { to { transform:translateX(var(--game-exit,-100%)); } }
-  @keyframes game-slide-in { from { transform:translateX(var(--game-enter,100%)); } }
 </style>
 <link rel="stylesheet" href="/feed-layout.css">
 <link rel="prefetch" href="/account.html" as="document">
@@ -235,7 +224,7 @@
   <article>
 
     <div class="game-viewport">
-      <div class="stage"></div>
+      <div class="stage"><div class="empty">準備遊戲中</div></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
@@ -846,8 +835,6 @@
   let gameResizeObserver;
   let gameLoadFrame;
   let gameLoadTimer;
-  let gameSlowTimer;
-  let activeGameFrame;
   let gameLoadVersion = 0;
   let gameExpanded = false;
   let expandHintFrame;
@@ -950,17 +937,16 @@
     gameLoadVersion++;
     cancelAnimationFrame(gameLoadFrame);
     clearTimeout(gameLoadTimer);
-    clearTimeout(gameSlowTimer);
-    PlayFeedFrame.stop(activeGameFrame);
-    activeGameFrame = null;
     gameResizeObserver?.disconnect();
     if (activeIndex >= 0) {
       setSourceOpen(cards[activeIndex], false);
       const previous = cards[activeIndex].querySelector('.stage');
       cards[activeIndex].hidden = true;
       previous.classList.remove('native-viewport');
-      delete previous.dataset.loading;
-      previous.replaceChildren();
+      const placeholder = document.createElement('div');
+      placeholder.className = 'empty';
+      placeholder.textContent = '準備遊戲中';
+      previous.replaceChildren(placeholder);
     }
     activeIndex = -1;
   }
@@ -985,30 +971,7 @@
       if(!queue.includes(activeIndex))showGame(queue[Math.min(Math.max(previousPosition,0),queue.length-1)],'saved_selection');
     }
   }
-  let gameTransition = null, pendingGameIndex = null, gameTransitionVersion = 0;
   function showGame(index, entrySource) {
-    const version = ++gameTransitionVersion;
-    gameTransition?.skipTransition();
-    pendingGameIndex = index;
-    const update = () => {
-      if (version !== gameTransitionVersion) return;
-      if (shell.hidden) { pendingGameIndex = null; return; }
-      pendingGameIndex = null;
-      mountGame(index, entrySource);
-    };
-    if (activeIndex < 0 || !['next','previous'].includes(entrySource) || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      gameTransition = null;
-      update();
-      return;
-    }
-    document.documentElement.dataset.gameDirection = entrySource;
-    const transition = document.startViewTransition(update);
-    gameTransition = transition;
-    transition.finished.catch(() => {}).finally(() => {
-      if (gameTransition === transition) gameTransition = null;
-    });
-  }
-  function mountGame(index, entrySource) {
     if (activeIndex === index) return;
     unmountGame(gameExpanded);
     activeIndex = index;
@@ -1016,7 +979,7 @@
     cards[index].hidden = false;
     cards[index].querySelector('.game-expand').setAttribute('aria-expanded', String(gameExpanded));
     cards[index].querySelector('.actions').append(switcher);
-    if(!document.startViewTransition&&['next','previous'].includes(entrySource)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(['next','previous'].includes(entrySource)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       cards[index].querySelector('.game-viewport').animate([
         {transform:`translateX(${entrySource==='next'?'100%':'-100%'})`,opacity:.35},
         {transform:'translateX(0)',opacity:1}
@@ -1029,7 +992,6 @@
     window.PlayFeedAnalytics?.setGame(game,entrySource);
     loadEngagement(game, cards[index]);
     const frame = document.createElement('iframe');
-    activeGameFrame = frame;
     frame.title = game.title;
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
     const stage = cards[index].querySelector('.stage');
@@ -1078,9 +1040,6 @@
     const version = gameLoadVersion;
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
-      clearTimeout(gameSlowTimer);
-      delete stage.dataset.loading;
-      stage.querySelector('.game-loading-hint')?.remove();
       setSourceOpen(cards[index], true);
       const enterDuration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
       sourceHintTimer = setTimeout(() => {
@@ -1088,24 +1047,13 @@
         if (!cards[index].querySelector('.game-info').contains(document.activeElement)) setSourceOpen(cards[index], false);
       }, 1000 + enterDuration);
     }, { once: true });
-    const loading = document.createElement('div');
-    loading.className = 'game-loading-hint';
-    loading.hidden = true;
-    loading.setAttribute('role', 'status');
-    loading.setAttribute('aria-live', 'polite');
-    loading.textContent = '載入較久，可以直接切換其他遊戲';
-    stage.dataset.loading = 'true';
-    stage.replaceChildren(loading);
-    gameSlowTimer = setTimeout(() => {
-      if (version !== gameLoadVersion || activeIndex !== index) return;
-      loading.hidden = false;
-    }, 5000);
-    // Load during the slide, without waiting for the iframe before navigation.
+    stage.querySelector('.empty').textContent = '載入遊戲中…';
+    // Let the navigation paint first. A later choice cancels this pending load.
     gameLoadFrame = requestAnimationFrame(() => {
       gameLoadTimer = setTimeout(() => {
         if (version !== gameLoadVersion || activeIndex !== index) return;
         frame.src = gameUrl;
-        stage.prepend(frame);
+        stage.replaceChildren(frame);
       }, 0);
     });
     const url = new URL(location.href);
@@ -1142,7 +1090,7 @@
   window.addEventListener('hashchange', gameFromLink);
   document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed'))pendingEntrySource='creator_selection';},true);
   function switchGame(direction) {
-    const queue=navigationQueue(),position=queue.indexOf(pendingGameIndex ?? activeIndex);
+    const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     if(position<0||!queue.length)return;
     const target=queue[(position+direction+queue.length)%queue.length];
     const source=gameExpanded?cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next'):(direction<0?previousButton:nextButton);
@@ -1158,29 +1106,33 @@
   switcher.addEventListener('pointerdown',event=>{
     if(!event.isPrimary||event.button!==0)return;
     const vertical=landscapeFeed.matches;
+    const rect=switcher.getBoundingClientRect();
     const position=vertical?event.clientY:event.clientX;
-    gesture={id:event.pointerId,position,vertical,moved:false};
+    const middle=vertical?rect.top+rect.height/2:rect.left+rect.width/2;
+    const button=event.target.closest('button')||(position<middle?previousButton:nextButton);
+    event.preventDefault();
+    button.focus({preventScroll:true});
+    gesture={id:event.pointerId,position,vertical,button,moved:false};
+    switcher.setPointerCapture(event.pointerId);
   });
   switcher.addEventListener('pointermove',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
-    if(Math.abs((gesture.vertical?event.clientY:event.clientX)-gesture.position)>10){
-      gesture.moved=true;
-      if(!switcher.hasPointerCapture(event.pointerId))switcher.setPointerCapture(event.pointerId);
-    }
+    if(Math.abs((gesture.vertical?event.clientY:event.clientX)-gesture.position)>10)gesture.moved=true;
   });
   switcher.addEventListener('pointerup',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
-    const {position,vertical,moved}=gesture;gesture=null;
+    const {position,vertical,button,moved}=gesture;gesture=null;
     const distance=(vertical?event.clientY:event.clientX)-position;
-    if(moved||Math.abs(distance)>=32)suppressClickUntil=performance.now()+500;
+    suppressClickUntil=performance.now()+500;
     if(switcher.hasPointerCapture(event.pointerId))switcher.releasePointerCapture(event.pointerId);
     if(Math.abs(distance)>=32)switchGame(distance<0?1:-1);
+    else if(!moved)switchGame(button===previousButton?-1:1);
   });
   switcher.addEventListener('pointercancel',()=>gesture=null);
-  switcher.addEventListener('lostpointercapture',()=>gesture=null);
   for(const [button,direction]of [[previousButton,-1],[nextButton,1]])button.addEventListener('click',event=>{
     if(performance.now()<suppressClickUntil)return;
-    switchGame(direction);
+    // Keyboard and assistive-technology activation emits a click without a pointer gesture.
+    if(event.detail===0)switchGame(direction);
   });
   let lastWheel=0;
   switcher.addEventListener('wheel',event=>{
