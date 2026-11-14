@@ -229,10 +229,10 @@
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
-        <div class="game-info" aria-hidden="true" inert><span class="game-title"></span><a class="byline"></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
+        <div class="game-info" aria-hidden="true" inert><a class="creator-card"><span class="game-title"></span><span class="byline"></span></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
     </div>
-    <button class="game-exit" type="button" aria-label="退出放大遊戲"><span>退出</span></button>
+    <nav class="expanded-controls" aria-label="放大模式遊戲切換"><button class="expanded-previous" type="button">上一個遊戲</button><button class="expanded-next" type="button">下一個遊戲</button></nav>
     <footer>
       <div class="actions">
         <button class="comments-button" type="button" aria-label="評分" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">評分</span></button>
@@ -603,7 +603,8 @@
     card.setAttribute('aria-label', game.title);
     card.dataset.gameKey=new URL(game.url,location.origin+'/').href;
     card.querySelector('.game-expand').addEventListener('click', () => setGameExpanded(true));
-    card.querySelector('.game-exit').addEventListener('click', () => setGameExpanded(false));
+    card.querySelector('.expanded-previous').addEventListener('click', () => switchGame(-1));
+    card.querySelector('.expanded-next').addEventListener('click', () => switchGame(1));
     const sourceToggle = card.querySelector('.source-toggle');
     const sourcePanel = card.querySelector('.game-info');
     sourcePanel.id = 'game-source-' + index;
@@ -621,7 +622,7 @@
     });
     card.querySelector('.comments-button').addEventListener('click', () => openComments(index));
     const byline = card.querySelector('.byline');
-    byline.href = game.creator.hash;
+    card.querySelector('.creator-card').href = game.creator.hash;
     card.querySelector('.game-title').textContent=game.title;
     card.querySelector('.game-title').title=game.title;
     byline.textContent = game.creator.name.startsWith('來源：') ? game.creator.name : 'by '+game.creator.name;
@@ -841,7 +842,7 @@
     expandHintAnimations = [];
     document.querySelectorAll('.expand-laser').forEach(beam => beam.remove());
   }
-  function showExpandExitHint(start, target) {
+  function showExpandControlsHint(start, target) {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     expandHintFrame = requestAnimationFrame(() => {
       if (!gameExpanded || !target.isConnected) return;
@@ -864,13 +865,15 @@
         expandHintAnimations.push(animation);
         animation.finished.then(() => {
           if (!gameExpanded || !target.isConnected) return;
-          const glow = target.animate([
-            {boxShadow:'0 0 0 0 #168bff',filter:'brightness(1)'},
-            {offset:.25,boxShadow:'0 0 12px 5px #168bff,0 0 24px 9px #168bff80',filter:'brightness(1.6)'},
-            {boxShadow:'0 1px 3px #44332325',filter:'brightness(1)'}
-          ], {duration:450});
-          glow.finished.catch(() => {});
-          expandHintAnimations.push(glow);
+          for (const button of target.querySelectorAll('button')) {
+            const glow = button.animate([
+              {boxShadow:'0 0 0 0 #168bff',filter:'brightness(1)'},
+              {offset:.25,boxShadow:'0 0 12px 5px #168bff,0 0 24px 9px #168bff80',filter:'brightness(1.6)'},
+              {boxShadow:'0 1px 3px #44332325',filter:'brightness(1)'}
+            ], {duration:450});
+            glow.finished.catch(() => {});
+            expandHintAnimations.push(glow);
+          }
         }).catch(() => {}).finally(() => beam.remove());
       }
     });
@@ -890,8 +893,8 @@
         setSourceOpen(card, false);
       }
       layoutFeed();
-      if (expanded) showExpandExitHint(start, card.querySelector('.game-exit span'));
-      if (restoreFocus) card.querySelector(expanded ? '.game-exit' : '.game-expand').focus({preventScroll:true});
+      if (expanded) showExpandControlsHint(start, card.querySelector('.expanded-controls'));
+      if (restoreFocus) card.querySelector(expanded ? '.expanded-next' : '.game-expand').focus({preventScroll:true});
     }
   }
   const landscapeFeed = matchMedia('(orientation: landscape) and (max-height: 600px)');
@@ -923,8 +926,9 @@
       cards[activeIndex].querySelector('.source-toggle').focus();
     }
   });
-  function unmountGame() {
-    if (gameExpanded) setGameExpanded(false, false);
+  function unmountGame(preserveExpanded = false) {
+    clearExpandHint();
+    if (gameExpanded && !preserveExpanded) setGameExpanded(false, false);
     window.PlayFeedAnalytics?.setGame(null);
     closeComments(false);
     gameLoadVersion++;
@@ -948,6 +952,7 @@
     const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     lastNavigationQueue=queue;
     previousButton.disabled=position<0||!queue.length;nextButton.disabled=position<0||!queue.length;
+    if (activeIndex >= 0) for (const button of cards[activeIndex].querySelectorAll('.expanded-controls button')) button.disabled=position<0||!queue.length;
     const label=document.querySelector('.saved-list-label');label.hidden=!savedMode;
     if(savedMode)label.textContent='儲存清單（'+(position>=0?position+1:0)+'/'+queue.length+'）';
   }
@@ -965,10 +970,11 @@
   }
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
-    unmountGame();
+    unmountGame(gameExpanded);
     activeIndex = index;
 
     cards[index].hidden = false;
+    cards[index].querySelector('.game-expand').setAttribute('aria-expanded', String(gameExpanded));
     cards[index].querySelector('.actions').append(switcher);
     if(['next','previous'].includes(entrySource)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       cards[index].querySelector('.game-viewport').animate([
@@ -1084,9 +1090,11 @@
     const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     if(position<0||!queue.length)return;
     const target=queue[(position+direction+queue.length)%queue.length];
-    showSwitchBomb(direction<0?previousButton:nextButton,cards[activeIndex].querySelector('.stage'));
+    const source=gameExpanded?cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next'):(direction<0?previousButton:nextButton);
+    showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
     window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
     showGame(target,direction<0?'previous':'next');
+    if(gameExpanded)cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next').focus({preventScroll:true});
 
   }
   let gesture=null,suppressClickUntil=0;
