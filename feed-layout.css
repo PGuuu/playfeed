@@ -177,3 +177,19 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 #rating-edit{border:1px solid #d8b995;border-radius:8px;background:#f3dfc6;color:#79502f;padding:6px 10px;font:600 11px system-ui;cursor:pointer;touch-action:manipulation;flex:none}
 .rating-choice .no-rating{font:600 12px system-ui;color:#79502f}
 .comments-list .own-review{background:#f7e8d6;border-radius:12px;padding:12px 8px;margin:8px -8px}
+
+/* Expand the existing frame in place so the current game keeps running. */
+#feed .game-expand{position:absolute;right:8px;bottom:8px;z-index:3;display:grid;place-items:center;width:34px;height:34px;min-width:34px;padding:6px;border:1px solid #72583f25;border-radius:9px;background:#fff7ebdf;color:#72583f;box-shadow:0 1px 6px #44332318;touch-action:manipulation}
+#feed .game-expand svg{width:20px;height:20px;pointer-events:none}
+#feed .game-expand:hover{background:#f4dfc9}
+#feed .game-expand:focus-visible,#feed .game-exit:focus-visible{outline:2px solid #8b542b;outline-offset:-3px}
+#feed .game-exit{display:none}
+body.game-expanded .feed-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);z-index:10;background:var(--feed-cream)}
+body.game-expanded .feed-rail{display:none}
+body.game-expanded #feed{grid-row:1;grid-column:1}
+body.game-expanded #feed article{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:0}
+body.game-expanded #feed article>.game-viewport{grid-row:1;grid-column:1;border-radius:0}
+body.game-expanded .game-viewport>.stage{border-radius:0}
+body.game-expanded #feed article>footer,body.game-expanded #feed .source-dock,body.game-expanded #feed .game-expand{display:none}
+body.game-expanded #feed .game-exit{grid-row:2;grid-column:1;display:flex;justify-content:center;align-items:center;width:100%;height:calc(30px + env(safe-area-inset-bottom));min-height:30px;border:0;border-top:1px solid #dcc6ae;border-radius:0;background:#fff7eb;color:#79502f;padding:0 12px env(safe-area-inset-bottom);font:600 12px system-ui;letter-spacing:.1em;touch-action:manipulation}
+body.game-expanded #feed .game-exit:hover{background:#f4dfc9}

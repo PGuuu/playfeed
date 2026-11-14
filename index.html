@@ -225,12 +225,14 @@
 
     <div class="game-viewport">
       <div class="stage"><div class="empty">準備遊戲中</div></div>
+      <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
         <div class="game-info" aria-hidden="true" inert><span class="game-title"></span><a class="byline"></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
     </div>
+    <button class="game-exit" type="button" aria-label="退出放大遊戲">退出</button>
     <footer>
       <div class="actions">
         <button class="comments-button" type="button" aria-label="評分" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">評分</span></button>
@@ -564,6 +566,8 @@
     card.hidden = true;
     card.setAttribute('aria-label', game.title);
     card.dataset.gameKey=new URL(game.url,location.origin+'/').href;
+    card.querySelector('.game-expand').addEventListener('click', () => setGameExpanded(true));
+    card.querySelector('.game-exit').addEventListener('click', () => setGameExpanded(false));
     const sourceToggle = card.querySelector('.source-toggle');
     const sourcePanel = card.querySelector('.game-info');
     sourcePanel.id = 'game-source-' + index;
@@ -792,13 +796,29 @@
   let gameLoadFrame;
   let gameLoadTimer;
   let gameLoadVersion = 0;
+  let gameExpanded = false;
+  function setGameExpanded(expanded, restoreFocus = true) {
+    if (expanded && activeIndex < 0) return;
+    gameExpanded = expanded;
+    document.body.classList.toggle('game-expanded', expanded);
+    if (activeIndex >= 0) {
+      const card = cards[activeIndex];
+      card.querySelector('.game-expand').setAttribute('aria-expanded', String(expanded));
+      if (expanded) {
+        closeComments(false);
+        setSourceOpen(card, false);
+      }
+      layoutFeed();
+      if (restoreFocus) card.querySelector(expanded ? '.game-exit' : '.game-expand').focus({preventScroll:true});
+    }
+  }
   const landscapeFeed = matchMedia('(orientation: landscape) and (max-height: 600px)');
   function layoutFeed(){
     if(shell.hidden||activeIndex<0)return;
     const viewportHeight=Math.min(window.innerHeight,window.visualViewport?.height||window.innerHeight);
     const sheet=document.body.classList.contains('comments-open')?commentsSheet.offsetHeight:0;
     const availableHeight=Math.max(180,viewportHeight-sheet);
-    shell.style.width=landscapeFeed.matches?document.documentElement.clientWidth+'px':Math.min(document.documentElement.clientWidth,462)+'px';
+    shell.style.width=gameExpanded||landscapeFeed.matches?document.documentElement.clientWidth+'px':Math.min(document.documentElement.clientWidth,462)+'px';
     shell.style.height=availableHeight+'px';
     shell.style.top='0px';
   }
@@ -811,12 +831,18 @@
     if (activeIndex >= 0) setSourceOpen(cards[activeIndex], false);
   });
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && gameExpanded) {
+      event.preventDefault();
+      setGameExpanded(false);
+      return;
+    }
     if (event.key === 'Escape' && activeIndex >= 0 && cards[activeIndex].classList.contains('source-open')) {
       setSourceOpen(cards[activeIndex], false);
       cards[activeIndex].querySelector('.source-toggle').focus();
     }
   });
   function unmountGame() {
+    if (gameExpanded) setGameExpanded(false, false);
     window.PlayFeedAnalytics?.setGame(null);
     closeComments(false);
     gameLoadVersion++;
@@ -888,6 +914,12 @@
         frame.style.height = height + 'px';
       }
       const fit = () => {
+        if (gameExpanded) {
+          frame.style.width = stage.clientWidth + 'px';
+          frame.style.height = stage.clientHeight + 'px';
+          frame.style.setProperty('--game-scale', 1);
+          return;
+        }
         const landscape = landscapeFeed.matches;
         const frameWidth = landscape ? Math.max(width,height) : width;
         const frameHeight = landscape ? Math.min(width,height) : height;
@@ -897,6 +929,9 @@
         const dock = cards[index].querySelector('.source-dock');
         dock.style.setProperty('--source-left', (gutter >= 34 ? (gutter - 28) / 2 : 6) + 'px');
         dock.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 16) + 'px';
+        const expand = cards[index].querySelector('.game-expand');
+        expand.style.right = (gutter + 8) + 'px';
+        expand.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 8) + 'px';
         dock.classList.toggle('over-game', gutter < 34);
         if (nativeSize) {
           frame.style.width = Math.floor(frameWidth * scale) + 'px';
