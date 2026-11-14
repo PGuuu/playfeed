@@ -4,7 +4,7 @@
   const pendingKey = 'playfeed:phuze-pending';
   const state = { user: null, token: '', ready: false, pending: null, collection: null, listeners: new Set() };
   let initialized = false, pendingLogin = null, pickupTimer, pickupBusy = false, refreshBusy = null, revision = 0;
-  let form, input, button, status, cooldownTimer, cooldownUntil = 0;
+  let form, input, button, status, cooldownTimer, cooldownUntil = 0, inline = false;
 
   function read(key) { try { return localStorage.getItem(key); } catch { return null; } }
   function write(key, value) {
@@ -21,7 +21,7 @@
     if (!button) return;
     const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
     button.disabled = Boolean(form?.dataset.sending) || remaining > 0;
-    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + ' 秒後可重新寄送' : '寄送認證連結';
+    button.textContent = form?.dataset.sending ? '寄送中…' : remaining ? remaining + (inline ? ' 秒後重送' : ' 秒後可重新寄送') : inline ? '送出' : '寄送認證連結';
     if (remaining) cooldownTimer = setTimeout(renderButton, 1000);
   }
   function cooldown(seconds) {
@@ -176,6 +176,7 @@
     pendingLogin = typeof afterLogin === 'function' ? afterLogin : null;
     const dialog = document.querySelector('#login-dialog');
     if (dialog && !dialog.open) dialog.showModal();
+    if (!dialog) input?.focus();
     refresh().then(() => { if (!state.user && state.pending) pickup(); });
   }
   async function api(path, options = {}) {
@@ -207,27 +208,36 @@
   function init() {
     if (initialized) return;
     initialized = true;
-    const dialog = document.querySelector('#login-dialog'), host = document.querySelector('#phuze-widget');
+    const dialog = document.querySelector('#login-dialog'), host = document.querySelector('#phuze-inline-widget') || document.querySelector('#phuze-widget');
     dialog?.querySelector('[data-close-login]')?.addEventListener('click', () => { pendingLogin = null; dialog.close(); });
     if (host) {
+      inline = host.id === 'phuze-inline-widget';
       host.replaceChildren();
       form = document.createElement('form'); form.className = 'phuze-form';
       input = document.createElement('input'); input.type = 'email'; input.required = true;
-      input.placeholder = 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
+      input.placeholder = inline ? '輸入 Email' : 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
       input.setAttribute('aria-label', '認證 Email'); input.className = 'phuze-input';
       button = document.createElement('button'); button.type = 'submit'; button.className = 'phuze-btn';
       status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
       status.style.cssText = 'white-space:normal;line-height:1.6;font-size:14px;overflow-wrap:anywhere';
       input.style.cssText = 'display:block;box-sizing:border-box;width:100%;min-width:0;padding:12px;border:1px solid #555;border-radius:12px;background:#25252d;color:inherit;font:inherit;font-size:16px';
       button.style.cssText = 'width:100%;margin-top:12px;background:#d6fb65;color:#101014;padding:12px;border:0;border-radius:12px;font:inherit;white-space:normal';
+      if (inline) {
+        form.style.cssText = 'display:flex;align-items:center;gap:8px';
+        input.style.cssText = 'display:block;box-sizing:border-box;flex:1;width:100%;min-width:0;height:44px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:inherit;font:inherit;font-size:16px';
+        button.style.cssText = 'flex:none;min-width:76px;height:40px;padding:0 14px;border:0;border-radius:9px;background:#e8b17e;color:#402815;font:700 13px system-ui;white-space:nowrap';
+        status.className = 'phuze-inline-status';
+      }
       form.append(input, button); host.append(form, status);
-      const credit = document.createElement('p');
-      credit.className = 'phuze-credit';
-      credit.style.cssText = 'margin:16px 0 0;font-size:12px;color:#aaa8b3;line-height:1.6;text-align:center';
-      const provider = document.createElement('a');
-      provider.href = 'https://phuze.edato.me/'; provider.target = '_blank'; provider.rel = 'noopener noreferrer';
-      provider.textContent = 'Phuze'; provider.style.cssText = 'color:inherit;text-decoration:underline;text-underline-offset:3px';
-      credit.append('採用 ', provider, ' 快速認證系統'); host.append(credit);
+      if (!inline) {
+        const credit = document.createElement('p');
+        credit.className = 'phuze-credit';
+        credit.style.cssText = 'margin:16px 0 0;font-size:12px;color:#aaa8b3;line-height:1.6;text-align:center';
+        const provider = document.createElement('a');
+        provider.href = 'https://phuze.edato.me/'; provider.target = '_blank'; provider.rel = 'noopener noreferrer';
+        provider.textContent = 'Phuze'; provider.style.cssText = 'color:inherit;text-decoration:underline;text-underline-offset:3px';
+        credit.append('採用 ', provider, ' 快速認證系統'); host.append(credit);
+      }
       form.addEventListener('submit', send); renderButton();
     }
     loadPending(); resume();

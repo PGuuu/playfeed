@@ -224,7 +224,7 @@
   <article>
 
     <div class="game-viewport">
-      <div class="stage"><div class="empty">準備遊戲中</div></div>
+      <div class="stage"></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
@@ -243,7 +243,7 @@
   </article>
 </template>
 
-<script src="/game-frame.js"></script><script src="/auth.js?v=20261114-email"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-frame.js"></script><script src="/auth.js?v=20261114-inline"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -949,10 +949,7 @@
       cards[activeIndex].hidden = true;
       previous.classList.remove('native-viewport');
       delete previous.dataset.loading;
-      const placeholder = document.createElement('div');
-      placeholder.className = 'empty';
-      placeholder.textContent = '準備遊戲中';
-      previous.replaceChildren(placeholder);
+      previous.replaceChildren();
     }
     activeIndex = -1;
   }
@@ -1049,7 +1046,7 @@
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
       clearTimeout(gameSlowTimer);
       delete stage.dataset.loading;
-      stage.querySelector('.game-loading')?.remove();
+      stage.querySelector('.game-loading-hint')?.remove();
       setSourceOpen(cards[index], true);
       const enterDuration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
       sourceHintTimer = setTimeout(() => {
@@ -1058,27 +1055,25 @@
       }, 1000 + enterDuration);
     }, { once: true });
     const loading = document.createElement('div');
-    loading.className = 'game-loading';
+    loading.className = 'game-loading-hint';
+    loading.hidden = true;
     loading.setAttribute('role', 'status');
     loading.setAttribute('aria-live', 'polite');
-    const loadingTitle = document.createElement('strong');
-    loadingTitle.textContent = '遊戲匯入中';
-    const loadingHint = document.createElement('span');
-    loadingHint.textContent = '可以隨時切換遊戲或使用其他按鈕';
-    loading.append(loadingTitle, loadingHint);
+    loading.textContent = '載入較久，可以直接切換其他遊戲';
     stage.dataset.loading = 'true';
     stage.replaceChildren(loading);
     gameSlowTimer = setTimeout(() => {
       if (version !== gameLoadVersion || activeIndex !== index) return;
-      loadingHint.textContent = '這款遊戲匯入較慢，可以先切換其他遊戲';
-    }, 12000);
-    // Let the navigation paint first. A later choice cancels this pending load.
+      loading.hidden = false;
+    }, 5000);
+    // Paint the new selection first. Rapid taps cancel intermediate games before
+    // they start downloading and initializing their scripts and 3D resources.
     gameLoadFrame = requestAnimationFrame(() => {
       gameLoadTimer = setTimeout(() => {
         if (version !== gameLoadVersion || activeIndex !== index) return;
         frame.src = gameUrl;
         stage.prepend(frame);
-      }, 0);
+      }, 160);
     });
     const url = new URL(location.href);
     url.pathname = "/g/" + encodeURIComponent(game.id);

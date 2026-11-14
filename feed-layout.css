@@ -199,11 +199,8 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 #feed .source-dock .creator-card:hover{background:#edd0af;border-color:#a77b52}
 #feed .source-dock .creator-card .byline{max-width:100%;text-decoration:none}
 
-/* Loading feedback belongs to the platform, never to the embedded game. */
-.game-loading{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px;background:#fff7ebf5;color:#593d2a;text-align:center;pointer-events:none}
-.game-loading strong{font-size:17px;font-weight:750}
-.game-loading span{font-size:12px;line-height:1.6;color:#84694e;max-width:260px}
-.stage[data-loading=true] iframe{pointer-events:none}
+/* Only a slow load gets a quiet hint; never mask or disable the game. */
+.game-loading-hint{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);z-index:2;max-width:calc(100% - 32px);width:max-content;padding:7px 11px;border-radius:9px;background:#fff7ebe8;color:#79502f;box-shadow:0 1px 5px #44332318;font-size:11px;line-height:1.5;text-align:center;pointer-events:none}
 #feed .source-dock .creator-card{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
 .creator-card-details{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
 .creator-card-action{display:inline-flex;align-items:center;gap:4px;flex:none;white-space:nowrap;font-size:11px;font-weight:750;color:#79502f}
