@@ -214,7 +214,7 @@
 <div id="save-feedback" class="save-feedback" role="status" aria-live="polite" hidden></div>
 <main id="creator" class="creator-page" aria-labelledby="creator-name" hidden>
   <header><span class="brand">Play<span>Feed</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
-  <span class="label">創作者作品集</span>
+  <span class="label">作品收錄</span>
   <h1 id="creator-name"></h1>
   <p class="note">PlayFeed 整理的作品集。</p>
   <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
@@ -229,7 +229,7 @@
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
-        <div class="game-info" aria-hidden="true" inert><a class="creator-card"><span class="game-title"></span><span class="byline"></span></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
+        <div class="game-info" aria-hidden="true" inert><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
     </div>
     <nav class="expanded-controls" aria-label="放大模式遊戲切換"><button class="expanded-previous" type="button">上一個遊戲</button><button class="expanded-next" type="button">下一個遊戲</button></nav>
@@ -567,18 +567,21 @@
       const item = document.createElement('li');
       const link = document.createElement('a');
       link.href = '#' + game.id;
-      if (game.cover) {
-        const cover = document.createElement('img');
-        cover.alt = '';
-        cover.addEventListener('error', () => {
-          cover.remove();
-          link.classList.add('text-cover');
-        }, { once: true });
-        cover.src = game.cover;
-        link.append(cover);
-      } else {
-        link.classList.add('text-cover');
-      }
+      const cover = document.createElement('img');
+      cover.alt = '';
+      cover.loading = 'lazy';
+      cover.decoding = 'async';
+      cover.width = 390; cover.height = 700;
+      cover.referrerPolicy = 'no-referrer';
+      const screenshot = 'https://image.thum.io/get/noanimate/width/390/maxAge/168/?url=' + encodeURIComponent(new URL(game.url, location.origin).href);
+      const sources = [...new Set([game.cover, game.screenshot, '/api/og?id='+encodeURIComponent(game.id)+'&v=4', screenshot, '/share-cards/'+encodeURIComponent(game.id)+'.png', '/share-cards/default.png'].filter(Boolean))];
+      let sourceIndex = 0;
+      cover.addEventListener('error', () => {
+        if (++sourceIndex < sources.length) cover.src = sources[sourceIndex];
+        else { cover.remove(); link.classList.add('text-cover'); }
+      });
+      cover.src = sources[0];
+      link.append(cover);
       const title = document.createElement('span');
       title.className = 'work-title';
       title.textContent = game.title;
@@ -832,6 +835,8 @@
   let gameResizeObserver;
   let gameLoadFrame;
   let gameLoadTimer;
+  let gameSlowTimer;
+  let activeGameFrame;
   let gameLoadVersion = 0;
   let gameExpanded = false;
   let expandHintFrame;
@@ -934,12 +939,16 @@
     gameLoadVersion++;
     cancelAnimationFrame(gameLoadFrame);
     clearTimeout(gameLoadTimer);
+    clearTimeout(gameSlowTimer);
+    PlayFeedFrame.stop(activeGameFrame);
+    activeGameFrame = null;
     gameResizeObserver?.disconnect();
     if (activeIndex >= 0) {
       setSourceOpen(cards[activeIndex], false);
       const previous = cards[activeIndex].querySelector('.stage');
       cards[activeIndex].hidden = true;
       previous.classList.remove('native-viewport');
+      delete previous.dataset.loading;
       const placeholder = document.createElement('div');
       placeholder.className = 'empty';
       placeholder.textContent = '準備遊戲中';
@@ -989,6 +998,7 @@
     window.PlayFeedAnalytics?.setGame(game,entrySource);
     loadEngagement(game, cards[index]);
     const frame = document.createElement('iframe');
+    activeGameFrame = frame;
     frame.title = game.title;
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
     const stage = cards[index].querySelector('.stage');
@@ -1037,6 +1047,9 @@
     const version = gameLoadVersion;
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
+      clearTimeout(gameSlowTimer);
+      delete stage.dataset.loading;
+      stage.querySelector('.game-loading')?.remove();
       setSourceOpen(cards[index], true);
       const enterDuration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
       sourceHintTimer = setTimeout(() => {
@@ -1044,13 +1057,27 @@
         if (!cards[index].querySelector('.game-info').contains(document.activeElement)) setSourceOpen(cards[index], false);
       }, 1000 + enterDuration);
     }, { once: true });
-    stage.querySelector('.empty').textContent = '載入遊戲中…';
+    const loading = document.createElement('div');
+    loading.className = 'game-loading';
+    loading.setAttribute('role', 'status');
+    loading.setAttribute('aria-live', 'polite');
+    const loadingTitle = document.createElement('strong');
+    loadingTitle.textContent = '遊戲匯入中';
+    const loadingHint = document.createElement('span');
+    loadingHint.textContent = '可以隨時切換遊戲或使用其他按鈕';
+    loading.append(loadingTitle, loadingHint);
+    stage.dataset.loading = 'true';
+    stage.replaceChildren(loading);
+    gameSlowTimer = setTimeout(() => {
+      if (version !== gameLoadVersion || activeIndex !== index) return;
+      loadingHint.textContent = '這款遊戲匯入較慢，可以先切換其他遊戲';
+    }, 12000);
     // Let the navigation paint first. A later choice cancels this pending load.
     gameLoadFrame = requestAnimationFrame(() => {
       gameLoadTimer = setTimeout(() => {
         if (version !== gameLoadVersion || activeIndex !== index) return;
         frame.src = gameUrl;
-        stage.replaceChildren(frame);
+        stage.prepend(frame);
       }, 0);
     });
     const url = new URL(location.href);
@@ -1103,33 +1130,29 @@
   switcher.addEventListener('pointerdown',event=>{
     if(!event.isPrimary||event.button!==0)return;
     const vertical=landscapeFeed.matches;
-    const rect=switcher.getBoundingClientRect();
     const position=vertical?event.clientY:event.clientX;
-    const middle=vertical?rect.top+rect.height/2:rect.left+rect.width/2;
-    const button=event.target.closest('button')||(position<middle?previousButton:nextButton);
-    event.preventDefault();
-    button.focus({preventScroll:true});
-    gesture={id:event.pointerId,position,vertical,button,moved:false};
-    switcher.setPointerCapture(event.pointerId);
+    gesture={id:event.pointerId,position,vertical,moved:false};
   });
   switcher.addEventListener('pointermove',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
-    if(Math.abs((gesture.vertical?event.clientY:event.clientX)-gesture.position)>10)gesture.moved=true;
+    if(Math.abs((gesture.vertical?event.clientY:event.clientX)-gesture.position)>10){
+      gesture.moved=true;
+      if(!switcher.hasPointerCapture(event.pointerId))switcher.setPointerCapture(event.pointerId);
+    }
   });
   switcher.addEventListener('pointerup',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
-    const {position,vertical,button,moved}=gesture;gesture=null;
+    const {position,vertical,moved}=gesture;gesture=null;
     const distance=(vertical?event.clientY:event.clientX)-position;
-    suppressClickUntil=performance.now()+500;
+    if(moved||Math.abs(distance)>=32)suppressClickUntil=performance.now()+500;
     if(switcher.hasPointerCapture(event.pointerId))switcher.releasePointerCapture(event.pointerId);
     if(Math.abs(distance)>=32)switchGame(distance<0?1:-1);
-    else if(!moved)switchGame(button===previousButton?-1:1);
   });
   switcher.addEventListener('pointercancel',()=>gesture=null);
+  switcher.addEventListener('lostpointercapture',()=>gesture=null);
   for(const [button,direction]of [[previousButton,-1],[nextButton,1]])button.addEventListener('click',event=>{
     if(performance.now()<suppressClickUntil)return;
-    // Keyboard and assistive-technology activation emits a click without a pointer gesture.
-    if(event.detail===0)switchGame(direction);
+    switchGame(direction);
   });
   let lastWheel=0;
   switcher.addEventListener('wheel',event=>{

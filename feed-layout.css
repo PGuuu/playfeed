@@ -198,3 +198,17 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 #feed .source-dock .creator-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;padding:10px 12px;border:1px solid #c9a884;border-radius:10px;background:#f4dfc9;color:#593d2a;text-decoration:none;white-space:normal;box-sizing:border-box;touch-action:manipulation}
 #feed .source-dock .creator-card:hover{background:#edd0af;border-color:#a77b52}
 #feed .source-dock .creator-card .byline{max-width:100%;text-decoration:none}
+
+/* Loading feedback belongs to the platform, never to the embedded game. */
+.game-loading{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px;background:#fff7ebf5;color:#593d2a;text-align:center;pointer-events:none}
+.game-loading strong{font-size:17px;font-weight:750}
+.game-loading span{font-size:12px;line-height:1.6;color:#84694e;max-width:260px}
+.stage[data-loading=true] iframe{pointer-events:none}
+#feed .source-dock .creator-card{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.creator-card-details{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.creator-card-action{display:inline-flex;align-items:center;gap:4px;flex:none;white-space:nowrap;font-size:11px;font-weight:750;color:#79502f}
+.creator-card-action>span{font-size:20px;line-height:1}
+.creator-page .works{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-top:20px}
+.creator-page .works a{aspect-ratio:390/700;border:0;border-radius:0;background:#202029;color:#fff7eb}
+.creator-page .works img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.creator-page .work-title{font-size:13px;line-height:1.25;padding:28px 10px 10px;font-weight:800}
