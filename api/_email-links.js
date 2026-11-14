@@ -23,13 +23,13 @@ async function load() {
     const email = typeof user.email === 'string' ? user.email.trim() : '';
     users.set(user.uid, { uid: user.uid, email, first_seen_at: user.first_seen_at || null,
      last_active_at: user.last_active_at || null, login_count: Number.isSafeInteger(user.login_count) ? user.login_count : null,
-     is_owner: OWNERS.has(email.toLowerCase()) });
+     is_owner: OWNERS.has(email.toLowerCase()), is_test: email.toLowerCase() === 'paulvongulla+playfeedtest@gmail.com' });
    }
    cursor = data.next_cursor;
   } while (cursor !== null);
  } finally { clearTimeout(timer); }
  const rows = [...users.values()].sort((a,b) => (Date.parse(b.first_seen_at)||0) - (Date.parse(a.first_seen_at)||0));
- return { users: rows, total: rows.length, owners: rows.filter(user => user.is_owner).length };
+ return { users: rows, total: rows.length, owners: rows.filter(user => user.is_owner).length, tests: rows.filter(user => user.is_test).length };
 }
 async function emailLinks() {
  if (cached && Date.now() - cachedAt < 60000) return cached;
