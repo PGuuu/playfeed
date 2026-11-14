@@ -42,6 +42,20 @@ async function get(user, action) {
   return { user: { id: user.id, email: user.email }, profile, isAdmin: admin, actions, requests, notifications, recommendations };
  }
 }
+
+const PLAYFEED_BASE = 'https://playfeed-gilt.vercel.app/';
+async function listedGame(url) {
+ const { loadPlayfeedGames } = require('../catalog');
+ const games = await loadPlayfeedGames(async resource => {
+  const offset = resource.indexOf('?');
+  return db(resource.slice(1, offset), { query: resource.slice(offset + 1) });
+ }, PLAYFEED_BASE);
+ return games.find(game => new URL(game.url, PLAYFEED_BASE).href === url);
+}
+function existingResult(game) {
+ return { status: 'existing', id: game.id, title: game.title, gamePath: '/g/' + encodeURIComponent(game.id), message: '這款遊戲已經上架，點下方按鈕即可在 PlayFeed 確認。' };
+}
+
 async function post(user, body) {
  if(body.action==='delete-game'){
   if(String(user.email||'').toLowerCase()!=='paulvongulla@gmail.com'||!await isAdmin(user))throw Object.assign(new Error('只有管理員可以刪除遊戲。'),{status:403});
@@ -76,17 +90,23 @@ async function post(user, body) {
  }
  if (body.action === 'recommend' || body.action === 'publish') {
   const url = validUrl(body.url);
+  const existing = await listedGame(url.href);
+  if (existing) return existingResult(existing);
   const admin = await isAdmin(user);
   if (admin && body.action === 'recommend') return { status: 'preview', url: url.href };
   if (admin) {
    if (body.interactionConfirmed !== true) throw Object.assign(new Error('請先試玩並確認可以互動。'), { status: 400 });
    const metadata = await require('./_source-metadata').sourceMetadata(url.href);
    await require('./_share-assets').prepareAsset({url:url.href,...metadata});
-   const published = await db('playfeed_recommendations', { method: 'POST', body: { url: url.href, ...metadata, submitted_by: user.id }, prefer: 'resolution=ignore-duplicates,return=representation' });
+   const published = await db('playfeed_recommendations', { method: 'POST', query: 'on_conflict=url', body: { url: url.href, ...metadata, submitted_by: user.id }, prefer: 'resolution=ignore-duplicates,return=representation' });
    const row = published[0] || (await db('playfeed_recommendations', { query: 'select=id&url=eq.' + eq(url.href) }))[0];
+   if (!row) throw Object.assign(new Error('遊戲上架結果暫時無法確認，請稍後重試。'), { status: 503 });
+   if (!published.length) return existingResult((await listedGame(url.href)) || row);
    return { id: row.id, status: 'published' };
   }
-  await db('playfeed_requests', { method: 'POST', body: { user_id: user.id, url: url.href }, prefer: 'resolution=ignore-duplicates,return=minimal' });
+  await db('playfeed_requests', { method: 'POST', query: 'on_conflict=user_id,url', body: { user_id: user.id, url: url.href }, prefer: 'resolution=ignore-duplicates,return=minimal' });
+  const publishedMeanwhile = await listedGame(url.href);
+  if (publishedMeanwhile) return existingResult(publishedMeanwhile);
   return { status: 'pending', message: '謝謝你的推薦！已送交管理者審核，上架後會通知你。' };
  }
  if (body.action === 'review') {
@@ -103,10 +123,14 @@ async function post(user, body) {
   const metadata = await require('./_source-metadata').sourceMetadata(request.url);
   const title = safeText(body.title || metadata.title, { max: 300 });
   await require('./_share-assets').prepareAsset({url:request.url,title,author:metadata.author,creator_url:metadata.creator_url});
-  const published = await db('playfeed_recommendations', { method: 'POST', body: { url: request.url, ...metadata, title, submitted_by: request.user_id }, prefer: 'resolution=ignore-duplicates,return=representation' });
+  const published = await db('playfeed_recommendations', { method: 'POST', query: 'on_conflict=url', body: { url: request.url, ...metadata, title, submitted_by: request.user_id }, prefer: 'resolution=ignore-duplicates,return=representation' });
   if (!published.length) {
    // Updating an existing listing also triggers matching recommendations and notifications.
    await db('playfeed_recommendations', { method: 'PATCH', query: 'url=eq.' + eq(request.url), body: { ...metadata, title } });
+  }
+  if (!published.length) {
+   const existing = await listedGame(request.url);
+   if (existing) return existingResult(existing);
   }
   return { ok: true };
  }
