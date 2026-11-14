@@ -1,6 +1,7 @@
 (()=>{
  const $=s=>document.querySelector(s),status=$('#status');let version=0;
  const labels={page_view:'頁面瀏覽',game_view:'切入遊戲',game_time:'停留時間',save_click:'按儲存',save_success:'會員儲存成功',guest_save_success:'訪客儲存成功',guest_unsave_success:'訪客取消儲存',save_sync_success:'收藏同步完成',unsave_success:'取消儲存',comments_open:'開啟留言（舊）',comment_success:'留言成功（舊）',rating_open:'開啟評分',rating_success:'評語送出成功',share_click:'按分享',share_success:'分享／複製完成',report_open:'開啟檢舉',report_success:'檢舉成功',creator_open:'查看作者',account_open:'開啟會員頁',search_open:'開啟搜尋',search_select:'選擇搜尋結果',previous_game:'上一款',next_game:'下一款',menu_open:'遊戲選單',recommend_open:'開啟推薦',recommend_success:'推薦送出',login_open:'開啟登入',external_open:'開啟外部網站',settings_open:'個人設定'};
+ Object.assign(labels,{game_expand:'點擊放大',expanded_previous_game:'放大後上一款',expanded_next_game:'放大後下一款'});
  const number=n=>Number(n||0).toLocaleString('zh-TW');
  function duration(ms){const s=Math.round(Number(ms||0)/1000);return s>=3600?`${Math.floor(s/3600)} 小時 ${Math.floor(s%3600/60)} 分`:s>=60?`${Math.floor(s/60)} 分 ${s%60} 秒`:`${s} 秒`;}
  async function api(action,body={}){return PlayFeedAuth.api('/api/analytics',{method:'POST',body:JSON.stringify({action,...body})});}
@@ -8,13 +9,17 @@
  async function load(){
   const run=++version;status.textContent='正在讀取統計…';$('#refresh').disabled=true;
   try{
-   const {report:r,devices,saveCounts=[],memberProfiles=[],impact={}}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
+   const {report:r,devices,saveCounts=[],emailLinks={users:[],total:null},impact={},expansion={summary:{},games:[]}}=await PlayFeedAuth.api('/api/analytics?days='+$('#days').value+'&audience='+$('#audience').value);
    if(run!==version)return;
    $('#dashboard').hidden=false;$('#summary').replaceChildren();
    const total=value=>Number.isSafeInteger(value)?number(value):'—';
-   for(const [label,value]of [['會員數（已建檔）',total(impact.memberProfiles)],['儲存成功（陌生訪客累計）',total(impact.externalSaves)],['分享完成（陌生訪客累計）',total(impact.externalShares)],['不同瀏覽器訪客',number(r.summary.visitors)],['造訪',number(r.summary.sessions)],['遊戲瀏覽',number(r.summary.game_views)],['遊戲停留總計',duration(r.summary.duration_ms)]]){const box=document.createElement('div');box.className='card'+(label.includes('已建檔')||label.includes('陌生訪客累計')?' impact-card':'');const name=document.createElement('div');name.textContent=label;const val=document.createElement('div');val.className='value';val.textContent=value;box.append(name,val);$('#summary').append(box)}
+   for(const [label,value]of [['已連結 Email 人數',total(emailLinks.total)],['儲存成功（陌生訪客累計）',total(impact.externalSaves)],['分享完成（陌生訪客累計）',total(impact.externalShares)],['不同瀏覽器訪客',number(r.summary.visitors)],['造訪',number(r.summary.sessions)],['遊戲瀏覽',number(r.summary.game_views)],['遊戲停留總計',duration(r.summary.duration_ms)]]){const box=document.createElement('div');box.className='card'+(label.includes('已連結 Email')||label.includes('陌生訪客累計')?' impact-card':'');const name=document.createElement('div');name.textContent=label;const val=document.createElement('div');val.className='value';val.textContent=value;box.append(name,val);$('#summary').append(box)}
    $('#since').textContent='頁面瀏覽 '+number(r.summary.page_views)+' 次。'+(r.started_at?'開始累積：'+new Date(r.started_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})+'。':'尚未收到瀏覽紀錄。');
-   table('#member-profiles',memberProfiles.map(p=>[p.display_name,new Date(p.updated_at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})]));
+   const date=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}):'—';
+   $('#email-links-status').textContent=emailLinks.error||('共 '+number(emailLinks.total)+' 人，其中站主 '+number(emailLinks.owners)+' 人。資料直接來自 Phuze，最多快取 1 分鐘。');
+   table('#email-links',(emailLinks.users||[]).map(user=>[user.email||'未回傳 Email（'+user.uid+'）',user.is_owner?'站主':'玩家',date(user.first_seen_at),date(user.last_active_at),user.login_count===null?'—':number(user.login_count)]));
+   table('#expansion-games',expansion.games.map(game=>[game.title||game.game_id,number(game.expands),number(game.previous),number(game.next)]));
+   $('#expansion-total').textContent='點擊放大 '+number(expansion.summary.expands)+' 次 · 放大後上一款 '+number(expansion.summary.previous)+' 次 · 放大後下一款 '+number(expansion.summary.next)+' 次';
    table('#save-counts',saveCounts.map(g=>[g.title||g.url,number(g.initialCount),number(g.realCount),number(g.displayCount)]));
    table('#games',r.games.map(g=>{const link=document.createElement('a');link.className='game-title';link.href='/g/'+encodeURIComponent(g.game_id);link.textContent=g.title||g.game_id;link.target='_blank';link.rel='noopener';const saved=document.createElement('span');saved.textContent=number(g.saves);const detail=document.createElement('small');detail.style.cssText='display:block;font-size:10px;white-space:nowrap;color:#8b6a4e';detail.textContent='訪客 '+number(g.guest_saves)+' · 會員 '+number(g.member_saves);saved.append(detail);return [link,number(g.views),number(g.visitors),duration(g.duration_ms),g.views?duration(g.duration_ms/g.views):'—',number(g.save_clicks),saved,number(g.unsaves),number(g.comments_open),number(g.comments),number(g.share_clicks),number(g.shares),number(g.reports),number(g.creator_opens)]}));
    const entryNames={next:'站內 · 下一款',previous:'站內 · 上一款',search_selection:'站內 · 搜尋選擇',saved_selection:'站內 · 個人收藏',creator_selection:'站內 · 作者頁',internal_selection:'站內 · 其他選擇',external_entry:'外部進站',direct_entry:'直接連結／來源不明',feed_initial:'首頁 · 首次顯示',reload:'重新整理',unknown:'未記錄（舊資料）'};

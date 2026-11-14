@@ -14,7 +14,7 @@
  function event(action,extra={}){
   queue.push({id:uuid(),session:visit(),action,game:current?.id||'',title:current?.title||'',entry:current?.entry||'unknown',previous:current?.previous||'',path:location.pathname,referrer:document.referrer,...extra});
   if(queue.length>200)queue.splice(0,queue.length-200);
-  if(['guest_save_success','guest_unsave_success','save_sync_success','rating_success'].includes(action))Promise.resolve().then(flush);
+  if(['guest_save_success','guest_unsave_success','save_sync_success','rating_success','game_expand','expanded_previous_game','expanded_next_game'].includes(action))Promise.resolve().then(flush);
  }
  function elapsed(){const now=performance.now(),ms=Math.min(60000,Math.max(0,Math.round(now-last)));last=now;if(current&&document.visibilityState==='visible'&&ms)event('game_time',{ms});}
  async function flush(){

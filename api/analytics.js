@@ -3,7 +3,7 @@ const {readJson,sendJson,requestOriginAllowed,supabaseRest,verifyPhuzeSession}=r
 const OWNERS=new Set(['paulvongulla@gmail.com','paulwu.hs10@nycu.edu.tw']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ENTRIES=new Set(['next','previous','search_selection','saved_selection','creator_selection','internal_selection','external_entry','direct_entry','feed_initial','reload','unknown']);
-const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','guest_save_success','save_sync_success','unsave_success','guest_unsave_success','comments_open','comment_success','rating_open','rating_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open']);
+const ACTIONS=new Set(['page_view','game_view','game_time','save_click','save_success','guest_save_success','save_sync_success','unsave_success','guest_unsave_success','comments_open','comment_success','rating_open','rating_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open','game_expand','expanded_previous_game','expanded_next_game']);
 const { saveCountSummary } = require('./_save-counts');
 const rates=new Map();
 const {deviceId,deviceInfo}=require('./_device');
@@ -24,8 +24,8 @@ module.exports=async(req,res)=>{
    await owner(req);
    const days=Math.min(90,Math.max(1,Number(req.query?.days)||7));
    const audience=['external','owner','all'].includes(req.query?.audience)?req.query.audience:'external';
-   const [report,devices,saveCounts,memberProfiles,impact]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'}),saveCountSummary(),db('playfeed_profiles',{query:'select=display_name,updated_at&order=updated_at.desc&limit=500'}),require('./_impact-summary').impactSummary()]);
-   return sendJson(res,200,{report,devices,saveCounts,memberProfiles,impact,audience,days});
+   const [report,devices,saveCounts,emailLinks,impact,expansion]=await Promise.all([db('rpc/playfeed_analytics_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}}),db('playfeed_analytics_devices',{query:'select=id,label,family,browser,first_seen,last_seen&is_owner=eq.true&order=last_seen.desc'}),saveCountSummary(),require('./_email-links').emailLinks().catch(()=>({users:[],total:null,owners:null,error:'Email 連結名單暫時無法讀取，請稍後重新整理。'})),require('./_impact-summary').impactSummary(),db('rpc/playfeed_expansion_report',{method:'POST',body:{p_days:Math.round(days),p_audience:audience}})]);
+   return sendJson(res,200,{report,devices,saveCounts,emailLinks,impact,expansion,audience,days});
   }
   if(req.method!=='POST')return sendJson(res,405,{error:'Method not allowed'});
   const body=await readJson(req,40000),action=body.action;

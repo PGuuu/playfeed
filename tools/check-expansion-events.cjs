@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('index.html','utf8');
+const code=source.slice(source.indexOf('  function switchGame('),source.indexOf('  let gesture='));
+const events=[];
+const context={activeIndex:0,gameExpanded:true,cards:[{querySelector:()=>({})},{querySelector:()=>({})}],previousButton:{},nextButton:{},navigationQueue:()=>[0,1],showSwitchBomb:()=>{},setGameExpanded:(value)=>context.gameExpanded=value,showGame:(target)=>{context.activeIndex=target},window:{PlayFeedAnalytics:{event:action=>events.push({action,game:context.activeIndex})}}};
+context.previousButton.focus=context.nextButton.focus=()=>{};
+vm.createContext(context);vm.runInContext(code,context);
+context.switchGame(1);assert.deepEqual(events,[{action:'expanded_next_game',game:0},{action:'next_game',game:0}]);assert.equal(context.gameExpanded,false);assert.equal(context.activeIndex,1);
+events.length=0;context.gameExpanded=true;context.switchGame(-1);assert.equal(events[0].action,'expanded_previous_game');assert.equal(events[0].game,1);
+events.length=0;context.switchGame(1);assert.equal(events.length,1);assert.equal(events[0].action,'next_game');
+const expand=source.match(/querySelector\('\.game-expand'\)\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);/);
+assert(expand);events.length=0;context.gameExpanded=false;vm.runInContext(expand[1],context);vm.runInContext(expand[1],context);assert.equal(events.length,1);assert.equal(events[0].action,'game_expand');
+console.log('PASS: expand recorded once; expanded previous/next attributed to outgoing game before shrinking; ordinary navigation not counted as expanded.');
