@@ -3,6 +3,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const games = [
+    { id: 'sticker-chat', title: '寶貝，這張你有嗎？', author: 'PlayFeed', creator: playfeed, url: './games/sticker-chat/index.html', cover: '/share-cards/v4/sticker-chat.png', published_at: '2026-11-14T07:58:33.000Z', viewport: { width: 390, height: 740 } },
     { id: 'vanilla-cloud', title: '香草雲朵 Vanilla Cloud', author: 'PlayFeed', creator: playfeed, url: './vanilla.html', cover: '/share-cards/vanilla-cloud.png', published_at: '2026-11-13T04:16:00.000Z', viewport: { width: 390, height: 740 } },
     { id: 'luck-rolls', title: '好運捲捲來', author: '喜年來 Serena', creator_url: 'https://www.serenafoods.com.tw/', url: 'https://play.serenafoods.com.tw/luck/', external: true, recommended: true, published_at: '2026-11-11T05:57:23.514Z' },
     { id: 'taistorm', title: '台灣氣象戰 Taistorm', author: '無夜霜', creator_url: 'https://github.com/nonightcream', url: 'https://nonightcream.github.io/Taistorm/', external: true, recommended: true, allowStorage: true, published_at: '2026-11-11T05:57:23.514Z' },
