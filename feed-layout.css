@@ -298,3 +298,21 @@ body.game-expanded #feed .expanded-controls button{height:42px;min-height:42px;f
  body.game-expanded #feed article{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
 }
 
+
+/* Emphasize the forward action and the single expanded-game exit. */
+.feed-shell .game-switcher #next-game,
+.switch-dark .feed-shell .game-switcher #next-game{
+ background:#d63f20;color:#fff;border-color:#b62e16;
+}
+.feed-shell .game-switcher #next-game:hover,
+.switch-dark .feed-shell .game-switcher #next-game:hover{background:#c53518}
+.feed-shell .game-switcher #next-game:active,
+.switch-dark .feed-shell .game-switcher #next-game:active{background:#b92d13}
+body.game-expanded #feed .expanded-controls .expanded-exit,
+.switch-dark body.game-expanded #feed .expanded-controls .expanded-exit{
+ background:#d63f20;color:#fff;border-color:#b62e16;
+}
+body.game-expanded #feed .expanded-controls .expanded-exit:hover,
+.switch-dark body.game-expanded #feed .expanded-controls .expanded-exit:hover{background:#c53518}
+body.game-expanded #feed .expanded-controls .expanded-exit:active,
+.switch-dark body.game-expanded #feed .expanded-controls .expanded-exit:active{background:#b92d13}
