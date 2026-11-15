@@ -94,7 +94,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   if(metadata.error||!Array.isArray(metadata.data))throw new Error('遊戲資料暫時無法載入，請重新整理。');
   const metadataByUrl=new Map(metadata.data.map(row=>[row.game_url,row]));
   for(const game of games){
-    const row=metadataByUrl.get(new URL(game.url,baseUrl).href);
+    const row=metadataByUrl.get(new URL(game.url,baseUrl).href)||metadataByUrl.get(new URL(game.url,'https://playfeed-gilt.vercel.app/').href);
     if(!row)continue;
     game.title=row.title;
     game.author=row.author;
