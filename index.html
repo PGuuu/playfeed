@@ -258,9 +258,11 @@
   const popularIdsPromise=Promise.resolve([]);
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
-  let requestedGameId='';
-  if(!reload)try{requestedGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}
+  let entryGameId='';
+  try{entryGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}
+  const requestedGameId=reload?'':entryGameId;
   const games=savedMode?catalog:orderPlayfeedGames(catalog,{popularIds:await popularIdsPromise,requestedId:requestedGameId});
+  const featuredVisit=createPlayfeedFeaturedVisit(games,{entryId:entryGameId,savedMode});
   let memberSavedKeys=new Set(),savedListError=false,savedMembershipVersion=0;
   async function readMemberSavedKeys(){
     if(PlayFeedAuth.checking)await new Promise(resolve=>{let stop=()=>{};stop=PlayFeedAuth.onChange(()=>{if(!PlayFeedAuth.checking){resolve();queueMicrotask(stop)}})});
@@ -1043,6 +1045,7 @@
 
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
+    featuredVisit.shown(games[index].id,entrySource);
     unmountGame(gameExpanded);
     activeIndex = index;
 
@@ -1170,7 +1173,8 @@
   function switchGame(direction) {
     const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     if(position<0||!queue.length)return;
-    const target=queue[(position+direction+queue.length)%queue.length];
+    const featuredId=featuredVisit.take(games[activeIndex].id,queue.map(index=>games[index].id));
+    const target=featuredId?games.findIndex(game=>game.id===featuredId):queue[(position+direction+queue.length)%queue.length];
     const source=gameExpanded?cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next'):(direction<0?previousButton:nextButton);
     showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
     const wasExpanded = gameExpanded;

@@ -35,6 +35,26 @@ function orderPlayfeedGames(games, options = {}) {
   return ordered;
 }
 
+
+function createPlayfeedFeaturedVisit(games, options = {}) {
+  const featuredId = 'light-switch';
+  const now = options.now || Date.now;
+  const inCampaign = () => now() >= Date.parse('2026-11-15T00:00:00+08:00') && now() < Date.parse('2026-11-16T00:00:00+08:00');
+  const directGame = games.some(game => game.id === options.entryId);
+  let pending = !options.savedMode && !directGame && !String(options.entryId || '').startsWith('creator-') && inCampaign() && games.some(game => game.id === featuredId);
+  return {
+    shown(gameId, source) {
+      if (gameId === featuredId || ['search_selection', 'creator_selection', 'saved_selection'].includes(source)) pending = false;
+    },
+    take(currentId, availableIds) {
+      if (!pending) return null;
+      pending = false;
+      if (!inCampaign() || currentId === featuredId || !availableIds.includes(featuredId)) return null;
+      return featuredId;
+    }
+  };
+}
+
 async function loadPlayfeedPopularIds(options = {}) {
   const request = options.fetch || globalThis.fetch;
   let storage = options.storage;
@@ -63,4 +83,4 @@ async function loadPlayfeedPopularIds(options = {}) {
   } catch { return []; }
   finally { clearTimeout(timer); }
 }
-if (typeof module !== 'undefined') module.exports = { orderPlayfeedGames, loadPlayfeedPopularIds };
+if (typeof module !== 'undefined') module.exports = { orderPlayfeedGames, loadPlayfeedPopularIds, createPlayfeedFeaturedVisit };
