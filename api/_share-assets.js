@@ -6,7 +6,7 @@ function assetKey(game) {
  return createHash('sha256').update(JSON.stringify([new URL(game.url,'https://playfeed-gilt.vercel.app/').href,game.title,game.creator?.name||game.author||'Independent creator'])).digest('hex');
 }
 function staticAsset(game) {
- const saved=manifest[assetKey(game)];
+ const saved=manifest[assetKey(game)] || game.cover;
  return saved?.startsWith('/share-cards/'+ASSET_VERSION+'/') ? saved : undefined;
 }
 function headers() {
