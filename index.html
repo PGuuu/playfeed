@@ -200,7 +200,7 @@
     <div class="rating-submit-row"><p class="rating-form-status" role="status"></p><button type="submit">送出評語</button></div>
   </form>
 </section>
-<div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"></main>
+<div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"><div class="boot-loading loading-screen" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><strong>Loading…</strong><span>請稍後</span></div></main>
 <aside class="feed-rail" aria-label="我的收藏、搜尋與遊戲切換">
  <nav class="rail-tools" aria-label="帳號與搜尋"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button></nav>
  <nav class="game-switcher" aria-label="切換遊戲">
@@ -220,6 +220,7 @@
   <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
   <ul class="works"></ul>
 </main>
+<nav id="creator-home-controls" class="creator-home-controls" aria-label="作品集底部控制板" hidden><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>回首頁</span></a></nav>
 <dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
   <form id="game-edit-form">
     <h2 id="game-edit-heading">修改遊戲資料</h2>
@@ -234,6 +235,7 @@
 
     <div class="game-viewport">
       <div class="stage"><div class="empty">準備遊戲中</div></div>
+      <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
     </div>
     <nav class="expanded-controls" aria-label="放大模式控制"><button class="expanded-exit" type="button">退出遊戲</button></nav>
@@ -251,7 +253,7 @@
   </article>
 </template>
 
-<script src="/game-surfaces.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -925,6 +927,7 @@
   let gameLoadFrame;
   let gameLoadTimer;
   let gameLoadVersion = 0;
+  let gameLoadingCleanup=null;
   let gameExpanded = false;
   let expandHintFrame;
   let expandHintAnimations = [];
@@ -1026,6 +1029,7 @@
     gameLoadVersion++;
     cancelAnimationFrame(gameLoadFrame);
     clearTimeout(gameLoadTimer);
+    gameLoadingCleanup?.();gameLoadingCleanup=null;
     gameResizeObserver?.disconnect();
     if (activeIndex >= 0) {
       setSourceOpen(cards[activeIndex], false);
@@ -1144,6 +1148,7 @@
       gameResizeObserver.observe(stage);
     }
     const version = gameLoadVersion;
+    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame});
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
       setSourceOpen(cards[index], true);
@@ -1156,11 +1161,13 @@
     stage.querySelector('.empty').textContent = '';
     // Let the navigation paint first. A later choice cancels this pending load.
     gameLoadFrame = requestAnimationFrame(() => {
-      gameLoadTimer = setTimeout(() => {
-        if (version !== gameLoadVersion || activeIndex !== index) return;
-        frame.src = gameUrl;
-        stage.replaceChildren(frame);
-      }, 0);
+      gameLoadFrame = requestAnimationFrame(() => {
+        gameLoadTimer = setTimeout(() => {
+          if (version !== gameLoadVersion || activeIndex !== index) return;
+          frame.src = gameUrl;
+          stage.replaceChildren(frame);
+        }, 0);
+      });
     });
     const url = new URL(location.href);
     url.pathname = "/g/" + encodeURIComponent(game.id);
@@ -1174,6 +1181,7 @@
     feed.hidden = Boolean(profile);
     creatorPage.hidden = !profile;
     shell.hidden = Boolean(profile);
+    document.querySelector('#creator-home-controls').hidden=!profile;
     if (profile) {
       backToFeed.href = '#' + (games[activeIndex]?.id ?? profile.games[0].id);
       renderProfile(profile);
@@ -1193,6 +1201,7 @@
   }
 
   gameFromLink();
+  document.querySelector('.boot-loading')?.remove();
   window.addEventListener('hashchange', gameFromLink);
   document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed'))pendingEntrySource='creator_selection';},true);
   function switchGame(direction) {
