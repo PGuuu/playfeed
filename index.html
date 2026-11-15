@@ -189,8 +189,8 @@
   </form>
 </dialog>
 <section id="comments-sheet" class="comments-sheet" role="region" aria-labelledby="comments-heading" hidden>
-  <div class="comments-grip" aria-label="向下拖曳收起評分"><h2 id="comments-heading">遊戲評分</h2><button class="comments-close" type="button" aria-label="關閉評分">×</button></div>
-  <div class="comments-content">
+  <div class="comments-grip" aria-label="向下拖曳收起來源"><button class="sheet-more" type="button" aria-label="更多遊戲選項">•••</button><h2 id="comments-heading">來源</h2><button class="comments-close" type="button" aria-label="關閉來源">×</button></div>
+  <div class="comments-content"><div id="sheet-source"></div><h3 class="reviews-heading">評分與留言</h3>
     <div class="rating-summary" aria-label="星等分布"><div class="rating-summary-header"><p id="rating-total">讀取評分中…</p><button type="button" id="rating-edit" hidden>修改我的評語</button></div><div class="rating-row" data-stars="3"><span class="rating-stars" aria-hidden="true">★★★</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div><div class="rating-row" data-stars="2"><span class="rating-stars" aria-hidden="true">★★☆</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div><div class="rating-row" data-stars="1"><span class="rating-stars" aria-hidden="true">★☆☆</span><span class="rating-bar"><i></i></span><span class="rating-count">– 人</span></div></div>
     <p class="comments-message" role="status"></p><button type="button" id="ratings-reload" hidden>重新載入</button><ul class="comments-list"></ul>
   </div>
@@ -235,18 +235,17 @@
     <div class="game-viewport">
       <div class="stage"><div class="empty">準備遊戲中</div></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+    </div>
+    <nav class="expanded-controls" aria-label="放大模式控制"><button class="expanded-exit" type="button">退出遊戲</button></nav>
+    <footer>
       <div class="source-dock">
-        <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
         <div class="game-info" aria-hidden="true" inert><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
-    </div>
-    <nav class="expanded-controls" aria-label="放大模式遊戲切換"><button class="expanded-previous" type="button">上一個遊戲</button><button class="expanded-next" type="button">下一個遊戲</button></nav>
-    <footer>
       <div class="actions">
-        <button class="comments-button" type="button" aria-label="評分" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">評分</span></button>
+        <button class="comments-button" type="button" aria-label="來源" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">來源</span></button>
         <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span><span class="action-count" data-count="shares" aria-hidden="true">–</span></button>
-        <button class="reaction" type="button" data-kind="saved" aria-label="儲存" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">save</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
+        <button class="reaction" type="button" data-kind="saved" aria-label="收藏" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">收藏</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
       </div>
     </footer>
   </article>
@@ -499,27 +498,48 @@
     clearTimeout(actionStatusTimer);document.querySelector('.action-status').textContent='';
     const hint=document.querySelector('#save-feedback'),account=document.querySelector('.account-link'),rect=account.getBoundingClientRect();
     clearTimeout(saveFeedbackTimer);hint.textContent=pending?'正在儲存至我的收藏…':'已儲存至我的收藏';hint.hidden=false;
-    hint.style.top=Math.max(8,rect.bottom+9)+'px';
+    hint.style.top=Math.max(8,rect.top-hint.offsetHeight-12)+'px';
     const right=Math.min(Math.max(8,innerWidth-rect.right),Math.max(8,innerWidth-hint.offsetWidth-8));
     hint.style.right=right+'px';
     hint.style.setProperty('--save-arrow-right',Math.max(8,Math.min(hint.offsetWidth-16,innerWidth-right-rect.left-rect.width/2-4))+'px');
     account.classList.add('saved-feedback');
     if(source&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       const start=source.getBoundingClientRect(),x=start.left+start.width/2,y=start.top+start.height/2;
-      const dx=rect.left+rect.width/2-x,dy=rect.top+rect.height/2-y;
+      const endX=rect.left+rect.width/2,endY=rect.top+rect.height/2;
+      // Unfold the viewport into mirrored tiles, then fold the straight ray back.
+      // This gives true reflections at both side walls and the top before landing.
+      const bounds=shell.getBoundingClientRect(),left=bounds.left+12,top=12;
+      const width=Math.max(24,bounds.width-24),height=Math.max(24,innerHeight-24);
+      const sx=x-left,sy=y-top,tx=endX-left,ty=endY-top;
+      const dx=-2*width+tx-sx,dy=-2*height+ty-sy;
+      const hits=[0,1];
+      for(const [start,delta,size] of [[sx,dx,width],[sy,dy,height]]){
+        const low=Math.min(start,start+delta),high=Math.max(start,start+delta);
+        for(let boundary=Math.floor(low/size)+1;boundary*size<high;boundary++){
+          const t=(boundary*size-start)/delta;if(t>0&&t<1)hits.push(t);
+        }
+      }
+      hits.sort((a,b)=>a-b);
+      const fold=(value,size)=>{const phase=((value%(2*size))+2*size)%(2*size);return phase<=size?phase:2*size-phase};
+      const points=hits.filter((t,i)=>!i||t-hits[i-1]>1e-6).map(t=>({t,x:left+fold(sx+dx*t,width),y:top+fold(sy+dy*t,height)}));
+      const frames=[];
+      const transform=(point,angle)=>`translate(-50%,-50%) translate(${point.x-x}px,${point.y-y}px) rotate(${angle}deg)`;
+      for(let i=0;i<points.length-1;i++){
+        const a=points[i],b=points[i+1],angle=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+        frames.push({offset:a.t,transform:transform(a,angle),opacity:1},{offset:b.t,transform:transform(b,angle),opacity:i===points.length-2?0:1});
+      }
       for(let shot=0;shot<3;shot++){
       const beam=document.createElement('span');beam.className='save-laser';beam.setAttribute('aria-hidden','true');
       beam.style.cssText=`position:fixed;pointer-events:none;z-index:10000;left:${x}px;top:${y}px;width:64px;height:9px;border-radius:99px;background:#ff174f;border:2px solid #ffb3ca;box-shadow:0 0 10px 3px #ff174f,0 0 26px 7px #ff005c;transform-origin:center`;
       document.body.append(beam);
-      const angle=Math.atan2(dy,dx)*180/Math.PI;
-      const animation=beam.animate([{transform:`translate(-50%,-50%) rotate(${angle}deg) scaleX(.3)`,opacity:0},{offset:.15,transform:`translate(${dx*.15}px,${dy*.15}px) rotate(${angle}deg)`,opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${angle}deg) scaleX(.3)`,opacity:0}],{duration:420,delay:shot*140,fill:'backwards',easing:'ease-in-out'});
+      const animation=beam.animate(frames,{duration:1100,delay:shot*120,fill:'backwards',easing:'linear'});
       animation.finished.then(()=>{
         if(hint.hidden)return;
         account.animate([{filter:'brightness(1)',boxShadow:'0 0 0 0 #ff005c'},{offset:.25,filter:'brightness(2.2)',boxShadow:'0 0 16px 10px #ff2b68,0 0 40px 20px #ff005cbb',transform:'scale(1.16)'},{filter:'brightness(1)',boxShadow:'0 0 0 3px #d9874470',transform:'scale(1)'}],{duration:450});
       }).catch(()=>{}).finally(()=>beam.remove());
       }
     }
-    saveFeedbackTimer=setTimeout(()=>{hint.hidden=true;account.classList.remove('saved-feedback')},2200);
+    saveFeedbackTimer=setTimeout(()=>{hint.hidden=true;account.classList.remove('saved-feedback')},2600);
   }
   window.addEventListener('resize',()=>{document.querySelector('#save-feedback').hidden=true;document.querySelector('.account-link').classList.remove('saved-feedback')});
   const engagementVersions = new WeakMap();
@@ -534,11 +554,11 @@
     const memberSaved=Boolean(PlayFeedAuth.user)&&active===true;
     card.dataset.memberSaved=String(memberSaved);
     button.setAttribute('aria-pressed', String(memberSaved || PlayFeedSaves.has(card.dataset.gameKey)));
-    button.querySelector('.action-label').textContent = 'save';
+    button.querySelector('.action-label').textContent = '收藏';
   }
   function renderCounts(card, counts) {
     for (const [field, selector, label] of [
-      ['saveCount', '[data-kind="saved"]', '儲存'],
+      ['saveCount', '[data-kind="saved"]', '收藏'],
       ['shareCount', '.share', '分享']
     ]) {
       if(field==='saveCount'&&card.dataset.savePending==='true')continue;
@@ -641,6 +661,7 @@
         document.title=game.title+' | PlayFeed';
         for(const meta of document.querySelectorAll('meta[property="og:title"],meta[name="twitter:title"]'))meta.content=game.title+' by '+game.author;
       }
+      if(commentsIndex>=0)renderSheetSource(commentsIndex);
       renderSearch();editDialog.close();notifyAction('遊戲資料已更新');
     }catch(error){editStatus.textContent=error.message||'修改未儲存，請再試一次。'}
     finally{submit.disabled=false}
@@ -651,7 +672,7 @@
     clearTimeout(sourceHintTimer);
     const panel = card.querySelector('.game-info');
     card.classList.toggle('source-open', open);
-    card.querySelector('.source-toggle').setAttribute('aria-expanded', String(open));
+
     panel.setAttribute('aria-hidden', String(!open));
     panel.inert = !open;
   }
@@ -664,13 +685,10 @@
       if (!gameExpanded) window.PlayFeedAnalytics?.event('game_expand');
       setGameExpanded(true);
     });
-    card.querySelector('.expanded-previous').addEventListener('click', () => switchGame(-1));
-    card.querySelector('.expanded-next').addEventListener('click', () => switchGame(1));
-    const sourceToggle = card.querySelector('.source-toggle');
+    card.querySelector('.expanded-exit').addEventListener('click', () => setGameExpanded(false));
     const sourcePanel = card.querySelector('.game-info');
     sourcePanel.id = 'game-source-' + index;
-    sourceToggle.setAttribute('aria-controls', sourcePanel.id);
-    sourceToggle.addEventListener('click', () => setSourceOpen(card, !card.classList.contains('source-open')));
+
     card.querySelector('.game-source').href = new URL(game.url, location.origin + '/').href;
     const editButton=card.querySelector('.game-edit');editButton.hidden=!canDeleteGame;
     editButton.addEventListener('click',()=>openGameEditor(game));
@@ -839,11 +857,22 @@
     commentsSheet.style.maxHeight=Math.max(180,height-100)+'px';
     document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');layoutFeed();
   }
+  function renderSheetSource(index){
+    const host=document.querySelector('#sheet-source');
+    const copy=cards[index].querySelector('.game-info').cloneNode(true);
+    copy.removeAttribute('id');copy.removeAttribute('aria-hidden');copy.inert=false;
+    copy.querySelector('.game-edit').addEventListener('click',()=>cards[index].querySelector('.game-edit').click());
+    host.replaceChildren(copy);
+  }
+  document.querySelector('.sheet-more').addEventListener('click',()=>{
+    if(commentsIndex>=0)cards[commentsIndex].querySelector('.game-more').click();
+  });
   function openComments(index){
     if(commentsIndex===index){closeComments();return}
     closeComments(false);commentsIndex=index;ratingDirty=false;ratingOwn=null;commentsForm.hidden=false;ratingEdit.hidden=true;commentsForm.reset();ratingStatus.textContent='';ratingSubmit.textContent='送出評語';commentsList.replaceChildren();
     document.querySelector('#rating-total').textContent='讀取評分中…';
     for(const row of document.querySelectorAll('.rating-row')){row.querySelector('.rating-count').textContent='– 人';row.querySelector('.rating-bar i').style.width='0%'}
+    renderSheetSource(index);
     commentsSheet.hidden=false;document.body.classList.add('comments-open');layoutRatingSheet();
     cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');setSourceOpen(cards[index],false);readComments(index);
   }
@@ -957,7 +986,7 @@
       }
       layoutFeed();
       if (expanded) showExpandControlsHint(start, card.querySelector('.expanded-controls'));
-      if (restoreFocus) card.querySelector(expanded ? '.expanded-next' : '.game-expand').focus({preventScroll:true});
+      if (restoreFocus) card.querySelector(expanded ? '.expanded-exit' : '.game-expand').focus({preventScroll:true});
     }
   }
   const landscapeFeed = matchMedia('(orientation: landscape) and (max-height: 600px)');
@@ -986,7 +1015,7 @@
     }
     if (event.key === 'Escape' && activeIndex >= 0 && cards[activeIndex].classList.contains('source-open')) {
       setSourceOpen(cards[activeIndex], false);
-      cards[activeIndex].querySelector('.source-toggle').focus();
+      cards[activeIndex].querySelector('.comments-button').focus();
     }
   });
   function unmountGame(preserveExpanded = false) {
@@ -1051,7 +1080,7 @@
 
     cards[index].hidden = false;
     cards[index].querySelector('.game-expand').setAttribute('aria-expanded', String(gameExpanded));
-    cards[index].querySelector('.actions').append(switcher);
+    cards[index].querySelector('.actions').append(switcher,document.querySelector('.account-link'));
     if(['next','previous'].includes(entrySource)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       cards[index].querySelector('.game-viewport').animate([
         {transform:`translateX(${entrySource==='next'?'100%':'-100%'})`,opacity:.35},
@@ -1098,13 +1127,9 @@
         viewport.style.setProperty('--surface-width', (nativeSize ? Math.floor(frameWidth * scale) : frameWidth * scale) + 'px');
         viewport.style.setProperty('--surface-height', (nativeSize ? Math.floor(frameHeight * scale) : frameHeight * scale) + 'px');
         const gutter = Math.max(0, (stage.clientWidth - frameWidth * scale) / 2);
-        const dock = cards[index].querySelector('.source-dock');
-        dock.style.setProperty('--source-left', (gutter >= 34 ? (gutter - 28) / 2 : 6) + 'px');
-        dock.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 16) + 'px';
         const expand = cards[index].querySelector('.game-expand');
         expand.style.right = (gutter + 8) + 'px';
         expand.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 8) + 'px';
-        dock.classList.toggle('over-game', gutter < 34);
         if (nativeSize) {
           frame.style.width = Math.floor(frameWidth * scale) + 'px';
           frame.style.height = Math.floor(frameHeight * scale) + 'px';
@@ -1175,7 +1200,7 @@
     if(position<0||!queue.length)return;
     const featuredId=featuredVisit.take(games[activeIndex].id,queue.map(index=>games[index].id));
     const target=featuredId?games.findIndex(game=>game.id===featuredId):queue[(position+direction+queue.length)%queue.length];
-    const source=gameExpanded?cards[activeIndex].querySelector(direction<0?'.expanded-previous':'.expanded-next'):(direction<0?previousButton:nextButton);
+    const source=direction<0?previousButton:nextButton;
     showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
     const wasExpanded = gameExpanded;
     if (wasExpanded) {
