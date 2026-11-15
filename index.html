@@ -245,7 +245,7 @@
       <div class="actions">
         <button class="comments-button" type="button" aria-label="來源" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">來源</span></button>
         <button class="share" type="button" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg><span class="action-label">分享</span><span class="action-count" data-count="shares" aria-hidden="true">–</span></button>
-        <button class="reaction" type="button" data-kind="saved" aria-label="收藏" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="action-label">收藏</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
+        <button class="reaction" type="button" data-kind="saved" aria-label="存起来" aria-pressed="false"><span class="action-label">存起来</span><span class="action-count" data-count="saves" aria-hidden="true">–</span></button>
       </div>
     </footer>
   </article>
@@ -554,11 +554,11 @@
     const memberSaved=Boolean(PlayFeedAuth.user)&&active===true;
     card.dataset.memberSaved=String(memberSaved);
     button.setAttribute('aria-pressed', String(memberSaved || PlayFeedSaves.has(card.dataset.gameKey)));
-    button.querySelector('.action-label').textContent = '收藏';
+    button.querySelector('.action-label').textContent = '存起来';
   }
   function renderCounts(card, counts) {
     for (const [field, selector, label] of [
-      ['saveCount', '[data-kind="saved"]', '收藏'],
+      ['saveCount', '[data-kind="saved"]', '存起来'],
       ['shareCount', '.share', '分享']
     ]) {
       if(field==='saveCount'&&card.dataset.savePending==='true')continue;
