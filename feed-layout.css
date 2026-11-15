@@ -214,6 +214,24 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 .game-viewport>.stage>iframe.fitted{position:absolute}
 
 /* The light switch controls the full PlayFeed page, including its frame. */
+.game-info-heading{display:flex;align-items:center;gap:7px;width:100%;min-width:0}
+#feed .source-dock .game-info-heading .creator-card{flex:1;min-width:0;width:auto}
+#feed .source-dock .game-edit{display:grid;place-items:center;flex:0 0 34px;width:34px;height:36px;min-height:36px;padding:7px;border:1px solid #c9a884;border-radius:9px;background:#f4dfc9;color:#79502f;cursor:pointer;touch-action:manipulation}
+#feed .source-dock .game-edit[hidden]{display:none}
+.game-edit svg{width:20px;height:20px}
+#game-edit-dialog{width:min(380px,calc(100vw - 28px));max-height:85dvh;overflow:auto;border:1px solid #d9c1a6;border-radius:18px;padding:22px;background:#fff7eb;color:#443323;color-scheme:light;touch-action:pan-y}
+#game-edit-dialog::backdrop{background:#15191080;backdrop-filter:blur(3px)}
+#game-edit-dialog h2{font-size:18px;margin:0 0 20px}
+#game-edit-dialog label{display:block;font-size:13px;font-weight:650;margin:15px 0}
+#game-edit-dialog input{display:block;width:100%;min-width:0;margin-top:7px;padding:11px 12px;border:1px solid #cfb496;border-radius:10px;background:#fffdf8;color:#443323;font:16px system-ui;user-select:text;touch-action:manipulation}
+#game-edit-status{font-size:12px;line-height:1.6;color:#8a502f;min-height:19px;margin:12px 0}
+.game-edit-actions{display:flex;justify-content:flex-end;gap:8px}
+#game-edit-dialog button{padding:9px 15px;border:1px solid #d4b697;background:#f4dfc9;color:#79502f;font-size:13px;font-weight:700;touch-action:manipulation}
+#game-edit-dialog button[type=submit]{background:#79502f;color:#fff7eb;border-color:#79502f}
+#game-edit-dialog button:disabled{opacity:.5;cursor:wait}
+.switch-dark #game-edit-dialog{background:#293323;color:#d3ddc8;border-color:#4b5841}
+.switch-dark #game-edit-dialog input,.switch-dark #game-edit-dialog button{background:#35402e;color:#d3ddc8;border-color:#4b5841}
+.switch-dark #game-edit-status{color:#b6c7a5}
 :root.switch-dark{color-scheme:dark;background:#20251f;color:#bdc8b2;--feed-cream:#20251f;--feed-ink:#bdc8b2}
 .switch-dark body,.switch-dark .feed-shell{background:#20251f;color:#bdc8b2}
 .switch-dark .game-viewport>.stage{background:#20251f}
@@ -228,3 +246,4 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 .switch-dark #feed .source-dock .byline,.switch-dark #feed .source-dock .game-source,.switch-dark .creator-card-action{color:#aebba1}
 .switch-dark .search-dialog,.switch-dark .report-dialog,.switch-dark .comments-sheet,.switch-dark .comments-form,.switch-dark .save-hint,.switch-dark .save-feedback{background:#293323;color:#d3ddc8;border-color:#4b5841}
 .switch-dark .comments-form textarea,.switch-dark .search-dialog input,.switch-dark .rating-choice label,.switch-dark #rating-edit{background:#35402e;color:#d3ddc8;border-color:#4b5841}
+

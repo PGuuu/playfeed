@@ -29,7 +29,7 @@ module.exports = async function handler(request, response) {
     if (!['https:', 'http:'].includes(gameUrl.protocol)) throw new Error('Invalid game URL');
     // Share a portrait screenshot; the title and creator stay in the link metadata.
     const saved = require('./_share-assets').staticAsset(game);
-    const image = escape(saved ? origin + saved : origin + '/api/og?id=' + encodeURIComponent(id) + '&v=4');
+    const image = escape(saved ? origin + saved : origin + '/api/og?id=' + encodeURIComponent(id) + '&v=4' + (game.metadata_updated_at ? '&m=' + encodeURIComponent(game.metadata_updated_at) : ''));
     const shareTitle = title + ' by ' + author;
     const description = shareTitle + ' — Play on PlayFeed.';
     const metadata = `<meta property="og:type" content="website"><meta property="og:site_name" content="PlayFeed"><meta property="og:locale" content="zh_TW"><meta property="og:title" content="${shareTitle}"><meta property="og:description" content="${description}"><meta property="og:url" content="${link}"><link rel="canonical" href="${link}"><meta property="og:image" content="${image}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="720"><meta property="og:image:height" content="1280"><meta property="og:image:alt" content="${shareTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${shareTitle}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`;
@@ -41,7 +41,7 @@ module.exports = async function handler(request, response) {
       .replace(/<meta name="description"[^>]*>/, () => `<meta name="description" content="${description}">`)
       .replace('</head>', () => metadata + '</head>');
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
-    response.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60');
+    response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     return response.send(page);
   } catch {
@@ -49,4 +49,5 @@ module.exports = async function handler(request, response) {
     return response.status(503).send('Share page temporarily unavailable');
   }
 };
+
 

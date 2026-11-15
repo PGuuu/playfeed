@@ -220,6 +220,15 @@
   <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
   <ul class="works"></ul>
 </main>
+<dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
+  <form id="game-edit-form">
+    <h2 id="game-edit-heading">修改遊戲資料</h2>
+    <label>遊戲名稱<input name="title" required maxlength="300" autocomplete="off"></label>
+    <label>創作者<input name="author" required maxlength="120" autocomplete="off"></label>
+    <p id="game-edit-status" role="status" aria-live="polite"></p>
+    <div class="game-edit-actions"><button type="button" id="cancel-game-edit">取消</button><button type="submit">儲存修改</button></div>
+  </form>
+</dialog>
 <template id="card">
   <article>
 
@@ -229,7 +238,7 @@
       <div class="source-dock">
         <button class="source-toggle" type="button" aria-label="查看遊戲標題與創作者" aria-expanded="false">來源</button>
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
-        <div class="game-info" aria-hidden="true" inert><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
+        <div class="game-info" aria-hidden="true" inert><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
     </div>
     <nav class="expanded-controls" aria-label="放大模式遊戲切換"><button class="expanded-previous" type="button">上一個遊戲</button><button class="expanded-next" type="button">下一個遊戲</button></nav>
@@ -280,21 +289,22 @@
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
   const creatorHashes = new Map();
+  function rebuildCreatorProfiles() {
+  profiles.clear();creatorHashes.clear();
   for (const game of games) {
-    if (!game.creator) {
-      const name = game.external ? game.author : playfeed.name;
-      const identity = name.trim().toLocaleLowerCase();
-      const hash = creatorHashes.get(identity) || '#creator-' + game.id;
-      creatorHashes.set(identity, hash);
-      game.creator = game.external
-        ? { name, url: game.creator_url || game.url, hash }
-        : playfeed;
-    }
+    const name = game.creator?.name || game.author || playfeed.name;
+    const identity = name.trim().toLocaleLowerCase();
+    const identityHash = creatorHashes.get(identity) || game.creator?.hash || '#creator-' + game.id;
+    creatorHashes.set(identity,identityHash);
+    game.creator = { name, url: game.creator?.url || game.creator_url || (game.external ? game.url : playfeed.url), hash:identityHash };
     const { hash } = game.creator;
     if (!profiles.has(hash)) profiles.set(hash, { ...game.creator, games: [] });
     profiles.get(hash).games.push(game);
     profiles.set('#creator-' + game.id, profiles.get(hash));
   }
+  }
+  rebuildCreatorProfiles();
+  PlayFeedSaves.refreshMetadata?.(games);
   const feed = document.querySelector('#feed');
   const creatorPage = document.querySelector('#creator');
   const backToFeed = document.querySelector('#back-to-feed');
@@ -310,7 +320,9 @@
     account.classList.toggle('signed-in',Boolean(user));
     account.title = user?.email || '我的收藏（此瀏覽器）';
     const version=++ownerCheckVersion;canDeleteGame=false;document.querySelector('#delete-game').hidden=true;
-    if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame}).catch(()=>{});
+    document.querySelectorAll('.game-edit').forEach(button=>button.hidden=true);
+    document.querySelector('#game-edit-dialog').close();
+    if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame;document.querySelectorAll('.game-edit').forEach(button=>button.hidden=!canDeleteGame)}).catch(()=>{});
   });
   let visitorToken;
   try {
@@ -590,6 +602,47 @@
       works.append(item);
     }
   }
+  const editDialog=document.querySelector('#game-edit-dialog');
+  const editForm=document.querySelector('#game-edit-form');
+  const editStatus=document.querySelector('#game-edit-status');
+  let editingGame=null;
+  function openGameEditor(game){
+    if(!canDeleteGame)return;
+    editingGame=game;
+    editForm.elements.title.value=game.title;
+    editForm.elements.author.value=game.creator?.name||game.author||'PlayFeed';
+    editStatus.textContent='';
+    editDialog.showModal();editForm.elements.title.focus();
+  }
+  document.querySelector('#cancel-game-edit').addEventListener('click',()=>editDialog.close());
+  editForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const game=editingGame;if(!canDeleteGame||!game)return;
+    const submit=editForm.querySelector('[type=submit]');
+    submit.disabled=true;editStatus.textContent='正在儲存…';
+    try{
+      const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'edit-game',gameId:game.id,title:editForm.elements.title.value,author:editForm.elements.author.value})});
+      game.creator_url ||= game.creator?.url;
+      game.title=result.game.title;game.author=result.game.author;game.metadata_updated_at=result.game.updated_at;game.creator=undefined;
+      rebuildCreatorProfiles();
+      for(let i=0;i<games.length;i++){
+        const entry=games[i],card=cards[i];
+        card.setAttribute('aria-label',entry.title);
+        card.querySelector('.game-title').textContent=entry.title;card.querySelector('.game-title').title=entry.title;
+        card.querySelector('.byline').textContent=entry.creator.name.startsWith('來源：')?entry.creator.name:'by '+entry.creator.name;
+        card.querySelector('.byline').title=entry.creator.name;card.querySelector('.creator-card').href=entry.creator.hash;
+        const frame=card.querySelector('iframe');if(frame)frame.title=entry.title;
+      }
+      PlayFeedSaves.refreshMetadata?.(games);
+      try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}
+      if(games[activeIndex]?.id===game.id){
+        document.title=game.title+' | PlayFeed';
+        for(const meta of document.querySelectorAll('meta[property="og:title"],meta[name="twitter:title"]'))meta.content=game.title+' by '+game.author;
+      }
+      renderSearch();editDialog.close();notifyAction('遊戲資料已更新');
+    }catch(error){editStatus.textContent=error.message||'修改未儲存，請再試一次。'}
+    finally{submit.disabled=false}
+  });
   const template = document.querySelector('#card');
   let sourceHintTimer;
   function setSourceOpen(card, open) {
@@ -617,6 +670,8 @@
     sourceToggle.setAttribute('aria-controls', sourcePanel.id);
     sourceToggle.addEventListener('click', () => setSourceOpen(card, !card.classList.contains('source-open')));
     card.querySelector('.game-source').href = new URL(game.url, location.origin + '/').href;
+    const editButton=card.querySelector('.game-edit');editButton.hidden=!canDeleteGame;
+    editButton.addEventListener('click',()=>openGameEditor(game));
     card.querySelector('.game-more').addEventListener('click', () => {
       reportGame = game;
       document.querySelector("#delete-game").hidden=!canDeleteGame;
@@ -1175,3 +1230,4 @@
 </script>
 </body>
 </html>
+

@@ -72,6 +72,17 @@ function existingResult(game) {
 }
 
 async function post(user, body) {
+ if(body.action==='edit-game'){
+  if(String(user.email||'').toLowerCase()!=='paulvongulla@gmail.com'||!await isAdmin(user))throw Object.assign(new Error('只有站長可以修改遊戲資料。'),{status:403});
+  const id=safeText(body.gameId,{name:'gameId',max:200,pattern:/^[a-zA-Z0-9_-]+$/});
+  const title=safeText(body.title,{name:'遊戲名稱',max:300});
+  const author=safeText(body.author,{name:'創作者',max:120});
+  const game=(await catalogGames()).find(game=>game.id===id);
+  if(!game)throw Object.assign(new Error('這款遊戲已下架或不存在。'),{status:404});
+  const result=await supabaseRest('rpc/playfeed_edit_game_metadata',{method:'POST',body:{p_game_url:new URL(game.url,PLAYFEED_BASE).href,p_title:title,p_author:author,p_updated_by:user.id}});
+  if(!result.ok||!result.data)throw Object.assign(new Error('修改未儲存，請稍後再試。'),{status:503});
+  return {ok:true,game:{id:game.id,...result.data}};
+ }
  if (body.action === 'remove-reported-game') {
   if (String(user.email || '').toLowerCase() !== 'paulvongulla@gmail.com' || !await isAdmin(user)) throw Object.assign(new Error('只有管理員可以下架遊戲。'), { status: 403 });
   if (body.reviewConfirmed !== true) throw Object.assign(new Error('請先查看遊戲與檢舉內容，再確認下架。'), { status: 400 });
@@ -162,4 +173,5 @@ async function post(user, body) {
  }
 }
 module.exports = { get, post, profileFor, isAdmin };
+
 

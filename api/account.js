@@ -67,7 +67,7 @@ module.exports = async function handler(request, response) {
     const user = await userFromRequest(request);
     if(action==='merge-saves')return sendJson(response,200,await require('./_guest-saves').mergeGuest(request,response,user,body));
 
-    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
+    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game', 'edit-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);
@@ -95,4 +95,5 @@ module.exports = async function handler(request, response) {
     sendJson(response, error.status || 500, { error: error.status ? error.message : '目前無法完成操作，請稍後再試。' });
   }
 };
+
 

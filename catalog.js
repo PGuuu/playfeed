@@ -1,9 +1,10 @@
 async function loadPlayfeedGames(request = recommendationRequest, baseUrl = location.origin + "/") {
   const removalResult=Promise.resolve().then(()=>request('/playfeed_removed_games?select=game_url')).then(data=>({data}),error=>({error}));
+  const metadataResult=Promise.resolve().then(()=>request('/playfeed_game_metadata?select=game_url,title,author,updated_at')).then(data=>({data}),error=>({error}));
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
   const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
   const games = [
-    { id: 'light-switch', title: '開關一下', creator: playfeed, author: 'PlayFeed', url: './games/light-switch/index.html', published_at: '2026-11-15T07:55:06.000Z' },
+    { id: 'light-switch', title: '幫我關燈', creator: playfeed, author: 'PlayFeed', url: './games/light-switch/index.html', published_at: '2026-11-15T07:55:06.000Z' },
     { id: 'sticker-chat', title: '寶貝，這張你有嗎？', author: 'PlayFeed', creator: playfeed, url: './games/sticker-chat/index.html', cover: '/share-cards/v4/sticker-chat.png', published_at: '2026-11-14T07:58:33.000Z', viewport: { width: 390, height: 740 } },
     { id: 'vanilla-cloud', title: '香草雲朵 Vanilla Cloud', author: 'PlayFeed', creator: playfeed, url: './vanilla.html', cover: '/share-cards/vanilla-cloud.png', published_at: '2026-11-13T04:16:00.000Z', viewport: { width: 390, height: 740 } },
     { id: 'luck-rolls', title: '好運捲捲來', author: '喜年來 Serena', creator_url: 'https://www.serenafoods.com.tw/', url: 'https://play.serenafoods.com.tw/luck/', external: true, recommended: true, published_at: '2026-11-11T05:57:23.514Z' },
@@ -88,6 +89,19 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   } catch (error) {
     console.warn('推薦清單暫時無法載入', error);
   }
+  // One authoritative display record for static games and recommendations alike.
+  const metadata=await metadataResult;
+  if(metadata.error||!Array.isArray(metadata.data))throw new Error('遊戲資料暫時無法載入，請重新整理。');
+  const metadataByUrl=new Map(metadata.data.map(row=>[row.game_url,row]));
+  for(const game of games){
+    const row=metadataByUrl.get(new URL(game.url,baseUrl).href);
+    if(!row)continue;
+    game.title=row.title;
+    game.author=row.author;
+    game.creator_url ||= game.creator?.url;
+    game.creator=undefined;
+    game.metadata_updated_at=row.updated_at;
+  }
   // All catalog consumers (feed, profile, sharing and images) respect owner removals.
   const removal=await removalResult;
   if(removal.error||!Array.isArray(removal.data))throw new Error('遊戲清單暫時無法載入，請重新整理。');
@@ -98,4 +112,5 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
 }
 
 if (typeof module !== "undefined") module.exports = { loadPlayfeedGames };
+
 

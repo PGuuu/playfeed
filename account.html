@@ -103,7 +103,7 @@ async function loadCollection(){
 for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelector('.tabs .active').classList.remove('active');button.classList.add('active');render()});
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
 PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user;avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=!user;updateBackup();render();if(user)loadCollection()});
-loadPlayfeedGames().then(value=>{games=value;try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render()});
+loadPlayfeedGames().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render()});
 
 const profileDialog=document.querySelector('#profile-dialog'),profileForm=document.querySelector('#profile-form');
 document.querySelector('#edit-profile').addEventListener('click',()=>{
@@ -142,4 +142,5 @@ async function loadReview(){
 }
 </script>
 </html>
+
 

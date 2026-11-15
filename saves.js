@@ -10,6 +10,16 @@
  function write(value){try{localStorage.setItem(KEY,JSON.stringify(value))}catch{throw Error('此瀏覽器無法保存收藏，請允許網站儲存資料後再試。')}}
  function changed(reason){window.dispatchEvent(new CustomEvent('playfeed:saves-change',{detail:{reason}}))}
  function list(){return Object.values(read().entries)}
+ function refreshMetadata(games){
+  const state=read(),byUrl=new Map(games.map(game=>[keyFor(game),game]));let updated=false;
+  for(const [key,saved]of Object.entries(state.entries)){
+   const game=byUrl.get(key);if(!game)continue;
+   if(saved.title!==game.title||saved.author!==(game.creator?.name||game.author||'')){
+    Object.assign(saved,{title:game.title,author:game.creator?.name||game.author||''});updated=true;
+   }
+  }
+  if(updated){try{write(state);changed('metadata')}catch{}}
+ }
  function has(game){return Boolean(read().entries[keyFor(game)])}
  function set(game,active){
   const state=read(),key=keyFor(game);
@@ -54,10 +64,11 @@
    }catch{lastError='瀏覽器收藏仍保留，同步暫時未完成，稍後會再試。';changed('merge-error');return false}
   })();try{return await merging}finally{merging=null}
  }
- window.PlayFeedSaves={list,has,set,sync,merge,get error(){return lastError}};
+ window.PlayFeedSaves={list,has,set,sync,merge,refreshMetadata,get error(){return lastError}};
  window.addEventListener('storage',event=>{if(event.key===KEY)changed('storage')});
  window.addEventListener('online',()=>{PlayFeedAuth.user?merge():sync()});
  window.addEventListener('focus',()=>{PlayFeedAuth.user?merge():sync()});
  setInterval(()=>{PlayFeedAuth.user?merge():sync()},30000);
  PlayFeedAuth.onChange(user=>{user?merge():sync()});
 })();
+
