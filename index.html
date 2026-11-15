@@ -952,6 +952,7 @@
       previous.replaceChildren(placeholder);
     }
     activeIndex = -1;
+    document.documentElement.classList.remove('switch-dark');
   }
 
   function updateNavigation(){
@@ -974,6 +975,17 @@
       if(!queue.includes(activeIndex))showGame(queue[Math.min(Math.max(previousPosition,0),queue.length-1)],'saved_selection');
     }
   }
+  // Only the active built-in switch can control the surrounding page theme.
+  window.addEventListener('message', event => {
+    if (event.data?.type !== 'playfeed:light-switch' || typeof event.data.dark !== 'boolean') return;
+    if (games[activeIndex]?.id !== 'light-switch') return;
+    const frame = cards[activeIndex]?.querySelector('iframe');
+    if (!frame || event.source !== frame.contentWindow) return;
+    const url = new URL(frame.src, location.href);
+    if (url.origin !== location.origin || url.pathname !== '/games/light-switch/index.html') return;
+    document.documentElement.classList.toggle('switch-dark', event.data.dark);
+  });
+
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
     unmountGame(gameExpanded);

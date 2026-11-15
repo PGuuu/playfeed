@@ -212,3 +212,19 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 .game-viewport>.stage::before{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;width:var(--surface-width,0px);height:var(--surface-height,0px);background:var(--surface-color,#ded7ca);pointer-events:none}
 .game-viewport>.stage>iframe{position:relative}
 .game-viewport>.stage>iframe.fitted{position:absolute}
+
+/* The light switch controls the full PlayFeed page, including its frame. */
+:root.switch-dark{color-scheme:dark;background:#20251f;color:#bdc8b2;--feed-cream:#20251f;--feed-ink:#bdc8b2}
+.switch-dark body,.switch-dark .feed-shell{background:#20251f;color:#bdc8b2}
+.switch-dark .game-viewport>.stage{background:#20251f}
+.switch-dark .game-viewport>.stage::before{background:#20251f}
+.switch-dark .feed-logo,.switch-dark .feed-logo .logo-dot,.switch-dark .saved-list-label{color:#aebba1}
+.switch-dark .feed-rail .search-button,.switch-dark .feed-rail .account-link{background:#35402e;color:#bdc8b2;border-color:#293323}
+.switch-dark #feed .actions button,.switch-dark #feed .actions .reaction,.switch-dark .feed-shell .game-switcher,.switch-dark .feed-shell .game-switcher button,.switch-dark .feed-shell .game-switcher #next-game{background:#35402e;color:#bdc8b2;border-color:#4b5841}
+.switch-dark #feed .actions .reaction[aria-pressed=true]{background:#566c42;color:#e6f2d9}
+.switch-dark #feed .actions .action-count,.switch-dark #feed .actions button[data-has-count=false] .action-count{color:#aebba1}
+.switch-dark #feed .actions .reaction .action-count{background:#ffffff0d}
+.switch-dark #feed .game-expand,.switch-dark #feed .source-dock button,.switch-dark #feed .source-dock .game-info,.switch-dark #feed .source-dock .creator-card,.switch-dark #feed .expanded-controls,.switch-dark #feed .expanded-controls button{background:#2c3625;color:#bdc8b2;border-color:#4b5841}
+.switch-dark #feed .source-dock .byline,.switch-dark #feed .source-dock .game-source,.switch-dark .creator-card-action{color:#aebba1}
+.switch-dark .search-dialog,.switch-dark .report-dialog,.switch-dark .comments-sheet,.switch-dark .comments-form,.switch-dark .save-hint,.switch-dark .save-feedback{background:#293323;color:#d3ddc8;border-color:#4b5841}
+.switch-dark .comments-form textarea,.switch-dark .search-dialog input,.switch-dark .rating-choice label,.switch-dark #rating-edit{background:#35402e;color:#d3ddc8;border-color:#4b5841}
