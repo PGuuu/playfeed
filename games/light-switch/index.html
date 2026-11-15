@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e6e3da">
+<title>開關一下 · PlayFeed</title>
+<style>
+*{box-sizing:border-box}
+:root{font-family:Arial,"Noto Sans TC",sans-serif;color-scheme:light;--wall:#e6e3da;--ink:#686b5e;--plate-light:#faf9ef;--plate-mid:#e5e5d9;--plate-dark:#b8bead;--key-light:#fbfbef;--key-dark:#dce0d0;--edge:#a2ac92;--angle:-22deg}
+html,body{margin:0;min-width:240px;min-height:100%;overflow:hidden}
+body{background:var(--wall);color:var(--ink);transition:background .24s,color .24s;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.21;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%2384867a' opacity='.3' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 22% 10%,#fff8 0,transparent 70%);opacity:1;transition:opacity .24s}
+main{position:relative;z-index:1;min-height:100svh;display:grid;place-items:center;padding:40px 24px}
+.assembly{position:relative;width:236px;height:316px;isolation:isolate}
+.assembly::before{content:"";position:absolute;inset:15px -18px -22px 15px;border-radius:18px;background:#343b2d55;filter:blur(8px);transform:skewY(3deg);transition:background .24s}
+.plate{position:absolute;inset:0;border:1px solid #c7cbbd;border-radius:12px 15px 14px 12px;background:linear-gradient(105deg,var(--plate-light),var(--plate-mid) 79%,var(--plate-dark));box-shadow:inset 2px 2px 2px #fff9,inset -6px -4px 5px #727a6540,6px 7px 1px #919783,7px 8px 2px #727964,0 0 0 1px #999e8a44;transition:background .24s,border-color .24s}
+.engraved{position:absolute;top:27px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:.24em;color:#aeb3a2;text-shadow:0 1px 0 #fff9;font-weight:700}
+.well{position:absolute;top:72px;left:29px;right:30px;height:172px;border-radius:6px;background:linear-gradient(90deg,#242c1c,#444e35 45%,#18200f);box-shadow:0 2px 1px #fff9,0 -1px 2px #a8ad9c,inset 0 0 10px 4px #10170d99;perspective:560px}
+.rocker{position:absolute;inset:8px 7px 9px;border-radius:3px;background:linear-gradient(90deg,var(--key-dark),var(--key-light) 70%,var(--plate-mid));transform:translateZ(12px) rotateY(var(--angle));transform-style:preserve-3d;box-shadow:-12px 4px 9px #18201077,inset 0 2px 1px #fff9,inset 0 -3px 2px #8e978066;transition:transform .16s cubic-bezier(.2,.8,.25,1.25),background .24s,box-shadow .16s}
+.rocker::before,.rocker::after{content:"";position:absolute;top:0;bottom:0;width:19px;background:linear-gradient(90deg,#727e61,var(--edge));backface-visibility:hidden;border:1px solid #8e9a7d77}
+.rocker::before{left:0;transform-origin:left;transform:rotateY(90deg)}
+.rocker::after{right:0;transform-origin:right;transform:rotateY(-90deg);background:linear-gradient(90deg,var(--edge),#7c876b)}
+.face{position:absolute;inset:0;border-radius:3px;border:1px solid #adb49c88;pointer-events:none;background:linear-gradient(108deg,#fff5,transparent 55%,#75806214);box-shadow:inset 1px 1px 1px #ffffffe0,inset -1px -1px 1px #9ea98a}
+.press{position:absolute;top:0;bottom:0;width:50%;border:0;background:transparent;cursor:pointer;padding:0;z-index:1;touch-action:manipulation}.press.left{left:0}.press.right{right:0}.press:focus-visible{outline:2px solid #81936d;outline-offset:-8px;border-radius:4px}
+.dimple{position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;box-shadow:inset 0 1px 1px #939d85,0 1px 1px #fff8;background:#d7ddcb;transform:translate(-50%,-50%)}
+.indicator{position:absolute;bottom:29px;left:calc(50% - 10px);width:20px;height:3px;background:#acb29e;border-radius:5px;box-shadow:inset 0 1px 2px #7c866a80;transition:background .24s,box-shadow .24s}
+.hint{position:absolute;top:calc(50% + 14px);left:calc(100% + 32px);white-space:nowrap;font-size:18px;letter-spacing:.08em;line-height:1.8;pointer-events:none;transition:opacity .18s;transform:rotate(-5deg)}
+.hint::before{content:"";position:absolute;width:40px;height:24px;left:-49px;top:-20px;border-bottom:1px solid currentColor;border-radius:0 0 0 90%;transform:rotate(22deg)}
+.hint::after{content:"";position:absolute;left:-49px;top:-13px;width:6px;height:6px;border-left:1px solid currentColor;border-top:1px solid currentColor;transform:rotate(-12deg)}
+body.dark{color-scheme:dark;--wall:#20251f;--ink:#a6b299;--plate-light:#646e5b;--plate-mid:#4d5845;--plate-dark:#333e2e;--key-light:#7b876c;--key-dark:#4f5c44;--edge:#3c492e;--angle:22deg}
+.dark::after{opacity:0}.dark .assembly::before{background:#080e08c0}.dark .plate{border-color:#58634e;box-shadow:inset 2px 2px 2px #98a68533,inset -6px -4px 5px #111c0f66,6px 7px 1px #293420,7px 8px 2px #10190c}
+.dark .engraved{color:#626e57;text-shadow:0 1px 0 #93a37d22}.dark .well{box-shadow:0 1px 1px #7b896344,0 -1px 2px #17220f,inset 0 0 10px 4px #070e04}
+.dark .rocker{background:linear-gradient(90deg,var(--plate-mid),var(--key-light) 30%,var(--key-dark));box-shadow:12px 4px 9px #080f03bb,inset 0 2px 1px #bac99f44,inset 0 -3px 2px #19260f66}.dark .face{box-shadow:inset 1px 1px 1px #b8c89a66,inset -1px -1px 1px #2e3d20}.dark .dimple{background:#69755d;box-shadow:inset 0 1px 1px #39482b,0 1px 1px #c7d6b533}.dark .indicator{background:#c1e69c;box-shadow:0 0 5px #b6df8c88,0 0 14px #b6df8c33}.dark .hint{opacity:0}
+.rocker.press-left{transform:translateZ(7px) rotateY(-28deg)}.rocker.press-right{transform:translateZ(7px) rotateY(28deg)}
+@media(max-width:560px){.hint{top:calc(100% + 33px);left:57%;font-size:17px;transform:rotate(-5deg)}.hint::before{width:29px;height:37px;left:-19px;top:-39px;transform:rotate(18deg)}.hint::after{left:-25px;top:-36px;transform:rotate(18deg)}}
+@media(max-height:440px){.assembly{transform:scale(.78)}.hint{top:50%;left:calc(100% + 28px)}}
+@media(prefers-reduced-motion:reduce){*,*::after,*::before{transition:none!important}}
+</style>
+</head>
+<body>
+<main aria-label="電燈開關小遊戲">
+<div class="assembly"><div class="plate"><span class="engraved">SWITCH</span><div class="well"><div class="rocker"><span class="face"></span><button class="press left" aria-label="按左側，開燈" aria-pressed="true"><span class="dimple"></span></button><button class="press right" aria-label="按右側，關燈" aria-pressed="false"><span class="dimple"></span></button></div></div><span class="indicator"></span></div><span class="hint" aria-hidden="true">按這邊，關燈</span></div>
+</main>
+<script>
+(() => {
+  const left = document.querySelector('.left');
+  const right = document.querySelector('.right');
+  const rocker = document.querySelector('.rocker');
+  let audio;
+  let noiseBuffer;
+  function clickSound(dark) {
+    try {
+      if (!audio) {
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        noiseBuffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * .065), audio.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      }
+      const play = () => {
+        if (audio.state !== 'running') return;
+        const now = audio.currentTime;
+        // A short plastic snap followed by a quieter mechanical contact.
+        for (const [delay, volume, frequency] of [[0, .25, dark ? 1400 : 1750], [.018, .12, 820]]) {
+          const source = audio.createBufferSource();
+          source.buffer = noiseBuffer;
+          const filter = audio.createBiquadFilter();
+          filter.type = 'bandpass'; filter.frequency.value = frequency; filter.Q.value = .8;
+          const gain = audio.createGain();
+          gain.gain.setValueAtTime(volume, now + delay);
+          gain.gain.exponentialRampToValueAtTime(.001, now + delay + .04);
+          source.connect(filter); filter.connect(gain); gain.connect(audio.destination);
+          source.start(now + delay); source.stop(now + delay + .06);
+          source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
+        }
+      };
+      if (audio.state === 'running') play();
+      else audio.resume().then(play).catch(() => {});
+    } catch (_) { /* Keep the switch usable when audio is unavailable. */ }
+  }
+  function setDark(dark) {
+    const changed = document.body.classList.contains('dark') !== dark;
+    document.body.classList.toggle('dark', dark);
+    left.setAttribute('aria-pressed', String(!dark));
+    right.setAttribute('aria-pressed', String(dark));
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#20251f' : '#e6e3da';
+    if (changed) clickSound(dark);
+  }
+  function release() { rocker.classList.remove('press-left', 'press-right'); }
+  left.addEventListener('click', () => setDark(false));
+  right.addEventListener('click', () => setDark(true));
+  for (const [button, side] of [[left, 'left'], [right, 'right']]) {
+    button.addEventListener('pointerdown', () => { release(); rocker.classList.add('press-' + side); });
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('pointerleave', release);
+  }
+  window.addEventListener('pointerup', release);
+  window.addEventListener('blur', () => { release(); if (audio && audio.state === 'running') audio.suspend().catch(() => {}); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && audio) audio.suspend().catch(() => {}); });
+  window.addEventListener('keydown', event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault(); setDark(event.key === 'ArrowRight');
+    }
+  });
+})();
+</script>
+</body>
+</html>
+
