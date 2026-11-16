@@ -28,7 +28,7 @@
     <p>我們使用 Phuze 提供 Email 連結功能。只要連結 Email，之後就能透過同一個信箱，在不同瀏覽器與裝置找回遊戲</p>
   </aside>
   <p id="recommend-entry" hidden><a class="recommend-button" href="/submit.html">＋ 推薦新遊戲</a></p>
-  <p id="reports-entry" hidden><a class="recommend-button" href="/reports.html">查看遊戲檢舉</a></p><section id="notifications" aria-label="通知"></section><button id="open-review" class="button" type="button" hidden aria-expanded="false" aria-controls="review">待審核</button><section id="review" hidden><button id="close-review" class="button" type="button">返回我的頁面</button><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
+  <p id="waiting-entry" hidden><a class="recommend-button" href="/waiting.html">待審遊戲 · 私人試玩</a></p><p id="reports-entry" hidden><a class="recommend-button" href="/reports.html">查看遊戲檢舉</a></p><section id="notifications" aria-label="通知"></section><button id="open-review" class="button" type="button" hidden aria-expanded="false" aria-controls="review">待審核</button><section id="review" hidden><button id="close-review" class="button" type="button">返回我的頁面</button><h2>待審核推薦</h2><div id="review-list"></div></section><nav class="tabs"><button class="active" data-tab="saved">儲存</button><button data-tab="recommended">我推薦的</button></nav>
   <section class="grid" aria-live="polite"><p class="empty">正在載入…</p></section>
 </main>
 <nav class="member-controls" aria-label="會員頁底部控制板"><a class="member-home" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>回首頁</span></a></nav>
@@ -103,6 +103,7 @@ async function loadCollection(){
   const pending=result.requests.filter(row=>row.status==='pending').length;
   if(pending){const p=document.createElement('p');p.textContent=pending+' 款推薦等待管理者審核。';notifications.append(p)}
   document.querySelector('#reports-entry').hidden=!result.isAdmin;
+  document.querySelector('#waiting-entry').hidden=result.user?.id!=='d28b1149fa6dc857b3086bf77acf5073'||String(result.user?.email||'').toLowerCase()!=='paulvongulla@gmail.com';
   document.querySelector('#open-review').hidden=!result.isAdmin;
   if(!result.isAdmin)document.querySelector('#review').hidden=true;
   else if(new URLSearchParams(location.search).get('review')==='1'){document.querySelector('#review').hidden=false;document.querySelector('#open-review').setAttribute('aria-expanded','true')}
@@ -113,6 +114,7 @@ async function loadCollection(){
 for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelector('.tabs .active').classList.remove('active');button.classList.add('active');render()});
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
 PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user;avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=!user;updateBackup();render();if(user)loadCollection()});
+PlayFeedAuth.onChange(()=>{document.querySelector('#waiting-entry').hidden=true;});
 loadPlayfeedGames().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render()});
 
 const profileDialog=document.querySelector('#profile-dialog'),profileForm=document.querySelector('#profile-form');

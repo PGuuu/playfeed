@@ -35,6 +35,7 @@ async function get(user, action) {
   }) };
  }
  if (action === 'review') {
+  require('./_waiting').owner(user);
   if (!await isAdmin(user)) throw Object.assign(new Error('僅管理者可以審核。'), { status: 403 });
   return { requests: await db('playfeed_requests', { query: 'select=*&status=eq.pending&order=created_at.asc' }) };
  }
@@ -147,6 +148,7 @@ async function post(user, body) {
   return { status: 'pending', message: '謝謝你的推薦！已送交管理者審核，上架後會通知你。' };
  }
  if (body.action === 'review') {
+  require('./_waiting').owner(user);
   if (!await isAdmin(user)) throw Object.assign(new Error('僅管理者可以審核。'), { status: 403 });
   const id = safeText(body.requestId, { pattern: /^[0-9a-f-]{36}$/i, max: 36 });
   const request = (await db('playfeed_requests', { query: 'select=*&id=eq.' + id + '&status=eq.pending' }))[0];
