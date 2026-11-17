@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/seo?format=xml"
+    },
+    {
+      "source": "/games.html",
+      "destination": "/api/seo"
+    },
+    {
       "source": "/g/:id",
       "destination": "/api/share?id=:id"
     }
@@ -19,6 +27,10 @@
       "maxDuration": 120
     },
     "api/analytics.js": {
+      "maxDuration": 15
+    },
+    "api/seo.js": {
+      "includeFiles": "catalog.js",
       "maxDuration": 15
     }
   },
