@@ -7,6 +7,7 @@
   const remote = url.origin !== new URL(base).origin;
   frame.setAttribute('sandbox', remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : 'allow-scripts');
   frame.setAttribute('allow', 'fullscreen');
+  frame.style.backgroundColor = '#000';
   frame.referrerPolicy = 'no-referrer';
   return url.href;
  }

@@ -3,7 +3,7 @@
 #feed{position:relative;inset:auto;height:100%;width:100%;overflow:hidden;min-width:0}
 #feed article,body.comments-open #feed article{position:absolute;inset:0;display:grid;height:100%;width:100%;max-width:none;grid-template-rows:minmax(0,1fr) 70px;gap:8px;padding:0;margin:0;min-width:0}
 .game-viewport{border-radius:17px;min-height:0;isolation:isolate}
-.game-viewport>.stage{border:0;border-radius:17px;background:#e6e0d5;width:100%;height:100%}
+.game-viewport>.stage{border:0;border-radius:17px;background:#000;width:100%;height:100%}
 .empty{color:#746553;text-align:center;padding:10px;font-size:13px}
 iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center center}
 #feed article>footer,body.controls-visible #feed article>footer{position:static;inset:auto;z-index:auto;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:5px;visibility:visible;pointer-events:auto;padding:0;border:0;border-radius:0;box-shadow:none;background:none;color:var(--feed-ink);min-width:0}
@@ -209,7 +209,7 @@ body.game-expanded #feed .expanded-controls button:active{background:#2e1e14}
 .creator-page .work-title{font-size:13px;line-height:1.25;padding:28px 10px 10px;font-weight:800}
 
 /* A passive game-sized surface stays behind the iframe, without gating loading. */
-.game-viewport>.stage::before{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;width:var(--surface-width,0px);height:var(--surface-height,0px);background:var(--surface-color,#ded7ca);pointer-events:none}
+.game-viewport>.stage::before{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;width:var(--surface-width,0px);height:var(--surface-height,0px);background:var(--surface-color,#000);pointer-events:none}
 .game-viewport>.stage>iframe{position:relative}
 .game-viewport>.stage>iframe.fitted{position:absolute}
 
@@ -339,3 +339,7 @@ body.game-expanded #feed .expanded-controls .expanded-exit:active,
 @keyframes loading-reveal{from{opacity:0}to{opacity:1}}
 @keyframes game-load-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
+
+/* Keep iframe gutters and loading surfaces consistently black. */
+.game-viewport,.game-viewport>.stage,.switch-dark .game-viewport>.stage,.switch-dark .game-viewport>.stage::before{background:#000}
+.game-loading,.switch-dark .game-loading{background:#000;color:#fff7eb}

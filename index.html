@@ -1114,7 +1114,7 @@
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
     const stage = cards[index].querySelector('.stage');
     const viewport = cards[index].querySelector('.game-viewport');
-    const surfaceColor = window.PlayFeedGameSurfaces?.[new URL(game.url, 'https://playfeed-gilt.vercel.app/').href] || '#ded7ca';
+    const surfaceColor = '#000';
     viewport.style.setProperty('--surface-color', surfaceColor);
     frame.style.backgroundColor = surfaceColor;
     {
@@ -1160,7 +1160,7 @@
       gameResizeObserver.observe(stage);
     }
     const version = gameLoadVersion;
-    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preview_image});
+    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preview_image||games[index].preload_image});
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
       setSourceOpen(cards[index], true);
