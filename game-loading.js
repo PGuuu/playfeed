@@ -1,10 +1,13 @@
 (function(root){
- function start({indicator,stage,frame}){
+ function start({indicator,stage,frame,image}){
   let stopped=false;
   const title=indicator.querySelector('.loading-title');
   const note=indicator.querySelector('.loading-note');
   const help=indicator.querySelector('.loading-help');
-  indicator.hidden=true;help.hidden=true;
+  indicator.querySelector('.loading-preview-image')?.remove();
+  indicator.classList.toggle('has-preview',Boolean(image));
+  if(image){const img=document.createElement('img');img.className='loading-preview-image';img.alt='';img.src=image;img.addEventListener('error',()=>{img.remove();indicator.classList.remove('has-preview')},{once:true});indicator.prepend(img);}
+  indicator.hidden=!image;help.hidden=true;
   title.textContent='Loading…';note.textContent='請稍後';
   stage.setAttribute('aria-busy','true');
   const revealTimer=setTimeout(()=>{if(!stopped)indicator.hidden=false},1000);

@@ -61,7 +61,7 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
-    const body = await readJson(request, 300_000);
+    const body = await readJson(request, 2_100_000);
     const action = safeText(body.action, { name: 'action', max: 30 });
     if(action==='rate')return sendJson(response,200,await require('./_ratings').post(request,response,body));
     if(action==='guest-save')return sendJson(response,200,await require('./_guest-saves').saveGuest(request,response,body));
@@ -69,7 +69,7 @@ module.exports = async function handler(request, response) {
     if(action==='waiting-review')return sendJson(response,200,await require('./_waiting').post(user,body));
     if(action==='merge-saves')return sendJson(response,200,await require('./_guest-saves').mergeGuest(request,response,user,body));
 
-    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game', 'edit-game'].includes(action)) return sendJson(response, 200, await community.post(user, body));
+    if (['profile', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game', 'edit-game', 'game-screenshot'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);

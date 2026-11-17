@@ -45,7 +45,8 @@ async function post(user,body){
  const metadata={creator_url:row.url};
  const title=safeText(body.title,{name:'遊戲名稱',max:300});
  const author=safeText(body.author,{name:'創作者',max:120});
- await require('./_share-assets').prepareAsset({url:row.url,title,author,creator_url:metadata.creator_url});
+ if(body.screenshot)await require('./_game-preview').savePreview(row.url,body.screenshot,user);
+ else await require('./_share-assets').prepareAsset({url:row.url,title,author,creator_url:metadata.creator_url});
  // The existing database trigger approves matching requests in the same transaction.
  const inserted=await db('playfeed_recommendations',{method:'POST',query:'on_conflict=url',body:{url:row.url,title,author,creator_url:metadata.creator_url,submitted_by:user.id},prefer:'resolution=ignore-duplicates,return=representation'});
  const game=inserted[0]||(await db('playfeed_recommendations',{query:'select=id&url=eq.'+encodeURIComponent(row.url)}))[0];

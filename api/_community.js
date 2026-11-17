@@ -73,6 +73,13 @@ function existingResult(game) {
 }
 
 async function post(user, body) {
+ if(body.action==='game-screenshot'){
+  require('./_waiting').owner(user);
+  if(!await isAdmin(user))throw Object.assign(Error('只有站長可以更新截圖。'),{status:403});
+  const game=(await catalogGames()).find(game=>game.id===body.gameId);
+  if(!game)throw Object.assign(Error('這款遊戲已下架或不存在。'),{status:404});
+  return require('./_game-preview').savePreview(new URL(game.url,PLAYFEED_BASE).href,body.image,user);
+ }
  if(body.action==='edit-game'){
   if(String(user.email||'').toLowerCase()!=='paulvongulla@gmail.com'||!await isAdmin(user))throw Object.assign(new Error('只有站長可以修改遊戲資料。'),{status:403});
   const id=safeText(body.gameId,{name:'gameId',max:200,pattern:/^[a-zA-Z0-9_-]+$/});
@@ -135,7 +142,8 @@ async function post(user, body) {
   if (admin) {
    if (body.interactionConfirmed !== true) throw Object.assign(new Error('請先試玩並確認可以互動。'), { status: 400 });
    const metadata = await require('./_source-metadata').sourceMetadata(url.href);
-   await require('./_share-assets').prepareAsset({url:url.href,...metadata});
+   if(body.screenshot){require('./_waiting').owner(user);await require('./_game-preview').savePreview(url.href,body.screenshot,user);}
+   else await require('./_share-assets').prepareAsset({url:url.href,...metadata});
    const published = await db('playfeed_recommendations', { method: 'POST', query: 'on_conflict=url', body: { url: url.href, ...metadata, submitted_by: user.id }, prefer: 'resolution=ignore-duplicates,return=representation' });
    const row = published[0] || (await db('playfeed_recommendations', { query: 'select=id&url=eq.' + eq(url.href) }))[0];
    if (!row) throw Object.assign(new Error('遊戲上架結果暫時無法確認，請稍後重試。'), { status: 503 });
@@ -161,7 +169,8 @@ async function post(user, body) {
   if (body.interactionConfirmed !== true) throw Object.assign(new Error('請先試玩並確認可以互動。'), { status: 400 });
   const metadata = await require('./_source-metadata').sourceMetadata(request.url);
   const title = safeText(body.title || metadata.title, { max: 300 });
-  await require('./_share-assets').prepareAsset({url:request.url,title,author:metadata.author,creator_url:metadata.creator_url});
+  if(body.screenshot)await require('./_game-preview').savePreview(request.url,body.screenshot,user);
+  else await require('./_share-assets').prepareAsset({url:request.url,title,author:metadata.author,creator_url:metadata.creator_url});
   const published = await db('playfeed_recommendations', { method: 'POST', query: 'on_conflict=url', body: { url: request.url, ...metadata, title, submitted_by: request.user_id }, prefer: 'resolution=ignore-duplicates,return=representation' });
   if (!published.length) {
    // Updating an existing listing also triggers matching recommendations and notifications.

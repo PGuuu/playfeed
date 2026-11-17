@@ -253,7 +253,7 @@
   </article>
 </template>
 
-<script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -323,9 +323,9 @@
     account.classList.toggle('signed-in',Boolean(user));
     account.title = user?.email || '我的收藏（此瀏覽器）';
     const version=++ownerCheckVersion;canDeleteGame=false;document.querySelector('#delete-game').hidden=true;
-    document.querySelectorAll('.game-edit').forEach(button=>button.hidden=true);
+    document.querySelectorAll('.game-edit,.owner-screenshot').forEach(button=>button.hidden=true);
     document.querySelector('#game-edit-dialog').close();
-    if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame;document.querySelectorAll('.game-edit').forEach(button=>button.hidden=!canDeleteGame)}).catch(()=>{});
+    if(user?.email?.toLowerCase()==='paulvongulla@gmail.com')PlayFeedAuth.api('/api/account?action=me').then(me=>{if(version!==ownerCheckVersion)return;canDeleteGame=me.isAdmin===true;document.querySelector('#delete-game').hidden=!canDeleteGame;document.querySelectorAll('.game-edit,.owner-screenshot').forEach(button=>button.hidden=!canDeleteGame)}).catch(()=>{});
   });
   let visitorToken;
   try {
@@ -865,6 +865,17 @@
     copy.removeAttribute('id');copy.removeAttribute('aria-hidden');copy.inert=false;
     copy.querySelector('.game-edit').addEventListener('click',()=>cards[index].querySelector('.game-edit').click());
     host.replaceChildren(copy);
+    const tools=PlayFeedScreenshot.mount(host,()=>({
+      frame:cards[index].querySelector('iframe'),
+      beforeCapture:()=>closeComments(false),
+      isCurrent:()=>activeIndex===index&&canDeleteGame,
+      onSave:async image=>{
+        const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'game-screenshot',gameId:games[index].id,image})});
+        games[index].preview_image=result.image;games[index].cover=result.image;games[index].preview_width=result.width;games[index].preview_height=result.height;
+        notifyAction('截圖已設為分享預覽與載入圖');
+      }
+    }));
+    tools.classList.add('owner-screenshot');tools.hidden=!canDeleteGame;
   }
   document.querySelector('.sheet-more').addEventListener('click',()=>{
     if(commentsIndex>=0)cards[commentsIndex].querySelector('.game-more').click();
@@ -1148,7 +1159,7 @@
       gameResizeObserver.observe(stage);
     }
     const version = gameLoadVersion;
-    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame});
+    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preview_image});
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
       setSourceOpen(cards[index], true);

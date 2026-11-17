@@ -8,6 +8,7 @@ module.exports=async function handler(req,res){
   const games=await loadPlayfeedGames(async resource=>{const r=await fetch('https://oimdeoszgxfumwtmapok.supabase.co/rest/v1'+resource,{headers:{apikey:'sb_publishable_ZovEIH8JuRiKuf24MTIKLg_sz2Tnui8'},signal:AbortSignal.timeout(3000)});if(!r.ok)throw Error('Catalog unavailable');return r.json();},origin+'/');
   const game=games.find(g=>g.id===id);
   if(!game){res.setHeader('Cache-Control','no-store');return res.status(404).end();}
+  if(game.preview_image){res.setHeader('Location',origin+game.preview_image);res.setHeader('Cache-Control','no-store');return res.status(302).end();}
   const {staticAsset,readAsset}=require('./_share-assets');
   const saved=staticAsset(game);
   if(saved){res.setHeader('Location',origin+saved);res.setHeader('Cache-Control','public, max-age=0, s-maxage=60');return res.status(302).end();}
