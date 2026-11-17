@@ -1,7 +1,7 @@
 const {createHash}=require('node:crypto');
 async function preparePreload(game){
- // Reuse the existing publication capture; the loading URL is stored separately.
- const image=await require('./_share-assets').prepareAsset(game)||await require('./_render-card').renderCard(game);
+ // Wait for the game's first screen; never save a third-party loading thumbnail.
+ const image=await require('./_capture-first-screen').captureFirstScreen(game);
  const metadata=await require('sharp')(image,{limitInputPixels:20000000}).metadata();
  if(!metadata.width||!metadata.height)throw Object.assign(Error('無法取得預載入截圖，請重試。'),{status:503});
  const url=new URL(game.url,'https://playfeed-gilt.vercel.app/').href;

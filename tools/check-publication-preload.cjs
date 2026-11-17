@@ -20,7 +20,7 @@ const community=require('../api/_community'),waiting=require('../api/_waiting');
  // Verify real helper saves the captured image without adding manual preview records.
  delete require.cache[require.resolve('../api/_game-preload')];
  const image=await sharp({create:{width:720,height:1280,channels:3,background:'#123456'}}).png().toBuffer();
- stub('../api/_share-assets',{prepareAsset:async()=>image});process.env.SUPABASE_SERVICE_ROLE_KEY='fixture';let stored;
+ stub('../api/_capture-first-screen',{captureFirstScreen:async()=>image});process.env.SUPABASE_SERVICE_ROLE_KEY='fixture';let stored;
  global.fetch=async(u,o)=>{stored={url:u,...o};return {ok:true}};
  const result=await require('../api/_game-preload').preparePreload({url,title:'New game'});assert.match(result,/^\/api\/game-image\?key=[a-f0-9]{64}$/);assert.ok(stored.body.equals(image));
  global.fetch=async()=>({ok:false});await assert.rejects(require('../api/_game-preload').preparePreload({url}),e=>e.status===503);

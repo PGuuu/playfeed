@@ -15,7 +15,8 @@
       "maxDuration": 30
     },
     "api/account.js": {
-      "maxDuration": 60
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**",
+      "maxDuration": 120
     },
     "api/analytics.js": {
       "maxDuration": 15
