@@ -45,10 +45,11 @@ async function post(user,body){
  const metadata={creator_url:row.url};
  const title=safeText(body.title,{name:'遊戲名稱',max:300});
  const author=safeText(body.author,{name:'創作者',max:120});
+ let preload_image_url=null;
  if(body.screenshot)await require('./_game-preview').savePreview(row.url,body.screenshot,user,body.screenshotFocus);
- else await require('./_share-assets').prepareAsset({url:row.url,title,author,creator_url:metadata.creator_url});
+ else preload_image_url=await require('./_game-preload').preparePreload({url:row.url,title,author,creator_url:metadata.creator_url});
  // The existing database trigger approves matching requests in the same transaction.
- const inserted=await db('playfeed_recommendations',{method:'POST',query:'on_conflict=url',body:{url:row.url,title,author,creator_url:metadata.creator_url,submitted_by:user.id},prefer:'resolution=ignore-duplicates,return=representation'});
+ const inserted=await db('playfeed_recommendations',{method:'POST',query:'on_conflict=url',body:{url:row.url,title,author,creator_url:metadata.creator_url,submitted_by:user.id,preload_image_url},prefer:'resolution=ignore-duplicates,return=representation'});
  const game=inserted[0]||(await db('playfeed_recommendations',{query:'select=id&url=eq.'+encodeURIComponent(row.url)}))[0];
  if(!game)throw Object.assign(new Error('公開結果暫時無法確認，請重新整理。'),{status:503});
  if(!inserted.length)await db('playfeed_requests',{method:'PATCH',query:'user_id=eq.'+OWNER_ID+'&id=eq.'+row.id+'&status=eq.pending',body:{status:'approved',published_game_id:game.id,reviewed_at:new Date().toISOString()}});

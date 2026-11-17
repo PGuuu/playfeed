@@ -25,5 +25,6 @@ async function prepareAsset(game) {
  const image=await renderCard(game);
  const r=await fetch(base+'/storage/v1/object/playfeed-share-cards/'+ASSET_VERSION+'/'+assetKey(game)+'.png',{method:'POST',headers:{...headers(),'Content-Type':'image/png','x-upsert':'true','Cache-Control':'max-age=31536000'},body:image,signal:AbortSignal.timeout(10000)});
  if(!r.ok)throw Object.assign(Error('無法保存遊戲預覽圖，請稍後重試上架。'),{status:503});
+ return image;
 }
 module.exports={assetKey,staticAsset,readAsset,prepareAsset,ASSET_VERSION};

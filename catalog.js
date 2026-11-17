@@ -76,15 +76,16 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   };
   for (const game of games) game.published_at ||= originalPublicationTimes[game.id] || null;
   try {
-    const published = await request('/playfeed_recommendations?select=id,title,url,author,creator_url,created_at&order=created_at.desc,id.desc');
+    const published = await request('/playfeed_recommendations?select=id,title,url,author,creator_url,created_at,preload_image_url&order=created_at.desc,id.desc');
     const existing = new Map(games.map(game => [new URL(game.url, baseUrl).href, game]));
     for (const game of published) {
       const url = new URL(game.url, baseUrl).href;
       const original = existing.get(url);
       if (original) {
         original.published_at ||= game.created_at;
+        if(game.preload_image_url)original.preload_image=game.preload_image_url;
       } else {
-        const entry = { ...game, published_at: game.created_at, author: game.author || '來源：' + new URL(url).hostname, external: true, recommended: true };
+        const entry = { ...game,preload_image:game.preload_image_url, published_at: game.created_at, author: game.author || '來源：' + new URL(url).hostname, external: true, recommended: true };
         games.push(entry);
         existing.set(url, entry);
       }
@@ -109,7 +110,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   const preloads=await preloadsResult;
   for(const game of games){
     const preload=preloads[new URL(game.url,'https://playfeed-gilt.vercel.app/').href];
-    if(preload)game.preload_image=preload.image;
+    if(preload&&!game.preload_image)game.preload_image=preload.image;
     const row=previews.get(new URL(game.url,baseUrl).href)||previews.get(new URL(game.url,'https://playfeed-gilt.vercel.app/').href);
     if(row){game.preview_image=row.image_url;game.share_image=row.share_image_url;game.cover=row.image_url;game.preview_width=row.width;game.preview_height=row.height;}
   }
