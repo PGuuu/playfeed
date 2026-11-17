@@ -44,7 +44,7 @@ module.exports=async(req,res)=>{
   if(action==='pair-link'){
    await owner(req);const token=crypto.randomBytes(32).toString('hex');
    await db('playfeed_analytics_pairings',{method:'POST',body:{token_hash:crypto.createHash('sha256').update(token).digest('hex'),expires_at:new Date(Date.now()+15*60000).toISOString(),label:text(body.label,60)||'我的 iPhone'}});
-   return sendJson(res,200,{url:'https://playfeed-gilt.vercel.app/analytics.html#pair='+token});
+   return sendJson(res,200,{url:'https://fangame.app/analytics.html#pair='+token});
   }
   if(action==='claim'){
    if(!/^[a-f0-9]{64}$/.test(body.token||''))return sendJson(res,400,{error:'裝置標記連結無效。'});

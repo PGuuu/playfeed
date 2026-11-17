@@ -1,4 +1,3 @@
-const { initialSaveCount } = require('./_save-counts');
 const community = require('./_community');
 const { publicName, readJson, requestOriginAllowed, safeText, sendJson, supabaseRest, verifyPhuzeSession } = require('./_lib');
 
@@ -17,7 +16,7 @@ async function publicCounts(game, gameId = '', request) {
   const result = await supabaseRest('rpc/playfeed_engagement_counts', {method:'POST',body:{p_game_key:game,p_game_id:String(gameId).slice(0,200),p_device_id:device}});
   const counts=result.data;
   if(!result.ok||!counts||!['saveCount','commentCount','shareCount'].every(key=>Number.isSafeInteger(counts[key])&&counts[key]>=0))throw Error('Could not load engagement counts.');
-  return {...counts,displaySaveCount:counts.saveCount+initialSaveCount(game)};
+  return {...counts,displaySaveCount:counts.saveCount};
 }
 
 async function stateFor(game, userId, gameId = '', request) {
@@ -42,6 +41,7 @@ module.exports = async function handler(request, response) {
   try {
     if (request.method === 'GET') {
       const action = String(request.query?.action || 'state');
+      if (['ratings','comments'].includes(action)) return sendJson(response,410,{error:'評分與留言功能已關閉。'});
       if (action === 'ratings') return sendJson(response,200,await require('./_ratings').get(request));
       if (action === 'counts') return sendJson(response, 200, await publicCounts(gameKey(request.query?.gameKey),request.query?.gameId,request));
       if (action === 'state') {
@@ -63,6 +63,7 @@ module.exports = async function handler(request, response) {
     if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
     const body = await readJson(request, 2_100_000);
     const action = safeText(body.action, { name: 'action', max: 30 });
+    if (['rate','comment'].includes(action)) return sendJson(response,410,{error:'評分與留言功能已關閉。'});
     if(action==='rate')return sendJson(response,200,await require('./_ratings').post(request,response,body));
     if(action==='guest-save')return sendJson(response,200,await require('./_guest-saves').saveGuest(request,response,body));
     const user = await userFromRequest(request);

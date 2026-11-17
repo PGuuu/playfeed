@@ -69,7 +69,7 @@ async function listedGame(url) {
  return (await catalogGames()).find(game => new URL(game.url, PLAYFEED_BASE).href === url);
 }
 function existingResult(game) {
- return { status: 'existing', id: game.id, title: game.title, gamePath: '/g/' + encodeURIComponent(game.id), message: '這款遊戲已經上架，點下方按鈕即可在 FanGame 確認。' };
+ return { status: 'existing', id: game.id, title: game.title, gamePath: '/g/' + encodeURIComponent(game.slug || game.id), message: '這款遊戲已經上架，點下方按鈕即可在 FanGame 確認。' };
 }
 
 async function post(user, body) {

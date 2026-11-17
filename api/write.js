@@ -519,6 +519,7 @@ module.exports = async function handler(request, response) {
   try {
     const body = await readJson(request);
     const action = String(body.action || '');
+    if(action==='comment')return sendJson(response,410,{error:'評分與留言功能已關閉。'});
     const perform = actions[action];
     if (!perform) return sendJson(response, 400, { error: 'Unknown action.' });
 

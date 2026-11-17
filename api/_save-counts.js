@@ -1,8 +1,7 @@
-const { games } = require('./_initial-saves.json');
 const base = 'https://playfeed-gilt.vercel.app/';
 const keyFor = value => { try { return new URL(value, base).href; } catch { return String(value); } };
-const starters = new Map(games.map(game => [keyFor(game.url), game]));
-function initialSaveCount(game) { return starters.get(keyFor(game))?.initialCount || 0; }
+const starters = new Map();
+function initialSaveCount() { return 0; }
 async function saveCountSummary() {
  const { supabaseRest } = require('./_lib');
  const rows = new Map([...starters].map(([url,game]) => [url, { url, title:game.title, initialCount:game.initialCount, realCount:0 }]));
@@ -16,6 +15,6 @@ async function saveCountSummary() {
   }
   if(result.data.length<1000)break;
  }
- return [...rows.values()].map(row=>({...row,displayCount:row.initialCount+row.realCount})).sort((a,b)=>b.displayCount-a.displayCount||b.realCount-a.realCount||a.url.localeCompare(b.url));
+ return [...rows.values()].map(row=>({...row,displayCount:row.realCount})).sort((a,b)=>b.displayCount-a.displayCount||b.realCount-a.realCount||a.url.localeCompare(b.url));
 }
 module.exports={initialSaveCount,saveCountSummary};

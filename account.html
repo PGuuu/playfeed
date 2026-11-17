@@ -56,7 +56,7 @@ function render(){
     const a=document.createElement('a');a.className='tile';
     const match=games.find(entry=>new URL(entry.url,location.origin).href===new URL(game.url,location.origin).href);
     const preview=match||game;
-    a.href=tab==='recommended'?game.url:'/g/'+encodeURIComponent(preview.id)+'?list=saved';
+    a.href=tab==='recommended'?game.url:'/g/'+encodeURIComponent(preview.slug || preview.id)+'?list=saved';
     if(tab==='saved')a.addEventListener('click',()=>{try{sessionStorage.setItem('playfeed:saved-order:v1',JSON.stringify(entries.map(entry=>new URL(entry.url,location.origin+'/').href)))}catch{}});
     if(tab==='recommended'){a.target='_blank';a.rel='noopener noreferrer';}
     a.setAttribute('aria-label',game.title);
@@ -99,7 +99,7 @@ async function loadCollection(){
   document.querySelector('.profile-site')?.remove();
   if(result.profile.website){const link=document.createElement('a');link.className='profile-site';link.href=result.profile.website;link.textContent=result.profile.website;link.target='_blank';link.rel='noopener noreferrer';document.querySelector('.identity').append(link)}
   const notifications=document.querySelector('#notifications');notifications.replaceChildren();
-  for(const item of result.notifications){const a=document.createElement('a');const recommended=result.recommendations.find(r=>r.id===item.game_id);const listed=recommended&&games.find(g=>new URL(g.url,location.origin).href===recommended.url);a.href='/#'+encodeURIComponent(listed?.id||item.game_id);a.textContent='你的推薦「'+item.title+'」已上架！';if(!item.read_at)a.className='unread';a.addEventListener('click',()=>PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'read-notifications'})}).catch(()=>{}));notifications.append(a)}
+  for(const item of result.notifications){const a=document.createElement('a');const recommended=result.recommendations.find(r=>r.id===item.game_id);const listed=recommended&&games.find(g=>new URL(g.url,location.origin).href===recommended.url);a.href='/g/'+encodeURIComponent(listed?.slug||listed?.id||item.game_id);a.textContent='你的推薦「'+item.title+'」已上架！';if(!item.read_at)a.className='unread';a.addEventListener('click',()=>PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'read-notifications'})}).catch(()=>{}));notifications.append(a)}
   const pending=result.requests.filter(row=>row.status==='pending').length;
   if(pending){const p=document.createElement('p');p.textContent=pending+' 款推薦等待管理者審核。';notifications.append(p)}
   document.querySelector('#reports-entry').hidden=!result.isAdmin;

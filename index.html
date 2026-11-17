@@ -164,6 +164,7 @@
 <meta name="twitter:image" content="https://fangame.app/share-cards/fangame-platform.png">
 <link rel="canonical" href="https://fangame.app/">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FanGame","alternateName":["糞Game","fangame.app"],"url":"https://fangame.app/","description":"收錄獨立創作者的免費網頁小遊戲，滑一下就玩。","inLanguage":"zh-Hant"}</script>
+<style>.play-count{position:absolute;left:10px;bottom:10px;z-index:4;padding:4px 7px;border-radius:7px;background:#0008;color:#fff;font:11px/1.3 system-ui,sans-serif;pointer-events:none;font-variant-numeric:tabular-nums;backdrop-filter:blur(5px)}#comments-sheet .reviews-heading,#comments-sheet .rating-summary,#comments-sheet .comments-message,#comments-sheet #ratings-reload,#comments-sheet .comments-list,#comments-sheet .comments-form{display:none!important}</style>
 </head>
 <body>
 <dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">Email 認證</h2><p>輸入 Email，點信中的認證連結，就能跨瀏覽器同步收藏與評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
@@ -235,6 +236,7 @@
   <article>
 
     <div class="game-viewport">
+      <span class="play-count" hidden></span>
       <div class="stage"><div class="empty">準備遊戲中</div></div>
       <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
@@ -262,6 +264,7 @@
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let entryGameId='';
   try{entryGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}
+  entryGameId = catalog.find(game => game.id === entryGameId || game.slug === entryGameId)?.id || entryGameId;
   const requestedGameId=reload?'':entryGameId;
   const games=savedMode?catalog:orderPlayfeedGames(catalog,{popularIds:await popularIdsPromise,requestedId:requestedGameId});
   const featuredVisit=createPlayfeedFeaturedVisit(games,{entryId:entryGameId,savedMode});
@@ -577,6 +580,17 @@
       button.setAttribute('aria-label', label + '，共 ' + count + (field === 'commentCount' ? ' 則留言' : ' 次'+label));
     }
   }
+  const playCountVersions=new WeakMap();
+  async function loadPlayCount(game,card){
+    const version=(playCountVersions.get(card)||0)+1;playCountVersions.set(card,version);
+    try{
+      await window.PlayFeedAnalytics?.flush();
+      const response=await fetch('/api/play-count?gameId='+encodeURIComponent(game.id));
+      if(!response.ok)return;
+      const data=await response.json();if(playCountVersions.get(card)!==version||!Number.isSafeInteger(data.playCount)||data.playCount<0)return;
+      const label=card.querySelector('.play-count');label.textContent='已玩 '+data.playCount.toLocaleString('zh-TW')+' 次';label.hidden=false;
+    }catch{}
+  }
   async function loadEngagement(game, card) {
     const version = invalidateEngagement(card);
     const key = encodeURIComponent(new URL(game.url, location.origin + '/').href)+'&gameId='+encodeURIComponent(game.id);
@@ -748,7 +762,7 @@
     }
     const share = card.querySelector('.share');
     share.addEventListener('click', async () => {
-      const link = new URL('/g/' + encodeURIComponent(game.id), location.origin);
+      const link = new URL('/g/' + encodeURIComponent(game.slug || game.id), location.origin);
         link.searchParams.set('v','4');
       showShareFlight(share);
       try {
@@ -856,7 +870,7 @@
     if(commentsIndex<0)return;
     const height=Math.min(innerHeight,window.visualViewport?.height||innerHeight);
     commentsSheet.style.bottom=Math.max(0,innerHeight-(window.visualViewport?visualViewport.height+visualViewport.offsetTop:innerHeight))+'px';
-    commentsSheet.style.height=Math.min(540,Math.max(260,height*.62))+'px';
+    commentsSheet.style.height=Math.min(320,Math.max(180,height*.38))+'px';
     commentsSheet.style.maxHeight=Math.max(180,height-100)+'px';
     document.body.style.setProperty('--comments-height',commentsSheet.offsetHeight+'px');layoutFeed();
   }
@@ -884,12 +898,10 @@
   });
   function openComments(index){
     if(commentsIndex===index){closeComments();return}
-    closeComments(false);commentsIndex=index;ratingDirty=false;ratingOwn=null;commentsForm.hidden=false;ratingEdit.hidden=true;commentsForm.reset();ratingStatus.textContent='';ratingSubmit.textContent='送出評語';commentsList.replaceChildren();
-    document.querySelector('#rating-total').textContent='讀取評分中…';
-    for(const row of document.querySelectorAll('.rating-row')){row.querySelector('.rating-count').textContent='– 人';row.querySelector('.rating-bar i').style.width='0%'}
+    closeComments(false);commentsIndex=index;
     renderSheetSource(index);
     commentsSheet.hidden=false;document.body.classList.add('comments-open');layoutRatingSheet();
-    cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');setSourceOpen(cards[index],false);readComments(index);
+    cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');setSourceOpen(cards[index],false);
   }
   document.querySelector('.comments-close').addEventListener('click',()=>closeComments());
   document.querySelector('#ratings-reload').addEventListener('click',()=>{if(commentsIndex>=0)readComments(commentsIndex)});
@@ -1110,6 +1122,7 @@
     const game = games[index];
     window.PlayFeedAnalytics?.setGame(game,entrySource);
     loadEngagement(game, cards[index]);
+    loadPlayCount(game, cards[index]);
     const frame = document.createElement('iframe');
     frame.title = game.title;
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
@@ -1183,7 +1196,7 @@
       });
     });
     const url = new URL(location.href);
-    url.pathname = "/g/" + encodeURIComponent(game.id);
+    url.pathname = "/g/" + encodeURIComponent(game.slug || game.id);
     url.search = savedMode?'?list=saved':'';
     url.hash = "";
     if (location.href !== url.href) history.replaceState(null, '', url);
@@ -1206,7 +1219,7 @@
     if(savedMode&&!queue.length){refreshSavedMode();return;}
     const requestedId = ignoreGameLinkOnReload ? '' : (location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id')));
     ignoreGameLinkOnReload=false;
-    const index = games.findIndex(game => game.id === requestedId);
+    const index = games.findIndex(game => game.id === requestedId || game.slug === requestedId);
     const target = savedMode?(queue.includes(index)?index:queue[0]):Math.max(index, 0);
     const source=typeof entrySource==='string'?entrySource:pendingEntrySource||(firstGameEntry?(savedMode?'saved_selection':undefined):'internal_selection');
     pendingEntrySource=null;firstGameEntry=false;

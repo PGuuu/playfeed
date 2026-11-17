@@ -17,19 +17,27 @@ module.exports = async function handler(request, response) {
       if (!result.ok) throw new Error('Catalog unavailable');
       return result.json();
     }, origin + '/');
-    const game = games.find(game => game.id === id);
+    const game = games.find(game => game.id === id || game.slug === id);
     if (!game) {
       response.setHeader('Cache-Control', 'no-store');
       return response.status(404).send('Game not found');
     }
+    if (id !== game.slug) {
+      const search = new URL(request.url || '/', origin).searchParams;
+      search.delete('id');
+      const suffix = search.toString();
+      response.setHeader('Location', origin + '/g/' + encodeURIComponent(game.slug) + (suffix ? '?' + suffix : ''));
+      response.setHeader('Cache-Control', 'public, max-age=3600');
+      return response.status(308).end();
+    }
     const title = escape(game.title);
     const author = escape(game.creator?.name || game.author || 'Independent creator');
-    const link = origin + '/g/' + encodeURIComponent(id);
+    const link = origin + '/g/' + encodeURIComponent(game.slug);
     const gameUrl = new URL(game.url, origin + '/');
     if (!['https:', 'http:'].includes(gameUrl.protocol)) throw new Error('Invalid game URL');
     // Share the owner's landscape crop; loading keeps the complete screenshot.
     const saved = game.share_image || game.preview_image || require('./_share-assets').staticAsset(game);
-    const image = escape(saved ? origin + saved : origin + '/api/og?id=' + encodeURIComponent(id) + '&v=4' + (game.metadata_updated_at ? '&m=' + encodeURIComponent(game.metadata_updated_at) : ''));
+    const image = escape(saved ? new URL(saved, origin).href : origin + '/api/og?id=' + encodeURIComponent(game.id) + '&v=4' + (game.metadata_updated_at ? '&m=' + encodeURIComponent(game.metadata_updated_at) : ''));
     const shareTitle = title + ' by ' + author;
     const description = shareTitle + ' — Play on FanGame.';
     const metadata = `<meta property="og:type" content="website"><meta property="og:site_name" content="FanGame"><meta property="og:locale" content="zh_TW"><meta property="og:title" content="${shareTitle}"><meta property="og:description" content="${description}"><meta property="og:url" content="${link}"><link rel="canonical" href="${link}"><meta property="og:image" content="${image}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="${game.share_image ? 1200 : game.preview_width || 720}"><meta property="og:image:height" content="${game.share_image ? 630 : game.preview_height || 1280}"><meta property="og:image:alt" content="${shareTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${shareTitle}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`;
