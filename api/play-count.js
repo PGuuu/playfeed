@@ -1,4 +1,5 @@
 const {supabaseRest}=require('./_lib');
+const historical=require('./_historical-plays.json');
 let ownersCache=null,ownersAt=0;
 async function ownerIds(){
  if(ownersCache&&Date.now()-ownersAt<60000)return ownersCache;
@@ -16,6 +17,7 @@ module.exports=async(req,res)=>{
   const tail='&is_bot=eq.false&limit=1'+(owners.length?'&device_id=not.in.('+owners.join(',')+')':'');
   const count=async action=>{const r=await supabaseRest('playfeed_analytics_events',{query:'select=id&game_id=eq.'+encodeURIComponent(id)+'&action=eq.'+action+tail,prefer:'count=exact'});if(!r.ok||!Number.isSafeInteger(r.count)||r.count<0)throw Error('Counts unavailable');return r.count;};
   const [exposureCount,playCount]=await Promise.all([count('game_view'),count('game_play')]);
-  return res.status(200).json({exposureCount,playCount,playThresholdSeconds:10});
+  const historicalPlayCount=historical.counts[id] || 0;
+  return res.status(200).json({exposureCount,playCount:playCount+historicalPlayCount,playThresholdSeconds:10});
  }catch{return res.status(503).json({error:'遊玩次數暫時無法載入。'});}
 };
