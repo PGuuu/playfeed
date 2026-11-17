@@ -41,10 +41,11 @@
     return error.message || '無法連線認證服務，請稍後再試。';
   }
   async function request(url, options = {}) {
+    const { timeoutMs = 15000, ...fetchOptions } = options;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const detail = data.error;

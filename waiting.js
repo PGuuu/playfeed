@@ -34,7 +34,7 @@
   if(decision==='publish'&&(!metadataReady||!form.reportValidity()))return;
   busy=true;controls();$('action-message').textContent=decision==='publish'?'正在公開，請稍候…':'正在略過…';
   try{
-   const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'waiting-review',requestId:row.id,decision,interactionConfirmed:form.elements.confirmed.checked,title:form.elements.title.value,author:form.elements.author.value,screenshot,screenshotFocus})});
+   const result=await PlayFeedAuth.api('/api/account',{timeoutMs:115000,method:'POST',body:JSON.stringify({action:'waiting-review',requestId:row.id,decision,interactionConfirmed:form.elements.confirmed.checked,title:form.elements.title.value,author:form.elements.author.value,screenshot,screenshotFocus})});
    if(session!==identity)return;
    rows=rows.filter(r=>r.id!==row.id);$('flash').replaceChildren(document.createTextNode(decision==='publish'?'「'+(row.title||label(row))+'」已公開。':'已略過這款遊戲。'));
    if(result.id){const a=document.createElement('a');a.href='/g/'+encodeURIComponent(result.id);a.target='_blank';a.rel='noopener';a.textContent=' 查看公開遊戲 ↗';$('flash').append(a);}
