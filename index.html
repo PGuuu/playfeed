@@ -164,7 +164,7 @@
 <meta name="twitter:image" content="https://fangame.app/share-cards/fangame-platform.png">
 <link rel="canonical" href="https://fangame.app/">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FanGame","alternateName":["糞Game","fangame.app"],"url":"https://fangame.app/","description":"收錄獨立創作者的免費網頁小遊戲，滑一下就玩。","inLanguage":"zh-Hant"}</script>
-<style>.play-count{position:absolute;left:10px;bottom:10px;z-index:4;padding:4px 7px;border-radius:7px;background:#0008;color:#fff;font:11px/1.3 system-ui,sans-serif;pointer-events:none;font-variant-numeric:tabular-nums;backdrop-filter:blur(5px)}#comments-sheet .reviews-heading,#comments-sheet .rating-summary,#comments-sheet .comments-message,#comments-sheet #ratings-reload,#comments-sheet .comments-list,#comments-sheet .comments-form{display:none!important}</style>
+<style> .source-stats{display:flex;gap:16px;margin:0 0 10px;font:12px/1.5 system-ui,sans-serif;color:inherit;opacity:.75;font-variant-numeric:tabular-nums}#comments-sheet .reviews-heading,#comments-sheet .rating-summary,#comments-sheet .comments-message,#comments-sheet #ratings-reload,#comments-sheet .comments-list,#comments-sheet .comments-form{display:none!important}</style>
 </head>
 <body>
 <dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">Email 認證</h2><p>輸入 Email，點信中的認證連結，就能跨瀏覽器同步收藏與評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
@@ -236,7 +236,6 @@
   <article>
 
     <div class="game-viewport">
-      <span class="play-count" hidden></span>
       <div class="stage"><div class="empty">準備遊戲中</div></div>
       <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
@@ -245,7 +244,7 @@
     <footer>
       <div class="source-dock">
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
-        <div class="game-info" aria-hidden="true" inert><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
+        <div class="game-info" aria-hidden="true" inert><div class="source-stats" aria-label="遊戲統計"><span class="exposure-stat">曝光 — 次</span><span class="play-stat" title="單次停留超過 10 秒計為一次遊玩">遊玩 — 次</span></div><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
       <div class="actions">
         <button class="comments-button" type="button" aria-label="來源" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">來源</span></button>
@@ -256,7 +255,7 @@
   </article>
 </template>
 
-<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261117-qualified-plays"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -588,7 +587,10 @@
       const response=await fetch('/api/play-count?gameId='+encodeURIComponent(game.id));
       if(!response.ok)return;
       const data=await response.json();if(playCountVersions.get(card)!==version||!Number.isSafeInteger(data.playCount)||data.playCount<0)return;
-      const label=card.querySelector('.play-count');label.textContent='已玩 '+data.playCount.toLocaleString('zh-TW')+' 次';label.hidden=false;
+      if(!Number.isSafeInteger(data.exposureCount)||data.exposureCount<0)return;
+      card.querySelector('.exposure-stat').textContent='曝光 '+data.exposureCount.toLocaleString('zh-TW')+' 次';
+      card.querySelector('.play-stat').textContent='遊玩 '+data.playCount.toLocaleString('zh-TW')+' 次';
+      if(commentsIndex>=0&&cards[commentsIndex]===card){const host=document.querySelector('#sheet-source');host.querySelector('.exposure-stat').textContent=card.querySelector('.exposure-stat').textContent;host.querySelector('.play-stat').textContent=card.querySelector('.play-stat').textContent;}
     }catch{}
   }
   async function loadEngagement(game, card) {
@@ -900,6 +902,7 @@
     if(commentsIndex===index){closeComments();return}
     closeComments(false);commentsIndex=index;
     renderSheetSource(index);
+    loadPlayCount(games[index],cards[index]);
     commentsSheet.hidden=false;document.body.classList.add('comments-open');layoutRatingSheet();
     cards[index].querySelector('.comments-button').setAttribute('aria-expanded','true');setSourceOpen(cards[index],false);
   }

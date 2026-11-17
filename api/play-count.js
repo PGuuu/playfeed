@@ -13,9 +13,9 @@ module.exports=async(req,res)=>{
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
  try{
   const owners=await ownerIds();
-  const query='select=id&game_id=eq.'+encodeURIComponent(id)+'&action=eq.game_view&is_bot=eq.false&limit=1'+(owners.length?'&device_id=not.in.('+owners.join(',')+')':'');
-  const r=await supabaseRest('playfeed_analytics_events',{query,prefer:'count=exact'});
-  if(!r.ok||!Number.isSafeInteger(r.count)||r.count<0)throw Error('Counts unavailable');
-  return res.status(200).json({playCount:r.count});
+  const tail='&is_bot=eq.false&limit=1'+(owners.length?'&device_id=not.in.('+owners.join(',')+')':'');
+  const count=async action=>{const r=await supabaseRest('playfeed_analytics_events',{query:'select=id&game_id=eq.'+encodeURIComponent(id)+'&action=eq.'+action+tail,prefer:'count=exact'});if(!r.ok||!Number.isSafeInteger(r.count)||r.count<0)throw Error('Counts unavailable');return r.count;};
+  const [exposureCount,playCount]=await Promise.all([count('game_view'),count('game_play')]);
+  return res.status(200).json({exposureCount,playCount,playThresholdSeconds:10});
  }catch{return res.status(503).json({error:'遊玩次數暫時無法載入。'});}
 };
