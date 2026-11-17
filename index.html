@@ -253,7 +253,7 @@
   </article>
 </template>
 
-<script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261114-expansion"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);
@@ -869,9 +869,10 @@
       frame:cards[index].querySelector('iframe'),
       beforeCapture:()=>closeComments(false),
       isCurrent:()=>activeIndex===index&&canDeleteGame,
-      onSave:async image=>{
-        const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'game-screenshot',gameId:games[index].id,image})});
-        games[index].preview_image=result.image;games[index].cover=result.image;games[index].preview_width=result.width;games[index].preview_height=result.height;
+      title:games[index].title,author:games[index].creator?.name||games[index].author||'',
+      onSave:async (image,focus)=>{
+        const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'game-screenshot',gameId:games[index].id,image,focus})});
+        games[index].preview_image=result.image;games[index].share_image=result.shareImage;games[index].cover=result.image;games[index].preview_width=result.width;games[index].preview_height=result.height;
         notifyAction('截圖已設為分享預覽與載入圖');
       }
     }));

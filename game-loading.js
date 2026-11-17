@@ -1,12 +1,18 @@
 (function(root){
  function start({indicator,stage,frame,image}){
-  let stopped=false;
+  let stopped=false,hasImage=Boolean(image),gameReady=false,shownAt=null,minTimer=null,imageTimer=null,revealAnimation=null;
   const title=indicator.querySelector('.loading-title');
   const note=indicator.querySelector('.loading-note');
   const help=indicator.querySelector('.loading-help');
   indicator.querySelector('.loading-preview-image')?.remove();
   indicator.classList.toggle('has-preview',Boolean(image));
-  if(image){const img=document.createElement('img');img.className='loading-preview-image';img.alt='';img.src=image;img.addEventListener('error',()=>{img.remove();indicator.classList.remove('has-preview')},{once:true});indicator.prepend(img);}
+  if(image){
+   const img=document.createElement('img');img.className='loading-preview-image';img.alt='';
+   function imageFailed(){if(stopped)return;clearTimeout(imageTimer);hasImage=false;img.remove();indicator.classList.remove('has-preview');maybeReveal();}
+   img.addEventListener('load',()=>{if(stopped||!hasImage)return;clearTimeout(imageTimer);shownAt=Date.now();maybeReveal()},{once:true});
+   img.addEventListener('error',imageFailed,{once:true});indicator.prepend(img);img.src=image;
+   imageTimer=setTimeout(imageFailed,2500);
+  }
   indicator.hidden=!image;help.hidden=true;
   title.textContent='Loading…';note.textContent='請稍後';
   stage.setAttribute('aria-busy','true');
@@ -17,14 +23,25 @@
   },8000);
   function cleanup(){
    if(stopped)return;
-   stopped=true;clearTimeout(revealTimer);clearTimeout(slowTimer);
+   stopped=true;clearTimeout(revealTimer);clearTimeout(slowTimer);clearTimeout(minTimer);clearTimeout(imageTimer);revealAnimation?.cancel();
    frame.removeEventListener('load',loaded);frame.removeEventListener('error',failed);
    indicator.hidden=true;stage.removeAttribute('aria-busy');
   }
-  function loaded(){if(frame.getAttribute('src'))cleanup()}
+  function maybeReveal(){
+   if(stopped||!gameReady)return;
+   if(!hasImage){cleanup();return;}
+   if(shownAt===null||minTimer!==null)return;
+   minTimer=setTimeout(()=>{
+    if(stopped)return;
+    if(typeof indicator.animate!=='function'||root?.matchMedia?.('(prefers-reduced-motion: reduce)').matches){cleanup();return;}
+    revealAnimation=indicator.animate([{opacity:1},{opacity:0}],{duration:220,fill:'forwards',easing:'ease-out'});
+    revealAnimation.finished.then(cleanup,()=>{});
+   },Math.max(0,500-(Date.now()-shownAt)));
+  }
+  function loaded(){if(frame.getAttribute('src')){gameReady=true;maybeReveal()}}
   function failed(){
    if(stopped)return;
-   clearTimeout(revealTimer);clearTimeout(slowTimer);indicator.hidden=false;
+   clearTimeout(revealTimer);clearTimeout(slowTimer);clearTimeout(minTimer);clearTimeout(imageTimer);revealAnimation?.cancel();gameReady=false;indicator.hidden=false;
    title.textContent='暫時無法載入';note.textContent='可以先切換其他遊戲';help.hidden=true;
    stage.removeAttribute('aria-busy');
   }

@@ -1,5 +1,5 @@
 async function loadPlayfeedGames(request = recommendationRequest, baseUrl = location.origin + "/") {
-  const previewsResult=Promise.resolve().then(()=>request('/playfeed_game_previews?select=game_url,image_url,width,height,updated_at')).catch(()=>[]);
+  const previewsResult=Promise.resolve().then(()=>request('/playfeed_game_previews?select=game_url,image_url,share_image_url,width,height,updated_at')).catch(()=>[]);
   const removalResult=Promise.resolve().then(()=>request('/playfeed_removed_games?select=game_url')).then(data=>({data}),error=>({error}));
   const metadataResult=Promise.resolve().then(()=>request('/playfeed_game_metadata?select=game_url,title,author,updated_at')).then(data=>({data}),error=>({error}));
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
@@ -106,7 +106,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   const previews=new Map((await previewsResult).map(row=>[row.game_url,row]));
   for(const game of games){
     const row=previews.get(new URL(game.url,baseUrl).href)||previews.get(new URL(game.url,'https://playfeed-gilt.vercel.app/').href);
-    if(row){game.preview_image=row.image_url;game.cover=row.image_url;game.preview_width=row.width;game.preview_height=row.height;}
+    if(row){game.preview_image=row.image_url;game.share_image=row.share_image_url;game.cover=row.image_url;game.preview_width=row.width;game.preview_height=row.height;}
   }
   // All catalog consumers (feed, profile, sharing and images) respect owner removals.
   const removal=await removalResult;

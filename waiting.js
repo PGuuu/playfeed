@@ -1,7 +1,7 @@
 (()=>{
  const $=id=>document.getElementById(id),form=$('review-form');
- let rows=[],index=-1,identity=0,revision=0,busy=false,metadataReady=false,screenshot=null;
- const shot=PlayFeedScreenshot.mount($('player').parentElement,()=>{const current=revision;return {frame:$('player').querySelector('iframe'),isCurrent:()=>current===revision&&!busy,onSave:async image=>{screenshot=image;shot.querySelector('button').textContent='截圖（已選好）';}}});
+ let rows=[],index=-1,identity=0,revision=0,busy=false,metadataReady=false,screenshot=null,screenshotFocus=null;
+ const shot=PlayFeedScreenshot.mount($('player').parentElement,()=>{const current=revision;return {frame:$('player').querySelector('iframe'),isCurrent:()=>current===revision&&!busy,title:form.elements.title.value,author:form.elements.author.value,onSave:async (image,focus)=>{screenshot=image;screenshotFocus=focus;shot.querySelector('button').textContent='截圖（已選好）';}}});
  $('player').after(shot);
  const label=row=>{const url=new URL(row.url);return decodeURIComponent(url.pathname.split('/').filter(Boolean).pop()||url.hostname)};
  function locked(message,login=false){revision++;rows=[];index=-1;metadataReady=false;$('player').replaceChildren();$('workspace').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;$('login').hidden=!login;$('retry').hidden=login;}
@@ -12,7 +12,7 @@
  }
  async function select(next){
   if(busy||!rows.length)return;const current=++revision,session=identity;index=(next+rows.length)%rows.length;metadataReady=false;renderQueue();
-  const row=rows[index];screenshot=null;shot.querySelector('button').textContent='截圖';form.reset();$('action-message').textContent='';$('metadata-message').textContent='正在讀取名稱與作者…';$('game-title').textContent=row.title||label(row);$('position').textContent=(index+1)+' / '+rows.length;
+  const row=rows[index];screenshot=null;screenshotFocus=null;shot.querySelector('button').textContent='截圖';form.reset();$('action-message').textContent='';$('metadata-message').textContent='正在讀取名稱與作者…';$('game-title').textContent=row.title||label(row);$('position').textContent=(index+1)+' / '+rows.length;
   form.elements.title.value=row.title||label(row);form.elements.author.value='';
   const frame=document.createElement('iframe');frame.title=row.title||label(row);frame.src=PlayFeedFrame.configure(frame,row.url);$('player').replaceChildren(frame);$('original').href=row.url;$('original').hidden=false;form.hidden=false;controls();
   try{
@@ -34,7 +34,7 @@
   if(decision==='publish'&&(!metadataReady||!form.reportValidity()))return;
   busy=true;controls();$('action-message').textContent=decision==='publish'?'正在公開，請稍候…':'正在略過…';
   try{
-   const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'waiting-review',requestId:row.id,decision,interactionConfirmed:form.elements.confirmed.checked,title:form.elements.title.value,author:form.elements.author.value,screenshot})});
+   const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'waiting-review',requestId:row.id,decision,interactionConfirmed:form.elements.confirmed.checked,title:form.elements.title.value,author:form.elements.author.value,screenshot,screenshotFocus})});
    if(session!==identity)return;
    rows=rows.filter(r=>r.id!==row.id);$('flash').replaceChildren(document.createTextNode(decision==='publish'?'「'+(row.title||label(row))+'」已公開。':'已略過這款遊戲。'));
    if(result.id){const a=document.createElement('a');a.href='/g/'+encodeURIComponent(result.id);a.target='_blank';a.rel='noopener';a.textContent=' 查看公開遊戲 ↗';$('flash').append(a);}
