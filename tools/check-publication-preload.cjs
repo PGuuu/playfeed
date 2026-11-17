@@ -11,9 +11,9 @@ stub('../api/_game-preload',{preparePreload:async()=>{events.push('capture');if(
 stub('../api/_game-preview',{savePreview:async()=>{events.push('manual')}});
 const community=require('../api/_community'),waiting=require('../api/_waiting');
 (async()=>{
- const cases=[()=>community.post(owner,{action:'publish',url,interactionConfirmed:true}),()=>community.post(owner,{action:'review',requestId:'11111111-1111-4111-8111-111111111111',decision:'approve',interactionConfirmed:true}),()=>waiting.post(owner,{requestId:'11111111-1111-4111-8111-111111111111',decision:'publish',interactionConfirmed:true,title:'New game',author:'Creator'})];
+ const cases=[screenshot=>community.post(owner,{action:'publish',url,interactionConfirmed:true,screenshot}),screenshot=>community.post(owner,{action:'review',requestId:'11111111-1111-4111-8111-111111111111',decision:'approve',interactionConfirmed:true,screenshot}),screenshot=>waiting.post(owner,{requestId:'11111111-1111-4111-8111-111111111111',decision:'publish',interactionConfirmed:true,title:'New game',author:'Creator',screenshot})];
  for(const publish of cases){writes.length=events.length=0;await publish();const row=writes.find(w=>w.table==='playfeed_recommendations'&&w.method==='POST');assert.match(row.body.preload_image_url,/^\/api\/game-image\?key=a{64}$/);assert.ok(events.indexOf('capture')<events.indexOf('playfeed_recommendations'));}
- writes.length=events.length=0;await community.post(owner,{action:'publish',url,interactionConfirmed:true,screenshot:'fixture'});assert.ok(events.includes('manual'));assert.ok(!events.includes('capture'));
+ for(const publish of cases){writes.length=events.length=0;await publish('fixture');assert.ok(events.includes('manual'));assert.ok(events.includes('capture'));assert.match(writes.find(w=>w.table==='playfeed_recommendations'&&w.method==='POST').body.preload_image_url,/^\/api\/game-image\?key=a{64}$/);}
  fail=true;writes.length=0;await assert.rejects(cases[0](),e=>e.status===503);assert.ok(!writes.some(w=>w.table==='playfeed_recommendations'));fail=false;
  const {loadPlayfeedGames}=require('../catalog');const games=await loadPlayfeedGames(async p=>p.startsWith('/playfeed_recommendations')?[{id:'new-game',title:'New game',url,preload_image_url:'/api/game-image?key='+'a'.repeat(64)}]:[],'https://playfeed-gilt.vercel.app/');
  const game=games.find(g=>g.id==='new-game');assert.ok(game.preload_image);assert.equal(game.cover,undefined);assert.equal(game.share_image,undefined);
@@ -24,5 +24,5 @@ const community=require('../api/_community'),waiting=require('../api/_waiting');
  global.fetch=async(u,o)=>{stored={url:u,...o};return {ok:true}};
  const result=await require('../api/_game-preload').preparePreload({url,title:'New game'});assert.match(result,/^\/api\/game-image\?key=[a-f0-9]{64}$/);assert.ok(stored.body.equals(image));
  global.fetch=async()=>({ok:false});await assert.rejects(require('../api/_game-preload').preparePreload({url}),e=>e.status===503);
- console.log('PASS: direct publish, review approval and waiting-room publish capture before listing; manual screenshot wins; failures prevent incomplete publication; catalog uses auto preload without changing sharing.');
+ console.log('PASS: all publication paths capture auto preloads with or without manual share screenshots; capture failures prevent incomplete publication; catalog keeps sharing separate.');
 })().catch(e=>{console.error(e);process.exitCode=1});

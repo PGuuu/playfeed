@@ -873,7 +873,7 @@
       onSave:async (image,focus)=>{
         const result=await PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'game-screenshot',gameId:games[index].id,image,focus})});
         games[index].preview_image=result.image;games[index].share_image=result.shareImage;games[index].cover=result.image;games[index].preview_width=result.width;games[index].preview_height=result.height;
-        notifyAction('截圖已設為分享預覽與載入圖');
+        notifyAction('連結分享預覽已更新');
       }
     }));
     tools.classList.add('owner-screenshot');tools.hidden=!canDeleteGame;
@@ -1160,7 +1160,7 @@
       gameResizeObserver.observe(stage);
     }
     const version = gameLoadVersion;
-    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preview_image||games[index].preload_image});
+    gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preload_image});
     frame.addEventListener('load', () => {
       if (version !== gameLoadVersion || activeIndex !== index || !frame.getAttribute('src')) return;
       setSourceOpen(cards[index], true);

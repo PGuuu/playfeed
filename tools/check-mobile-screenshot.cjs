@@ -29,7 +29,7 @@ const {chromium}=require('../../.vanilla-test/node_modules/playwright');
    const before=await page.locator('canvas').evaluate(c=>c.toDataURL());
    await page.locator('[data-y]').press('Home');await page.locator('[data-zoom]').press('End');
    assert.notEqual(await page.locator('canvas').evaluate(c=>c.toDataURL()),before);
-   await page.getByText('查看完整預載入圖').click();assert.equal(await page.locator('.screenshot-dialog img').isVisible(),true);
+   await page.getByText('查看原始截圖').click();assert.equal(await page.locator('.screenshot-dialog img').isVisible(),true);
    await page.getByRole('button',{name:'使用這張截圖'}).click();
    assert.match(await page.evaluate(()=>window.savedImage),/^data:image\/jpeg;base64,/);
    assert.deepEqual(await page.evaluate(()=>window.savedFocus),{x:.5,y:0,zoom:3});
