@@ -39,7 +39,15 @@ async function captureFirstScreen(game){
   text=await page.locator('body').innerText();
   if(/vercel security checkpoint|just a moment|performing security verification|checking your browser|deployment_not_found|404: not_found/i.test(text))throw Error('Game screenshot unavailable');
   stage='保存截圖';
-  const image=await page.screenshot({type:'png',animations:'disabled',timeout:10000});
+  // Capture the already rendered viewport directly. Playwright's font/animation
+  // settling can hang on WebGL games in a serverless browser.
+  const session=await page.context().newCDPSession(page);
+  let captureTimer;
+  const shot=await Promise.race([
+   session.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true}),
+   new Promise((_,reject)=>{captureTimer=setTimeout(()=>reject(Error('Screenshot compositor timed out')),30000)})
+  ]).finally(()=>clearTimeout(captureTimer));
+  const image=Buffer.from(shot.data,'base64');
   const stats=await require('sharp')(image).stats();if(stats.channels.every(c=>c.stdev<2))throw Error('Game screen is blank');
   return image;
  }catch(error){const detail=stage+'：'+error.message.split('\n')[0].slice(0,150)+(diagnostics.length?'；'+diagnostics.join('；'):'');console.warn('Automatic first screen failed:',detail);throw Object.assign(Error('尚未取得遊戲首畫面，請稍後重試上架。（'+detail+'）'),{status:503});}
