@@ -63,10 +63,16 @@ async function browserTests(){
   await page.getByRole('button',{name:'截圖（已選好）'}).waitFor();await page.locator('[name=confirmed]').check();
   await page.getByRole('button',{name:'確認上架'}).click();await page.waitForTimeout(100);
   assert.match(posts.find(b=>b.action==='publish').screenshot,/^data:image\/jpeg;base64,/);
-  // Waiting room: unsupported mobile capture uses upload and keeps image with that candidate.
+  // Phones must use the saved screenshot even when the browser exposes screen sharing.
   await page.goto('https://playfeed.test/waiting.html');await page.locator('#player iframe').waitFor();
-  await page.evaluate(()=>navigator.mediaDevices.getDisplayMedia=undefined);
+  await page.evaluate(()=>{
+   Object.defineProperty(navigator,'userAgentData',{configurable:true,value:{mobile:true}});
+   window.mobileCaptureCalls=0;
+   navigator.mediaDevices.getDisplayMedia=async()=>{window.mobileCaptureCalls++;throw Error('Phone must not request screen sharing');};
+  });
   await page.getByRole('button',{name:'截圖',exact:true}).click();
+  assert.equal(await page.evaluate(()=>window.mobileCaptureCalls),0);
+  assert.equal(await page.locator('[data-capture]').isVisible(),false);
   await page.locator('.screenshot-dialog input').setInputFiles(path.join(root,'share-cards/screenshots/carpet-20261117.png'));
   await page.getByRole('button',{name:'使用這張截圖'}).click();await page.locator('[name=confirmed]').check();
   await page.getByRole('button',{name:'公開',exact:true}).click();await page.waitForTimeout(100);

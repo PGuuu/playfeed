@@ -36,15 +36,19 @@
  }
  async function open({frame,onSave,beforeCapture,isCurrent=()=>true}){
   if(active||!frame)return;active=true;
+  const mobile=navigator.userAgentData?.mobile===true||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const uploadOnly=mobile||!navigator.mediaDevices?.getDisplayMedia;
   const dialog=document.createElement('dialog');dialog.className='screenshot-dialog';dialog.setAttribute('aria-label','遊戲截圖');
   dialog.innerHTML='<h2>遊戲截圖</h2><p>這張圖會用於分享連結預覽與遊戲載入畫面。</p><img alt="即將使用的遊戲截圖" hidden><p class="screenshot-status" role="status"></p><div class="screenshot-actions"><button type="button" data-capture>重新截圖</button><button type="button" data-upload>上傳截圖</button><button type="button" data-save disabled>使用這張截圖</button><button type="button" data-cancel>取消</button></div><input type="file" accept="image/png,image/jpeg,image/webp" hidden>';
   document.body.append(dialog);
   const status=dialog.querySelector('.screenshot-status'),img=dialog.querySelector('img'),save=dialog.querySelector('[data-save]'),input=dialog.querySelector('input');let data=null,busy=false,closed=false;
+  dialog.querySelector('[data-capture]').hidden=uploadOnly;
+  if(mobile)dialog.querySelector('[data-upload]').textContent='選擇截圖';
   function close(){if(busy)return;closed=true;dialog.close();dialog.remove();active=false;}
   function show(value){if(closed)return;data=value;img.src=value;img.hidden=false;save.disabled=false;status.textContent='確認畫面後，按「使用這張截圖」。';}
   async function take(){
    if(busy)return;
-   if(!navigator.mediaDevices?.getDisplayMedia){status.textContent='此瀏覽器請使用裝置截圖，再按「上傳截圖」。';input.click();if(!dialog.open)dialog.showModal();return;}
+   if(uploadOnly){status.textContent='請選擇已儲存的截圖，確認預覽後按「使用這張截圖」。';if(!dialog.open)dialog.showModal();input.click();return;}
    busy=true;const wasOpen=dialog.open;if(wasOpen)dialog.close();
    try{const value=await capture(frame,beforeCapture);if(!isCurrent())throw Error('遊戲已切換，請重新截圖。');show(value)}
    catch(error){status.textContent=error.name==='NotAllowedError'?'已取消擷取；可以重試或上傳截圖。':error.message;}
