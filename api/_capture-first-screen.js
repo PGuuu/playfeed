@@ -29,14 +29,15 @@ async function captureFirstScreen(game){
   if(response&&!response.ok())throw Error('Game returned '+response.status());
   await page.waitForLoadState('load',{timeout:4000}).catch(()=>{});
   await new Promise(resolve=>setTimeout(resolve,2000));
-  let text=await page.locator('body').innerText({timeout:3000});
+  await page.waitForSelector('body',{state:'attached',timeout:15000});
+  let text=await page.evaluate(()=>document.body.innerText);
   if(text.length<300&&/請把手機橫過來|請.{0,10}橫.{0,6}螢幕|rotate.{0,20}device/i.test(text))await page.setViewportSize({width:700,height:390});
   stage='等待首畫面';
   await page.waitForFunction(()=>{
    const text=document.body.innerText.trim();
    return !(text.length<300&&/loading|載入中|読み込|載入資源|正在生成|正在準備|generating|building/i.test(text));
   },{},{timeout:18000});
-  text=await page.locator('body').innerText();
+  text=await page.evaluate(()=>document.body.innerText);
   if(/vercel security checkpoint|just a moment|performing security verification|checking your browser|deployment_not_found|404: not_found/i.test(text))throw Error('Game screenshot unavailable');
   stage='保存截圖';
   // Capture the already rendered viewport directly. Playwright's font/animation
