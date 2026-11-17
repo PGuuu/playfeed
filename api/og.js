@@ -1,5 +1,5 @@
 const { loadPlayfeedGames } = require('../catalog.js');
-const origin = 'https://playfeed-gilt.vercel.app';
+const origin = 'https://fangame.app';
 module.exports=async function handler(req,res){
  if(!['GET','HEAD'].includes(req.method))return res.status(405).end();
  const id=req.query?.id;

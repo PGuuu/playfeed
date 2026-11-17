@@ -1,4 +1,4 @@
-const origin = 'https://playfeed-gilt.vercel.app';
+const origin = 'https://fangame.app';
 const WIDTH = 720, HEIGHT = 1280;
 function card(game, image) {
  return {type:'div',props:{style:{display:'flex',width:WIDTH,height:HEIGHT,background:'#fff7eb'},children:{type:'img',props:{src:image,style:{width:WIDTH,height:HEIGHT,objectFit:'cover',objectPosition:'top'}}}}};

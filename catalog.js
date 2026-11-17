@@ -1,15 +1,17 @@
 async function loadPlayfeedGames(request = recommendationRequest, baseUrl = location.origin + "/") {
+  // Preserve stored game URL identities across the domain migration.
+  baseUrl = 'https://playfeed-gilt.vercel.app/';
   // Automatic first screens are loading assets only. Sharing stays owner-controlled.
   const preloadsResult=typeof window==='undefined'?Promise.resolve({}):fetch(new URL('/preload-assets.json',baseUrl)).then(r=>r.ok?r.json():{}).catch(()=>({}));
   const previewsResult=Promise.resolve().then(()=>request('/playfeed_game_previews?select=game_url,image_url,share_image_url,width,height,updated_at')).catch(()=>[]);
   const removalResult=Promise.resolve().then(()=>request('/playfeed_removed_games?select=game_url')).then(data=>({data}),error=>({error}));
   const metadataResult=Promise.resolve().then(()=>request('/playfeed_game_metadata?select=game_url,title,author,updated_at')).then(data=>({data}),error=>({error}));
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
-  const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
+  const playfeed = { name: 'FanGame', url: 'https://fangame.app/', hash: '#creator-playfeed' };
   const games = [
-    { id: 'light-switch', title: '幫我關燈', creator: playfeed, author: 'PlayFeed', url: './games/light-switch/index.html', cover: '/share-cards/v4/light-switch.png', published_at: '2026-11-15T07:55:06.000Z' },
-    { id: 'sticker-chat', title: '寶貝，這張你有嗎？', author: 'PlayFeed', creator: playfeed, url: './games/sticker-chat/index.html', cover: '/share-cards/v4/sticker-chat.png', published_at: '2026-11-14T07:58:33.000Z', viewport: { width: 390, height: 740 } },
-    { id: 'vanilla-cloud', title: '香草雲朵 Vanilla Cloud', author: 'PlayFeed', creator: playfeed, url: './vanilla.html', cover: '/share-cards/vanilla-cloud.png', published_at: '2026-11-13T04:16:00.000Z', viewport: { width: 390, height: 740 } },
+    { id: 'light-switch', title: '幫我關燈', creator: playfeed, author: 'FanGame', url: './games/light-switch/index.html', cover: '/share-cards/v4/light-switch.png', published_at: '2026-11-15T07:55:06.000Z' },
+    { id: 'sticker-chat', title: '寶貝，這張你有嗎？', author: 'FanGame', creator: playfeed, url: './games/sticker-chat/index.html', cover: '/share-cards/v4/sticker-chat.png', published_at: '2026-11-14T07:58:33.000Z', viewport: { width: 390, height: 740 } },
+    { id: 'vanilla-cloud', title: '香草雲朵 Vanilla Cloud', author: 'FanGame', creator: playfeed, url: './vanilla.html', cover: '/share-cards/vanilla-cloud.png', published_at: '2026-11-13T04:16:00.000Z', viewport: { width: 390, height: 740 } },
     { id: 'luck-rolls', title: '好運捲捲來', author: '喜年來 Serena', creator_url: 'https://www.serenafoods.com.tw/', url: 'https://play.serenafoods.com.tw/luck/', external: true, recommended: true, published_at: '2026-11-11T05:57:23.514Z' },
     { id: 'taistorm', title: '台灣氣象戰 Taistorm', author: '無夜霜', creator_url: 'https://github.com/nonightcream', url: 'https://nonightcream.github.io/Taistorm/', external: true, recommended: true, allowStorage: true, published_at: '2026-11-11T05:57:23.514Z' },
     { id: 'balcony-blanket', title: '陽台上的小被被', author: 'sansword', url: 'https://sansword.github.io/balcony-blanket/', external: true, recommended: true },
@@ -46,8 +48,8 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
     { id: 'nurse-shift', title: '上班不要吃鳳梨：護理師輪班模擬', author: '來源：busy-nurse.vercel.app', url: 'https://busy-nurse.vercel.app/', external: true, viewport: { width: 390, height: 740 } },
     { id: 'rooftop-scaper', title: '頂樓加蓋 Scaper', author: '來源：rooftop-scaper.pages.dev', url: 'https://rooftop-scaper.pages.dev/', external: true, viewport: { width: 390, height: 740 } },
     { id: 'taiwan-sanbao-driver', title: '台灣三寶駕駛模擬器', author: '陳品叡', url: 'https://pinruichen.github.io/taiwan-sanbao-driver.html', external: true, viewport: { width: 390, height: 740 } },
-    { id: 'spark-tap', title: '追光', author: 'PlayFeed 測試遊戲', url: './arcade.html#tap' },
-    { id: 'memory-grid', title: '記憶方格', author: 'PlayFeed 測試遊戲', url: './arcade.html#memory' },
+    { id: 'spark-tap', title: '追光', author: 'FanGame 測試遊戲', url: './arcade.html#tap' },
+    { id: 'memory-grid', title: '記憶方格', author: 'FanGame 測試遊戲', url: './arcade.html#memory' },
 
   ];
   // Recovered from publication records; code updates never bump a game.
@@ -120,6 +122,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   const removedUrls=new Set(removal.data.map(row=>row.game_url));
   // Stable ties retain the original batch order; legacy entries without a known date stay in their existing order.
   const time = game => Number.isFinite(Date.parse(game.published_at)) ? Date.parse(game.published_at) : 0;
+  for (const game of games) game.url = new URL(game.url, baseUrl).href;
   return games.filter(game=>!removedUrls.has(new URL(game.url,baseUrl).href)).sort((a, b) => time(b) - time(a));
 }
 

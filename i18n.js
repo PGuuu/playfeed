@@ -8,7 +8,7 @@
     : ((navigator.languages?.[0] || navigator.language || '').toLowerCase().startsWith('zh') ? 'zh-Hant' : 'en');
 
   const en = {
-    'PlayFeed 載入中': 'PlayFeed loading',
+    'FanGame 載入中': 'FanGame loading',
     '登入': 'Log in',
     '登出': 'Log out',
     '取消': 'Cancel',
@@ -57,7 +57,7 @@
     '上傳圖片替換遊戲元素（支援透明圖檔）。圖片會置中縮放、對齊虛線輪廓，並即時顯示在上面的畫面。儲存後會變成大家都能玩的新遊戲（需登入）。': 'Upload images to replace game elements (transparent images supported). Images are centered, scaled to the guide, and previewed live. Saving publishes a new playable game (login required).',
     '幫你的新版本取個名字': 'Name your new version',
     '儲存成新遊戲': 'Save as a new game',
-    '登入 PlayFeed': 'Log in to PlayFeed',
+    '登入 FanGame': 'Log in to FanGame',
     '輸入 Email，點信裡的連結就完成登入。': 'Enter your email and open the link we send you.',
     '登入後就能按讚、留言、把遊戲收進「我的頁面」。': 'Log in to like, comment, and save games to your profile.',
     '先不用，我玩玩就好': 'Not now, let me play',
@@ -113,13 +113,13 @@
     '新紀錄': 'New best',
     '成績圖產生中，再按一次': 'Score image is being prepared. Tap again.',
     '找不到這個遊戲': 'Game not found',
-    '創作 PlayFeed': 'Create for PlayFeed',
+    '創作 FanGame': 'Create for FanGame',
     '五個步驟，': 'Five steps,',
     '發布一款遊戲。': 'publish a game.',
-    '你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。': 'Create with ChatGPT, Claude, Gemini, any other tool, or by hand. PlayFeed handles the spec, validation, playtesting, and publishing.',
+    '你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。FanGame 只負責規格、驗證、試玩與發布。': 'Create with ChatGPT, Claude, Gemini, any other tool, or by hand. FanGame handles the spec, validation, playtesting, and publishing.',
     '玩法來源': 'Gameplay source',
     '複製創作規格': 'Copy creation spec',
-    '複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。': 'Copy PlayFeed’s runtime format, platform API, safety rules, and input boundaries. The gameplay is up to you.',
+    '複製 FanGame 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。': 'Copy FanGame’s runtime format, platform API, safety rules, and input boundaries. The gameplay is up to you.',
     '複製遊戲創作規格': 'Copy game creation spec',
     '交給自己的 AI 創作': 'Create with your own AI',
     '把規格貼給你使用的 AI，再告訴它你想製作什麼遊戲。它最後應只輸出一個完整 JavaScript 程式碼區塊。': 'Paste the spec into your AI and describe the game you want. It should output one complete JavaScript code block.',
@@ -129,7 +129,7 @@
     '從剪貼簿貼上': 'Paste from clipboard',
     '全部刪除': 'Clear all',
     '驗證': 'Validate',
-    'PlayFeed 會擷取顯示資料並檢查 Script；有問題時會產生可複製的修復報告。': 'PlayFeed extracts display data and checks the Script. If something is wrong, it creates a repair report you can copy.',
+    'FanGame 會擷取顯示資料並檢查 Script；有問題時會產生可複製的修復報告。': 'FanGame extracts display data and checks the Script. If something is wrong, it creates a repair report you can copy.',
     '驗證遊戲 Script': 'Validate game Script',
     '正式作者與遊戲 ID 由平台建立，不採信 Script 裡的 author 與 id。': 'The platform assigns the official creator and game ID; author and id inside the Script are not trusted.',
     '試玩': 'Playtest',
@@ -148,9 +148,9 @@
     '重新驗證遊戲 Script': 'Validate game Script again',
     '用熟悉的玩法，': 'Use familiar gameplay',
     '做一款新遊戲。': 'to make a new game.',
-    '保留核心互動，主題、角色與風格由你決定。PlayFeed 不會替你生成內容。': 'Keep the core interaction. The theme, characters, and style are up to you. PlayFeed does not generate the content.',
+    '保留核心互動，主題、角色與風格由你決定。FanGame 不會替你生成內容。': 'Keep the core interaction. The theme, characters, and style are up to you. FanGame does not generate the content.',
     '複製玩法模板': 'Copy gameplay template',
-    '複製這款遊戲的玩法配方與 PlayFeed 執行規格。': 'Copy this game’s gameplay recipe and the PlayFeed runtime spec.',
+    '複製這款遊戲的玩法配方與 FanGame 執行規格。': 'Copy this game’s gameplay recipe and the FanGame runtime spec.',
     '告訴 AI 你的新主題': 'Give your AI a new theme',
     '把玩法模板貼給自己的 AI，再告訴它想換成什麼主題。它最後應只輸出一個完整 JavaScript 程式碼區塊。': 'Paste the gameplay template into your AI and describe the new theme. It should output one complete JavaScript code block.',
     '複製玩法模板＋創作規格': 'Copy gameplay template + creation spec',
@@ -190,13 +190,13 @@
     '發布中…': 'Publishing…',
     '這份 Script 的檔案過大，請精簡後再發布。': 'This Script is too large. Make it smaller before publishing.',
     '後端沒有回傳已發布的遊戲資料。': 'The server did not return the published game.',
-    '發布成功！已加入 PlayFeed': 'Published! Your game is now on PlayFeed.',
+    '發布成功！已加入 FanGame': 'Published! Your game is now on FanGame.',
     '玩家': 'Player',
     '我': 'Me',
     '@我': '@Me',
     '遊戲執行錯誤': 'Game runtime error',
     '執行錯誤': 'Runtime error',
-    'PlayFeed 沙盒遊戲': 'PlayFeed sandbox game',
+    'FanGame 沙盒遊戲': 'FanGame sandbox game',
     '創作工具載入中，請再按一次': 'The creation tools are loading. Tap again.',
     '體驗模式：尚未連接後台，互動先不會被儲存': 'Demo mode: the backend is not connected, so interactions will not be saved.',
     '尚未連接後台，設定 config.js 之後留言就會是真的。': 'The backend is not connected. Comments will work after config.js is configured.',
@@ -239,9 +239,9 @@
     '沒有偵測到 env.over(score)。': 'env.over(score) was not detected.',
     '沒有偵測到 env.setScore(number)。': 'env.setScore(number) was not detected.',
     'input() 沒有安全處理 cancel。': 'input() does not safely handle cancel.',
-    '這個 PlayFeed Script 沒有通過 v1 驗證。': 'This PlayFeed Script did not pass v1 validation.',
+    '這個 FanGame Script 沒有通過 v1 驗證。': 'This FanGame Script did not pass v1 validation.',
     '錯誤：': 'Errors:',
-    '請依照 PlayFeed v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。': 'Fix the issues above according to the PlayFeed v1 spec, preserve the original gameplay, and output one complete JavaScript code block again.'
+    '請依照 FanGame v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。': 'Fix the issues above according to the FanGame v1 spec, preserve the original gameplay, and output one complete JavaScript code block again.'
   };
 
   const textOriginals = new WeakMap();
@@ -318,7 +318,7 @@
   function apply(root = document.body) {
     if (!root) return;
     document.documentElement.lang = locale === 'en' ? 'en' : 'zh-Hant';
-    document.title = locale === 'en' ? 'PlayFeed — Play and swipe' : 'PlayFeed — 滑一下，玩一個';
+    document.title = locale === 'en' ? 'FanGame — Play and swipe' : 'FanGame — 滑一下，玩一個';
     if (root.nodeType === Node.TEXT_NODE) translateTextNode(root);
     else translateElement(root);
     document.querySelectorAll('.language-toggle').forEach(button => {

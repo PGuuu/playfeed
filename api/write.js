@@ -394,7 +394,7 @@ async function syncOfficialGames(user, body) {
   if (!existing.ok) throw Object.assign(new Error(existing.error), { status: existing.status });
   const firstAuthor = Array.isArray(existing.data) ? existing.data[0]?.author_id : null;
   if (firstAuthor && firstAuthor !== user.id) {
-    throw Object.assign(new Error('Only the PlayFeed owner can synchronize official games.'), { status: 403 });
+    throw Object.assign(new Error('Only the FanGame owner can synchronize official games.'), { status: 403 });
   }
 
   const submitted = Array.isArray(body.games) ? body.games : [];
@@ -403,7 +403,7 @@ async function syncOfficialGames(user, body) {
   }
   const byId = new Map(submitted.map(game => [String(game?.id || ''), game]));
   if (byId.size !== OFFICIAL_GAME_IDS.length || OFFICIAL_GAME_IDS.some(id => !byId.has(id))) {
-    throw Object.assign(new Error('The official game package does not match PlayFeed.'), { status: 400 });
+    throw Object.assign(new Error('The official game package does not match FanGame.'), { status: 400 });
   }
 
   const rows = OFFICIAL_GAME_IDS.map((id, index) => {

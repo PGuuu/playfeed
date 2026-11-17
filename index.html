@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="description" content="在 PlayFeed 直接玩網頁遊戲，往上滑就換下一款。">
-<title>PlayFeed — 滑一下，玩一個</title>
+<meta name="description" content="在 FanGame 直接玩網頁遊戲，往上滑就換下一款。">
+<title>FanGame — 滑一下，玩一個</title>
 <style>
   * { box-sizing: border-box; }
   :root { color-scheme: dark; font: 16px system-ui, sans-serif; background: #101014; color: #faf8f2; }
@@ -148,21 +148,21 @@
 <link rel="stylesheet" href="/feed-layout.css">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="PlayFeed">
+<meta property="og:site_name" content="FanGame">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="PlayFeed — 滑一下，玩一個">
+<meta property="og:title" content="FanGame — 滑一下，玩一個">
 <meta property="og:description" content="打開就玩，發現網頁小遊戲。滑一下，換下一款；收藏喜歡的遊戲，分享給朋友。">
-<meta property="og:url" content="https://playfeed-gilt.vercel.app/">
-<meta property="og:image" content="https://playfeed-gilt.vercel.app/share-cards/playfeed-platform.png">
+<meta property="og:url" content="https://fangame.app/">
+<meta property="og:image" content="https://fangame.app/share-cards/fangame-platform.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1734">
 <meta property="og:image:height" content="907">
-<meta property="og:image:alt" content="PlayFeed：滑一下，玩一個。打開就玩，發現網頁小遊戲。">
+<meta property="og:image:alt" content="FanGame：滑一下，玩一個。打開就玩，發現網頁小遊戲。">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="PlayFeed — 滑一下，玩一個">
+<meta name="twitter:title" content="FanGame — 滑一下，玩一個">
 <meta name="twitter:description" content="打開就玩，發現網頁小遊戲。">
-<meta name="twitter:image" content="https://playfeed-gilt.vercel.app/share-cards/playfeed-platform.png">
-<link rel="canonical" href="https://playfeed-gilt.vercel.app/">
+<meta name="twitter:image" content="https://fangame.app/share-cards/fangame-platform.png">
+<link rel="canonical" href="https://fangame.app/">
 </head>
 <body>
 <dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">Email 認證</h2><p>輸入 Email，點信中的認證連結，就能跨瀏覽器同步收藏與評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
@@ -200,23 +200,23 @@
     <div class="rating-submit-row"><p class="rating-form-status" role="status"></p><button type="submit">送出評語</button></div>
   </form>
 </section>
-<div class="feed-shell"><main id="feed" aria-label="PlayFeed 遊戲牆"><div class="boot-loading loading-screen" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><strong>Loading…</strong><span>請稍後</span></div></main>
+<div class="feed-shell"><main id="feed" aria-label="FanGame 遊戲牆"><div class="boot-loading loading-screen" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><strong>Loading…</strong><span>請稍後</span></div></main>
 <aside class="feed-rail" aria-label="我的收藏、搜尋與遊戲切換">
  <nav class="rail-tools" aria-label="帳號與搜尋"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button></nav>
  <nav class="game-switcher" aria-label="切換遊戲">
   <button id="previous-game" type="button" aria-label="上一款"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span class="switch-label">上一款</span></button>
   <button id="next-game" type="button" aria-label="下一款"><span class="switch-label">下一款</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
  </nav>
- <a class="feed-logo" href="/" aria-label="PlayFeed，重新整理遊戲"><span>playfeed<span class="logo-dot">.</span></span></a>
+ <a class="feed-logo" href="/" aria-label="FanGame，重新整理遊戲"><span>fangame<span class="logo-dot">.</span></span></a>
  <span class="saved-list-label" aria-live="polite" hidden></span>
 </aside></div>
 <div class="action-status" role="status" aria-live="polite"></div>
 <div id="save-feedback" class="save-feedback" role="status" aria-live="polite" hidden></div>
 <main id="creator" class="creator-page" aria-labelledby="creator-name" hidden>
-  <header><span class="brand">Play<span>Feed</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
+  <header><span class="brand">Fan<span>Game</span></span><a class="source" id="back-to-feed" href="#stay-on-track">← 回遊戲牆</a></header>
   <span class="label">作品收錄</span>
   <h1 id="creator-name"></h1>
-  <p class="note">PlayFeed 整理的作品集。</p>
+  <p class="note">FanGame 整理的作品集。</p>
   <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
   <ul class="works"></ul>
 </main>
@@ -289,7 +289,7 @@
   }
   let ignoreGameLinkOnReload=!savedMode&&performance.getEntriesByType('navigation')[0]?.type==='reload';
   try { sessionStorage.setItem('playfeed:catalog:v1', JSON.stringify({ time: Date.now(), games })); } catch {}
-  const playfeed = { name: 'PlayFeed', url: 'https://playfeed-gilt.vercel.app/', hash: '#creator-playfeed' };
+  const playfeed = { name: 'FanGame', url: 'https://fangame.app/', hash: '#creator-playfeed' };
   const profiles = new Map();
   const creatorHashes = new Map();
   function rebuildCreatorProfiles() {
@@ -634,7 +634,7 @@
     if(!canDeleteGame)return;
     editingGame=game;
     editForm.elements.title.value=game.title;
-    editForm.elements.author.value=game.creator?.name||game.author||'PlayFeed';
+    editForm.elements.author.value=game.creator?.name||game.author||'FanGame';
     editStatus.textContent='';
     editDialog.showModal();editForm.elements.title.focus();
   }
@@ -660,7 +660,7 @@
       PlayFeedSaves.refreshMetadata?.(games);
       try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}
       if(games[activeIndex]?.id===game.id){
-        document.title=game.title+' | PlayFeed';
+        document.title=game.title+' | FanGame';
         for(const meta of document.querySelectorAll('meta[property="og:title"],meta[name="twitter:title"]'))meta.content=game.title+' by '+game.author;
       }
       if(commentsIndex>=0)renderSheetSource(commentsIndex);
@@ -1071,7 +1071,7 @@
     if(shell.hidden)return;
     if(!queue.length){
       unmountGame();
-      if(!feed.querySelector('.collection-empty')){const empty=document.createElement('p');empty.className='empty collection-empty';empty.textContent=savedListError?'儲存清單暫時無法載入，請重新整理。':'儲存清單已空，點左上 PlayFeed 回首頁探索新遊戲。';feed.append(empty)}
+      if(!feed.querySelector('.collection-empty')){const empty=document.createElement('p');empty.className='empty collection-empty';empty.textContent=savedListError?'儲存清單暫時無法載入，請重新整理。':'儲存清單已空，點左上 FanGame 回首頁探索新遊戲。';feed.append(empty)}
     }else{
       feed.querySelector('.collection-empty')?.remove();
       if(!queue.includes(activeIndex))showGame(queue[Math.min(Math.max(previousPosition,0),queue.length-1)],'saved_selection');

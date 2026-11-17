@@ -1,8 +1,8 @@
-export const FULL_SPEC = `# PlayFeed 遊戲創作規格 v1
+export const FULL_SPEC = `# FanGame 遊戲創作規格 v1
 
-PlayFeed 接收一個自足的 JavaScript Script，負責驗證、預玩與發布。
+FanGame 接收一個自足的 JavaScript Script，負責驗證、預玩與發布。
 
-這份規格只定義遊戲如何在 PlayFeed 執行，不限制題材、玩法、類型或創作方向。請忠實發展使用者的點子，選擇適合它的互動方式；經典玩法與新玩法都可以。不要把下方欄位、程式骨架或 API 名稱當成玩法範例，也不要自行加入使用者沒有要求的設計公式。
+這份規格只定義遊戲如何在 FanGame 執行，不限制題材、玩法、類型或創作方向。請忠實發展使用者的點子，選擇適合它的互動方式；經典玩法與新玩法都可以。不要把下方欄位、程式骨架或 API 名稱當成玩法範例，也不要自行加入使用者沒有要求的設計公式。
 
 ## 1. Script 格式
 
@@ -83,7 +83,7 @@ metadata 規則：
 - env.over(finalScore)：結束當局；同一局只能呼叫一次。
 - env.beep(fromHz, toHz, seconds, volume, waveType)：產生簡單音效。
 - 遊戲可自行設計音效：使用不同頻率、滑音、長度與波形，或組合多次 env.beep() 製作操作、得分、受傷與環境聲。這些音效只會在玩家正式遊玩時播放。
-- 只要 Script 使用 env.beep()，PlayFeed 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕。聲音只會在玩家正式遊玩時播放；Feed 預覽、滑離遊戲及任何其他頁面一律無聲。遊戲不可自行繪製音效按鈕，也不需要處理它的點擊。
+- 只要 Script 使用 env.beep()，FanGame 會自動在遊戲左下角顯示平台統一的喇叭／靜音按鈕。聲音只會在玩家正式遊玩時播放；Feed 預覽、滑離遊戲及任何其他頁面一律無聲。遊戲不可自行繪製音效按鈕，也不需要處理它的點擊。
 - 所有聲音都必須透過 env.beep() 播放。玩家選擇靜音後，平台會強制攔截該遊戲的全部 env.beep() 音效。
 - env.sprite(key, centerX, centerY, size, flip?)：請平台畫出 Remix 素材；有素材時回傳 true，否則回傳 false。
 - env.texture(key)：3D 遊戲取得 Remix 素材的 WebGLTexture；尚未載入或沒有素材時回傳 null。
@@ -97,7 +97,7 @@ GameInstance 必須包含：
 
 每次 start() 開局時，遊戲必須直接在 canvas 畫面中短暫顯示操作方法。提示應簡短、清楚，可在第一次操作後或數秒後淡出；不可使用 DOM 製作提示。
 
-玩家滑到這款遊戲時，PlayFeed 會顯示「點一下開始」，並先呼叫 start() 產生預覽。玩家輕點後，平台會重新呼叫 start()，清除預覽狀態並正式開局。Script 不要自行製作「開始」按鈕。
+玩家滑到這款遊戲時，FanGame 會顯示「點一下開始」，並先呼叫 start() 產生預覽。玩家輕點後，平台會重新呼叫 start()，清除預覽狀態並正式開局。Script 不要自行製作「開始」按鈕。
 
 請依玩法選擇預覽方式：
 
@@ -112,7 +112,7 @@ cancel 代表平台接管手勢或遊戲被中止，只能解除按住或拖曳�
 
 ## 3. 輸入邊界
 
-PlayFeed 將輸入轉成：
+FanGame 將輸入轉成：
 
 - down：手指或滑鼠按下。
 - move：按住後移動。
@@ -136,7 +136,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 
 ## 5. 換皮／貼皮（必要）
 
-每一款 PlayFeed 遊戲都必須支援換皮。請找出遊戲中可辨識的角色、物件、障礙物、目標、道具或裝飾，盡量把多個重要元素分別列入 remixSlots：
+每一款 FanGame 遊戲都必須支援換皮。請找出遊戲中可辨識的角色、物件、障礙物、目標、道具或裝飾，盡量把多個重要元素分別列入 remixSlots：
 
 \`{ key, label, hint, default, shape }\`
 
@@ -160,7 +160,7 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 - 遊戲會呼叫 env.setScore() 與 env.over()。
 - stop() 能停止全部動畫與 timer。
 - 每次開局會先在遊戲畫面中顯示簡短操作提示。
-- 如果遊戲使用音效，全部音效都透過 env.beep() 播放，喇叭／靜音按鈕由 PlayFeed 統一提供。
+- 如果遊戲使用音效，全部音效都透過 env.beep() 播放，喇叭／靜音按鈕由 FanGame 統一提供。
 - preview 使用 cover 或 demo，並選擇不會劇透或替玩家做決定的模式。
 - 不會自行顯示開始按鈕或停在等待開始狀態。
 - remixSlots 至少一項，而且每個可換元素都實際透過 env.sprite() 繪製。
@@ -172,11 +172,11 @@ x、y 使用 env.W × env.H 的邏輯座標；平台負責轉換實際螢幕尺�
 
 最後只輸出一個完整 JavaScript 程式碼區塊，不要在程式碼前後加入解釋、教學、摘要或其他文字。`;
 
-export const FULL_SPEC_EN = `# PlayFeed Game Creation Spec v1
+export const FULL_SPEC_EN = `# FanGame Game Creation Spec v1
 
-PlayFeed accepts one self-contained JavaScript Script and handles validation, previewing, and publishing.
+FanGame accepts one self-contained JavaScript Script and handles validation, previewing, and publishing.
 
-This spec only defines how a game runs inside PlayFeed. It does not restrict subject matter, gameplay, genre, language, or creative direction. Develop the user’s idea faithfully and choose an interaction that suits it. Classic and original mechanics are both welcome. Do not treat the fields, lifecycle skeleton, or API names below as a gameplay example, and do not add a design formula the user did not request.
+This spec only defines how a game runs inside FanGame. It does not restrict subject matter, gameplay, genre, language, or creative direction. Develop the user’s idea faithfully and choose an interaction that suits it. Classic and original mechanics are both welcome. Do not treat the fields, lifecycle skeleton, or API names below as a gameplay example, and do not add a design formula the user did not request.
 
 ## 1. Script format
 
@@ -245,7 +245,7 @@ Metadata rules:
 ## 2. Runtime API
 
 - Use env.W / env.H as the current device's logical canvas size. These values change with the actual game-area aspect ratio; never assume fixed dimensions or read physical screen pixels.
-- PlayFeed scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
+- FanGame scales clearly for device pixel density. Portrait devices fill the available area; on landscape displays the full portrait game is centered and fitted to the display height.
 - Derive positions and sizes from env.W / env.H. Do not use fixed CSS sizes or assume a physical phone aspect ratio.
 - Lay out from the center, edges, safe margins, and \`Math.min(env.W, env.H)\`. Cover the background from \`0, 0\` through \`env.W, env.H\`; circles and text must keep their proportions at every aspect ratio.
 - renderer defaults to '2d'. Use env.ctx for normal games. Set renderer to '3d' only when real 3D is essential, then use env.gl.
@@ -257,9 +257,9 @@ Metadata rules:
 - env.over(finalScore): end the run. Call it only once per run.
 - env.beep(fromHz, toHz, seconds, volume, waveType): play a simple sound.
 - Games may design their own sound effects by varying pitch, sweep, duration, and waveform, or combining multiple env.beep() calls for actions, rewards, damage, and ambience. These sounds play only during active gameplay.
-- When a Script uses env.beep(), PlayFeed automatically shows its standard speaker/mute button in the lower-left corner. Sound is allowed only during active gameplay; feed previews, games that have been swiped away, and every other page are always silent. Do not draw a sound button inside the game or handle that button in input().
+- When a Script uses env.beep(), FanGame automatically shows its standard speaker/mute button in the lower-left corner. Sound is allowed only during active gameplay; feed previews, games that have been swiped away, and every other page are always silent. Do not draw a sound button inside the game or handle that button in input().
 - Every sound must use env.beep(). After the player selects mute, the platform forcibly blocks every env.beep() sound from that game.
-- env.sprite(key, centerX, centerY, size, flip?): ask PlayFeed to draw Remix media. Returns true when media was drawn, otherwise false.
+- env.sprite(key, centerX, centerY, size, flip?): ask FanGame to draw Remix media. Returns true when media was drawn, otherwise false.
 - env.texture(key): obtain Remix media as a WebGLTexture in a 3D game. Returns null while unavailable.
 - Public submissions do not receive env.getSprite.
 
@@ -271,31 +271,31 @@ GameInstance must contain:
 
 At the beginning of every start(), briefly show the controls directly inside the canvas. Keep the instruction short and clear; it may fade after the first input or after a few seconds. Do not use DOM elements for instructions.
 
-When a player scrolls to the game, PlayFeed shows “Tap to play” and calls start() to create the preview. When the player taps, PlayFeed calls start() again, discards the preview state, and begins the real run. Do not build a Start button inside the Script.
+When a player scrolls to the game, FanGame shows “Tap to play” and calls start() to create the preview. When the player taps, FanGame calls start() again, discards the preview state, and begins the real run. Do not build a Start button inside the Script.
 
 Choose the preview mode that fits the game:
 
-- preview: 'cover' (default): show a non-spoiling title, cover, or idle scene. PlayFeed sends no automatic input. Use this for tarot/card draws, quizzes, memory games, story choices, surprise reveals, and any game where automation would make a decision for the player. With no input, start() must not reveal an answer, draw a card, or advance a key result.
-- preview: 'demo': after the short in-canvas control instruction, PlayFeed sends random valid input to demonstrate the gameplay in the background. Use this for action, rhythm, dodging, catching, and other games where showing the action does not spoil the experience.
+- preview: 'cover' (default): show a non-spoiling title, cover, or idle scene. FanGame sends no automatic input. Use this for tarot/card draws, quizzes, memory games, story choices, surprise reveals, and any game where automation would make a decision for the player. With no input, start() must not reveal an answer, draw a card, or advance a key result.
+- preview: 'demo': after the short in-canvas control instruction, FanGame sends random valid input to demonstrate the gameplay in the background. Use this for action, rhythm, dodging, catching, and other games where showing the action does not spoil the experience.
 
 In both modes, start() must fully reset the game for the real run. Preview scores, random outcomes, timers, and progress must never carry over.
 
-create(env) may contain helper functions, and helpers may return objects. PlayFeed treats only the object directly returned by create(env) as the GameInstance.
+create(env) may contain helper functions, and helpers may return objects. FanGame treats only the object directly returned by create(env) as the GameInstance.
 
 cancel means the platform took over the gesture or interrupted the game. It may only release held or dragged state. It must not trigger firing, scoring, or results that belong to up.
 
 ## 3. Input boundaries
 
-PlayFeed sends:
+FanGame sends:
 
 - down: finger or mouse pressed.
 - move: pointer moved while held.
 - up: the player actually released.
-- cancel: PlayFeed interrupted the interaction.
+- cancel: FanGame interrupted the interaction.
 
-x and y use the env.W × env.H logical coordinate space. PlayFeed converts physical screen coordinates.
+x and y use the env.W × env.H logical coordinate space. FanGame converts physical screen coordinates.
 
-During play, every gesture that starts outside PlayFeed's reserved bottom exit area belongs to the game. Vertical dragging, swipe-up, swipe-down, diagonal dragging, and drawing are allowed. Do not place a required control inside the reserved bottom area. Do not call addEventListener; receive input only through input().
+During play, every gesture that starts outside FanGame's reserved bottom exit area belongs to the game. Vertical dragging, swipe-up, swipe-down, diagonal dragging, and drawing are allowed. Do not place a required control inside the reserved bottom area. Do not call addEventListener; receive input only through input().
 
 ## 4. Self-contained and safety rules
 
@@ -310,7 +310,7 @@ During play, every gesture that starts outside PlayFeed's reserved bottom exit a
 
 ## 5. Reskin support (required)
 
-Every PlayFeed game must support reskinning. Identify visible characters, objects, obstacles, targets, items, or decorations. Put as many important replaceable elements as practical into separate remixSlots:
+Every FanGame game must support reskinning. Identify visible characters, objects, obstacles, targets, items, or decorations. Put as many important replaceable elements as practical into separate remixSlots:
 
 \`{ key, label, hint, default, shape }\`
 
@@ -334,7 +334,7 @@ Rules:
 - The game calls env.setScore() and env.over().
 - stop() stops all animations and timers.
 - Every run begins with a short in-canvas control instruction.
-- If the game uses sound, every sound uses env.beep(); PlayFeed supplies the standard speaker/mute button.
+- If the game uses sound, every sound uses env.beep(); FanGame supplies the standard speaker/mute button.
 - preview is cover or demo and is chosen so the preview cannot spoil content or decide for the player.
 - The Script does not show its own Start button or wait in a pre-start state.
 - At least one remix slot is present and every slotted element is drawn through env.sprite().
@@ -357,9 +357,9 @@ The source Script below is only for understanding the core mechanic. Do not copy
 ${template.sourceScript}
 \`\`\`
 ` : '';
-    return `# Create with a PlayFeed gameplay template
+    return `# Create with a FanGame gameplay template
 
-Use the gameplay structure below to make a new PlayFeed game.
+Use the gameplay structure below to make a new FanGame game.
 
 Source game: ${template.sourceTitle}
 
@@ -389,9 +389,9 @@ ${FULL_SPEC_EN}`;
 ${template.sourceScript}
 \`\`\`
 ` : '';
-  return `# 使用 PlayFeed 玩法模板創作
+  return `# 使用 FanGame 玩法模板創作
 
-請使用下面的玩法骨架製作一款新的 PlayFeed 遊戲。
+請使用下面的玩法骨架製作一款新的 FanGame 遊戲。
 
 來源遊戲：${template.sourceTitle}
 
@@ -416,9 +416,9 @@ ${FULL_SPEC}`;
 
 export function buildRepairPrompt(report, source, locale = 'zh-Hant') {
   if (locale === 'en') {
-    return `# PlayFeed v1 repair spec
+    return `# FanGame v1 repair spec
 
-Repair the PlayFeed Script below. Preserve its gameplay, art direction, and creative choices. Do not turn it into a different game under the guise of a technical fix.
+Repair the FanGame Script below. Preserve its gameplay, art direction, and creative choices. Do not turn it into a different game under the guise of a technical fix.
 
 Core requirements:
 - Register exactly one window.GAMES game object.
@@ -427,11 +427,11 @@ Core requirements:
 - input must handle up and cancel separately.
 - Use only env.W, env.H, env.ctx, env.locale, env.setScore, env.over, env.beep, and env.sprite.
 - No network, DOM, browser storage, external resources, Worker, eval, or infinite loops.
-- Required gestures remain usable outside PlayFeed's reserved bottom exit area.
+- Required gestures remain usable outside FanGame's reserved bottom exit area.
 - At the beginning of start(), briefly draw the controls inside the canvas.
 - Use preview: 'cover' for hidden information or player decisions, and preview: 'demo' only when automatic input cannot spoil the game.
-- Do not build a Start button; PlayFeed handles previewing and tap-to-start.
-- If the game uses sound, remove any in-game sound toggle and route every sound through env.beep(); PlayFeed supplies and enforces the speaker/mute control.
+- Do not build a Start button; FanGame handles previewing and tap-to-start.
+- If the game uses sound, remove any in-game sound toggle and route every sound through env.beep(); FanGame supplies and enforces the speaker/mute control.
 - Provide at least one remix slot. Every replaceable element must actually call env.sprite(), drawing its original appearance only when no replacement is available.
 - Technical repairs must not restrict or redesign the gameplay.
 - Output exactly one complete JavaScript code block with no other text.
@@ -444,9 +444,9 @@ Original Script:
 ${source}
 \`\`\``;
   }
-  return `# PlayFeed v1 修復規格
+  return `# FanGame v1 修復規格
 
-請修復下面的 PlayFeed Script，保留原本玩法、美術方向與創作選擇，不要藉修復之名改成另一種遊戲。
+請修復下面的 FanGame Script，保留原本玩法、美術方向與創作選擇，不要藉修復之名改成另一種遊戲。
 
 核心要求：
 - 只能註冊一個 window.GAMES 遊戲物件。
@@ -455,11 +455,11 @@ ${source}
 - input 必須分開處理 up 與 cancel。
 - 只能使用 env.W、env.H、env.ctx、env.locale、env.setScore、env.over、env.beep、env.sprite。
 - 禁止網路、DOM、瀏覽器儲存、外部資源、Worker、eval 與無限迴圈。
-- 必要手勢都能在 PlayFeed 保留的底部退出區以外完成。
+- 必要手勢都能在 FanGame 保留的底部退出區以外完成。
 - start() 開局時要直接在 canvas 畫面中短暫顯示操作方法。
 - 隱藏資訊或需要玩家決定的遊戲使用 preview: 'cover'；只有不怕自動輸入劇透時才使用 preview: 'demo'。
 - 不可自行製作開始按鈕；平台會處理預覽與輕點開局。
-- 如果遊戲使用音效，移除遊戲自行繪製的音效開關，所有聲音都改用 env.beep()；喇叭／靜音控制由 PlayFeed 統一提供並強制執行。
+- 如果遊戲使用音效，移除遊戲自行繪製的音效開關，所有聲音都改用 env.beep()；喇叭／靜音控制由 FanGame 統一提供並強制執行。
 - remixSlots 至少一項；每個可換元素都要實際呼叫 env.sprite()，沒有素材時才畫原本外觀。
 - 技術修復不應限制或重新設計玩法。
 - 最後只輸出一個完整 JavaScript 程式碼區塊，不要加入其他文字。

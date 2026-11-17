@@ -11,7 +11,9 @@ module.exports = async function handler(request, response) {
   if (!request.headers.origin || !requestOriginAllowed(request)) return sendJson(response, 403, { error: 'Origin not allowed.' });
   let timer;
   try {
-    const origin = new URL(request.headers.origin).origin;
+    const requestOrigin = new URL(request.headers.origin).origin;
+    // Preserve existing Phuze identities; the original callback redirects to the new site.
+    const origin = ['https://fangame.app', 'https://www.fangame.app'].includes(requestOrigin) ? 'https://playfeed-gilt.vercel.app' : requestOrigin;
     const body = await readJson(request, 4000);
     let path, payload, method = 'POST', session;
     if (body.action === 'send') {
@@ -41,6 +43,6 @@ module.exports = async function handler(request, response) {
     if (retry && /^\d+$/.test(retry)) response.setHeader('Retry-After', retry);
     return sendJson(response, upstream.status, data);
   } catch {
-    return sendJson(response, 502, { error: 'PlayFeed 暫時無法連線 Phuze，請稍後再試。' });
+    return sendJson(response, 502, { error: 'FanGame 暫時無法連線 Phuze，請稍後再試。' });
   } finally { clearTimeout(timer); }
 };

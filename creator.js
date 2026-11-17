@@ -357,7 +357,7 @@ function createRuntime(container, source, duration, onMessage, spriteData = {}) 
   const frame = document.createElement('iframe');
   frame.className = 'sandbox-frame';
   frame.setAttribute('sandbox', 'allow-scripts');
-  frame.setAttribute('title', 'PlayFeed 沙盒遊戲');
+  frame.setAttribute('title', 'FanGame 沙盒遊戲');
   frame.srcdoc = sandboxDocument(channel, source, duration, spriteData, host.locale);
   container.appendChild(frame);
   let ready = false;
@@ -411,20 +411,20 @@ function copyText(text, message) {
 }
 
 function reportText(result) {
-  return `${host.t('這個 PlayFeed Script 沒有通過 v1 驗證。')}\n\n${host.t('錯誤：')}\n` +
+  return `${host.t('這個 FanGame Script 沒有通過 v1 驗證。')}\n\n${host.t('錯誤：')}\n` +
     result.errors.map((x, i) => `${i + 1}. ${host.t(x)}`).join('\n') +
-    `\n\n${host.t('請依照 PlayFeed v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。')}`;
+    `\n\n${host.t('請依照 FanGame v1 規格修復以上問題，保留原本玩法，並重新輸出完整的單一 JavaScript 程式碼區塊。')}`;
 }
 
 function buildCreatorUI() {
   const root = el('section');
   root.id = 'creator';
   root.innerHTML = `
-    <header class="creator-head"><b>創作 PlayFeed</b><button id="creatorClose">取消</button></header>
+    <header class="creator-head"><b>創作 FanGame</b><button id="creatorClose">取消</button></header>
     <div class="creator-scroll"><main class="creator-wrap">
       <section class="creator-intro">
         <h1 id="creatorIntroTitle">五個步驟，<br>發布一款遊戲。</h1>
-        <p id="creatorIntroText">你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。</p>
+        <p id="creatorIntroText">你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。FanGame 只負責規格、驗證、試玩與發布。</p>
       </section>
       <section class="creator-mechanic-context" id="creatorMechanicContext" hidden>
         <small>玩法來源</small>
@@ -434,7 +434,7 @@ function buildCreatorUI() {
       <section class="creator-step" data-step="1">
         <span class="creator-step-no">1</span><div class="creator-step-content">
           <h2 id="creatorCopyTitle">複製創作規格</h2>
-          <p id="creatorCopyText">複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
+          <p id="creatorCopyText">複製 FanGame 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。</p>
           <button class="creator-action" id="copyCreatorSpec">複製遊戲創作規格</button>
         </div>
       </section>
@@ -458,7 +458,7 @@ function buildCreatorUI() {
       <section class="creator-step" data-step="4">
         <span class="creator-step-no">4</span><div class="creator-step-content">
           <h2>驗證</h2>
-          <p>PlayFeed 會擷取顯示資料並檢查 Script；有問題時會產生可複製的修復報告。</p>
+          <p>FanGame 會擷取顯示資料並檢查 Script；有問題時會產生可複製的修復報告。</p>
           <button class="creator-action creator-submit" id="validateCreatorSource">驗證遊戲 Script</button>
           <p class="creator-hint">正式作者與遊戲 ID 由平台建立，不採信 Script 裡的 author 與 id。</p>
         </div>
@@ -561,12 +561,12 @@ function setCreatorMode(context) {
     ? '用熟悉的玩法，<br>做一款新遊戲。'
     : '五個步驟，<br>發布一款遊戲。';
   creatorRoot.querySelector('#creatorIntroText').textContent = special
-    ? '保留核心互動，主題、角色與風格由你決定。PlayFeed 不會替你生成內容。'
-    : '你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。PlayFeed 只負責規格、驗證、試玩與發布。';
+    ? '保留核心互動，主題、角色與風格由你決定。FanGame 不會替你生成內容。'
+    : '你可以使用 ChatGPT、Claude、Gemini 或任何工具創作。FanGame 只負責規格、驗證、試玩與發布。';
   creatorRoot.querySelector('#creatorCopyTitle').textContent = special ? '複製玩法模板' : '複製創作規格';
   creatorRoot.querySelector('#creatorCopyText').textContent = special
-    ? '複製這款遊戲的玩法配方與 PlayFeed 執行規格。'
-    : '複製 PlayFeed 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。';
+    ? '複製這款遊戲的玩法配方與 FanGame 執行規格。'
+    : '複製 FanGame 的執行格式、平台 API、安全限制與操作邊界；玩法由你決定。';
   creatorRoot.querySelector('#creatorAiTitle').textContent = special ? '告訴 AI 你的新主題' : '交給自己的 AI 創作';
   creatorRoot.querySelector('#creatorAiText').textContent = special
     ? '把玩法模板貼給自己的 AI，再告訴它想換成什麼主題。它最後應只輸出一個完整 JavaScript 程式碼區塊。'
@@ -1040,7 +1040,7 @@ async function publishDraft() {
     publishedRows.push(data);
     const post = addSandboxPost(data);
     host.refreshProfile();
-    host.toast('發布成功！已加入 PlayFeed');
+    host.toast('發布成功！已加入 FanGame');
     resetCreator();
     closeCreator();
     setTimeout(() => post.el.scrollIntoView({ behavior: 'smooth' }), 320);
@@ -1562,8 +1562,8 @@ async function loadPublishedGames() {
     host.db.from('remixes')
       .select('*').eq('base_id', LEGACY_BASE_ID).order('created_at', { ascending: false })
   ]);
-  if (nativeResult.error) console.warn('PlayFeed 新版投稿載入失敗', nativeResult.error);
-  if (legacyResult.error) console.warn('PlayFeed 舊版投稿載入失敗', legacyResult.error);
+  if (nativeResult.error) console.warn('FanGame 新版投稿載入失敗', nativeResult.error);
+  if (legacyResult.error) console.warn('FanGame 舊版投稿載入失敗', legacyResult.error);
 
   const nativeRows = nativeResult.data || [];
   const legacyRows = (legacyResult.data || []).map(legacyRowToPublished).filter(Boolean);

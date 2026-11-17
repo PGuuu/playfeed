@@ -28,7 +28,12 @@
   "headers": [
     {
       "source": "/preload-cards/:path*",
-      "headers": [{"key":"Cache-Control","value":"public, max-age=31536000, immutable"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/share-cards/v4/:path*",
@@ -38,6 +43,30 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "playfeed-gilt.vercel.app"
+        }
+      ],
+      "destination": "https://fangame.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.fangame.app"
+        }
+      ],
+      "destination": "https://fangame.app/:path*",
+      "permanent": true
     }
   ]
 }

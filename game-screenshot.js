@@ -22,7 +22,7 @@
   const video=document.createElement('video');video.muted=true;video.playsInline=true;video.srcObject=stream;
   try{
    const track=stream.getVideoTracks()[0],settings=track.getSettings(),captured=track.getCaptureHandle?.();
-   if(settings.displaySurface!=='browser'||(captured&&captured.handle!==handle))throw Error('請選擇目前的 PlayFeed 分頁，再試一次。');
+   if(settings.displaySurface!=='browser'||(captured&&captured.handle!==handle))throw Error('請選擇目前的 FanGame 分頁，再試一次。');
    await beforeCapture?.();frame.scrollIntoView({block:'center',behavior:'instant'});
    await Promise.race([video.play(),new Promise((_,reject)=>setTimeout(()=>reject(Error('畫面擷取逾時，請重試或上傳截圖。')),8000))]);
    await new Promise(resolve=>setTimeout(resolve,220));

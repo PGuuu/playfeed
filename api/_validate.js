@@ -62,7 +62,7 @@ async function validatePublishedScript(source) {
 
   const errors = [];
   const game = registrationObject(program);
-  if (!game) return ['Script must contain exactly one PlayFeed game registration.'];
+  if (!game) return ['Script must contain exactly one FanGame game registration.'];
 
   const apiVersion = property(game, 'apiVersion')?.value;
   if (apiVersion?.type !== 'Literal' || apiVersion.value !== 1) errors.push('apiVersion must be 1.');

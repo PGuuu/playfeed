@@ -13,7 +13,7 @@
   }
   function emit() {
     for (const listener of state.listeners) {
-      try { listener(state.user); } catch (error) { console.error('PlayFeed login UI failed:', error?.name || 'Error'); }
+      try { listener(state.user); } catch (error) { console.error('FanGame login UI failed:', error?.name || 'Error'); }
     }
   }
   function message(text) { if (status) status.textContent = text; }
