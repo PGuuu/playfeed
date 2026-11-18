@@ -146,6 +146,7 @@
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
 <link rel="stylesheet" href="/feed-layout.css">
+<link rel="stylesheet" href="/update-notice.css">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FanGame">
@@ -255,6 +256,15 @@
   </article>
 </template>
 
+<dialog id="update-notice" aria-labelledby="update-notice-title">
+  <section class="update-notice-card">
+    <h2 id="update-notice-title">日誌: 互動體驗更新</h2>
+    <p>會員頁面更新<br>新增清單分享功能</p>
+  </section>
+  <div class="update-notice-effects" aria-hidden="true"></div>
+  <div class="update-notice-controls"><button type="button" autofocus>關掉通知</button></div>
+</dialog>
+<script src="/update-notice.js" defer></script>
 <script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';

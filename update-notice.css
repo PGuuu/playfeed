@@ -1,0 +1,67 @@
+body.update-notice-open :is(.feed-rail, #feed .actions, #feed .game-expand, #creator-home-controls) {
+  visibility: hidden;
+}
+#update-notice {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #fff3df;
+}
+#update-notice::backdrop { background: #1c0e1680; }
+.update-notice-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  translate: -50% -50%;
+  border: 2px solid #ffa35f;
+  border-radius: 16px;
+  padding: 16px 20px;
+  background: #261834;
+  box-shadow: 0 6px 0 #721d56, 0 18px 40px #0e061b66;
+}
+.update-notice-card h2 { margin: 0 0 8px; color: #ffb478; font: 800 17px/1.35 system-ui,sans-serif; }
+.update-notice-card p { margin: 0; font: 650 15px/1.55 system-ui,sans-serif; }
+.update-notice-controls {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  justify-items: center;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent,#1c0e16ee);
+}
+.update-notice-controls button {
+  min-width: 120px;
+  min-height: 44px;
+  padding: 6px 16px;
+  border: 2px solid #ffb478;
+  border-radius: 12px;
+  background: #ac321f;
+  color: #fff3df;
+  font: 800 15px system-ui,sans-serif;
+  cursor: pointer;
+}
+.update-notice-controls button:focus-visible { outline: 3px solid #fff3df; outline-offset: 3px; }
+.update-notice-effects { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.update-notice-beam {
+  position: absolute;
+  height: 5px;
+  transform-origin: 0 50%;
+  border-radius: 8px;
+  background: #fff3eb;
+  box-shadow: 0 0 6px 3px #ff4c72, 0 0 20px #ff532e;
+}
+.update-notice-spark { position: absolute; width: 9px; height: 9px; border-radius: 3px; background: #ffa35f; }
+.update-notice-spark:nth-child(3n) { background: #ff547d; }
+.update-notice-spark:nth-child(3n + 1) { background: #fff3df; }
