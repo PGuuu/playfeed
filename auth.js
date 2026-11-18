@@ -216,7 +216,7 @@
       host.replaceChildren();
       form = document.createElement('form'); form.className = 'phuze-form';
       input = document.createElement('input'); input.type = 'email'; input.required = true;
-      input.placeholder = inline ? '收藏別弄丟，連結 Email 帶著走～' : 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
+      input.placeholder = inline ? '不用記密碼，連結 Email 加入會員' : 'name@example.com'; input.autocomplete = 'email'; input.inputMode = 'email';
       input.setAttribute('aria-label', '認證 Email'); input.className = 'phuze-input';
       button = document.createElement('button'); button.type = 'submit'; button.className = 'phuze-btn';
       status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');

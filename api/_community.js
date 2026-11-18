@@ -1,4 +1,5 @@
 const { publicName, safeText, supabaseRest } = require('./_lib');
+const { randomUUID } = require('node:crypto');
 const eq = value => encodeURIComponent(String(value));
 async function db(table, options) {
  const result = await supabaseRest(table, options);
@@ -10,7 +11,7 @@ async function isAdmin(user) {
  return rows.length > 0;
 }
 async function profileFor(user) {
- const rows = await db('playfeed_profiles', { query: 'select=display_name,bio,website&user_id=eq.' + eq(user.id) });
+ const rows = await db('playfeed_profiles', { query: 'select=display_name,bio,website,avatar,public_id&user_id=eq.' + eq(user.id) });
  return rows[0] || { display_name: publicName(user), bio: '', website: '' };
 }
 function validUrl(value) {
@@ -20,7 +21,40 @@ function validUrl(value) {
  url.hash = '';
  return url;
 }
+async function addLinkedRecommendations(requests, recommendations) {
+  const ids = requests.filter(r=>r.status==='approved'&&r.published_game_id).map(r=>r.published_game_id);
+  if (ids.length) {
+   const linked = await db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&id=in.(' + ids.join(',') + ')' });
+   for (const row of linked) if (!recommendations.some(r=>r.id===row.id)) recommendations.push(row);
+  }
+}
+
+function publicId(value) {
+ return safeText(value, {name:'profile', max:36, pattern:/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i});
+}
+
+async function publicCollection(viewer, value) {
+ const id = publicId(value);
+ const [row] = await db('playfeed_profiles', {query:'select=user_id,display_name,bio,website,avatar&public_id=eq.' + id});
+ if (!row) throw Object.assign(new Error('找不到這個遊戲清單。'), {status:404});
+ const {user_id, ...profile} = row;
+ const owner = 'user_id=eq.' + eq(user_id);
+ const isOwn = viewer?.id === user_id;
+ const [actions, recommendations, requests, follows] = await Promise.all([
+  db('playfeed_user_actions', {query:'select=game_key,kind&kind=eq.save&' + owner + '&order=created_at.desc'}),
+  db('playfeed_recommendations', {query:'select=id,title,url&submitted_by=eq.' + eq(user_id) + '&order=created_at.desc'}),
+  db('playfeed_requests', {query:'select=published_game_id,status&status=eq.approved&' + owner}),
+  viewer && !isOwn ? db('playfeed_follows', {query:'select=target_id&follower_id=eq.' + eq(viewer.id) + '&target_id=eq.' + id}) : []
+ ]);
+ await addLinkedRecommendations(requests, recommendations);
+ return {profile, actions, recommendations, isOwn, following:follows.length > 0};
+}
+
 async function get(user, action) {
+ if (action === 'following') {
+  const rows = await db('playfeed_follows', {query:'select=profile:playfeed_profiles!inner(public_id,display_name,avatar)&follower_id=eq.' + eq(user.id) + '&order=created_at.desc'});
+  return {profiles:rows.map(row=>row.profile)};
+ }
  if (action === 'me') return { user: { email: user.email, name: publicName(user) }, profile: await profileFor(user), isAdmin: await isAdmin(user) };
  if (action === 'reports') {
   if (!await isAdmin(user)) throw Object.assign(new Error('僅管理員可以查看檢舉。'), { status: 403 });
@@ -47,11 +81,7 @@ async function get(user, action) {
    db('playfeed_notifications', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc&limit=100' }),
    db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&submitted_by=eq.' + eq(user.id) + '&order=created_at.desc' })
   ]);
-  const ids = requests.filter(r=>r.status==='approved'&&r.published_game_id).map(r=>r.published_game_id);
-  if (ids.length) {
-   const linked = await db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&id=in.(' + ids.join(',') + ')' });
-   for (const row of linked) if (!recommendations.some(r=>r.id===row.id)) recommendations.push(row);
-  }
+  await addLinkedRecommendations(requests, recommendations);
   return { user: { id: user.id, email: user.email }, profile, isAdmin: admin, actions, requests, notifications, recommendations };
  }
 }
@@ -116,6 +146,26 @@ async function post(user, body) {
   return {ok:true,id:game.id};
  }
 
+ if (body.action === 'share-profile') {
+  const owner = 'user_id=eq.' + eq(user.id);
+  await db('playfeed_profiles', {method:'POST',query:'on_conflict=user_id',body:{user_id:user.id,display_name:'玩家'},prefer:'resolution=ignore-duplicates,return=minimal'});
+  await db('playfeed_profiles', {method:'PATCH',query:owner + '&public_id=is.null',body:{public_id:randomUUID()},prefer:'return=minimal'});
+  const [row] = await db('playfeed_profiles', {query:'select=public_id&' + owner});
+  return {id:row.public_id};
+ }
+ if (body.action === 'follow') {
+  const id = publicId(body.profile);
+  if (typeof body.active !== 'boolean') throw Object.assign(new Error('無效的追蹤操作。'), {status:400});
+  const [target] = await db('playfeed_profiles', {query:'select=user_id&public_id=eq.' + id});
+  if (!target) throw Object.assign(new Error('找不到這個遊戲清單。'), {status:404});
+  if (target.user_id === user.id) throw Object.assign(new Error('無法追蹤自己。'), {status:400});
+  if (body.active) {
+   await db('playfeed_follows', {method:'POST',query:'on_conflict=follower_id,target_id',body:{follower_id:user.id,target_id:id},prefer:'resolution=ignore-duplicates,return=minimal'});
+  } else {
+   await db('playfeed_follows', {method:'DELETE',query:'follower_id=eq.' + eq(user.id) + '&target_id=eq.' + id});
+  }
+  return {following:body.active};
+ }
  if (body.action === 'profile') {
   const display_name = safeText(body.displayName, { name: '名稱', max: 40 });
   const bio = safeText(body.bio || '', { name: '自介', min: 0, max: 300 });
@@ -126,6 +176,14 @@ async function post(user, body) {
    website = url.href;
   }
   const profile = { user_id: user.id, display_name, bio, website, updated_at: new Date().toISOString() };
+  if (body.avatar !== undefined) {
+   const value = body.avatar;
+   if (value !== null && (typeof value !== 'string' || value.length > 140000 ||
+    !/^data:image\/jpeg;base64,\/9j\/[a-z0-9+/]+={0,2}$/i.test(value))) {
+    throw Object.assign(new Error('頭貼必須是有效的 JPEG 圖片。'), {status:400});
+   }
+   profile.avatar = value;
+  }
   await db('playfeed_profiles', { method: 'POST', query: 'on_conflict=user_id', body: profile, prefer: 'resolution=merge-duplicates,return=minimal' });
   return { profile };
  }
@@ -183,6 +241,6 @@ async function post(user, body) {
   return { ok: true };
  }
 }
-module.exports = { get, post, profileFor, isAdmin };
+module.exports = { get, post, profileFor, publicCollection, isAdmin };
 
 
