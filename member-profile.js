@@ -33,8 +33,8 @@ function prepareShare() {
     const form = emailWidget.querySelector('form');
     const input = form?.querySelector('input');
     if (input) {
-      input.placeholder = '輸入email認證 即可分享遊戲清單~';
-      form.dataset.emailHint = input.placeholder;
+      input.removeAttribute('placeholder');
+      delete form.dataset.emailHint;
     }
     shareLogin.append(emailWidget);
   }

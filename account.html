@@ -52,7 +52,7 @@
 <dialog id="share-dialog">
   <h2>分享我的遊戲清單</h2>
   <p id="share-description">有連結的人可以查看你的自介、已同步的收藏和已上架的推薦，也能追蹤你。</p>
-  <div id="share-login" hidden></div>
+  <div id="share-login" hidden><p>輸入email認證 即可分享清單</p></div>
   <button class="button" type="button" id="create-profile-link" hidden>建立分享連結</button>
   <label id="profile-link-field" hidden>分享連結<input id="profile-link" readonly></label>
   <button class="button" type="button" id="copy-profile-link" hidden>複製連結</button>
@@ -322,7 +322,7 @@ async function loadReview(){
  }catch(error){document.querySelector('#review-list').textContent=error.message}
 }
 </script>
-<script src="/member-profile.js?v=20261118-profile-url"></script>
+<script src="/member-profile.js?v=20261118-share-prompt"></script>
 <script src="/external-game-link.js"></script>
 </html>
 

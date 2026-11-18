@@ -222,7 +222,7 @@
   <a class="source" id="creator-site" data-external-game target="_blank" rel="noopener noreferrer">原站 ↗</a>
   <ul class="works"></ul>
 </main>
-<nav id="creator-home-controls" class="creator-home-controls" aria-label="作品集底部控制板" hidden><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>回首頁</span></a></nav>
+<nav id="creator-home-controls" class="creator-home-controls" aria-label="作品集底部控制板" hidden><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>上一頁</span></a></nav>
 <dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
   <form id="game-edit-form">
     <h2 id="game-edit-heading">修改遊戲資料</h2>
@@ -314,6 +314,8 @@
   const feed = document.querySelector('#feed');
   const creatorPage = document.querySelector('#creator');
   const backToFeed = document.querySelector('#back-to-feed');
+  const creatorControls = document.querySelector('#creator-home-controls');
+  const creatorBack = creatorControls.querySelector('a');
   const switcher = document.querySelector('.game-switcher');
   const previousButton = document.querySelector('#previous-game');
   const nextButton = document.querySelector('#next-game');
@@ -1209,9 +1211,12 @@
     feed.hidden = Boolean(profile);
     creatorPage.hidden = !profile;
     shell.hidden = Boolean(profile);
-    document.querySelector('#creator-home-controls').hidden=!profile;
+    creatorControls.hidden=!profile;
     if (profile) {
-      backToFeed.href = '#' + (games[activeIndex]?.id ?? profile.games[0].id);
+      const fromSlug = location.pathname.startsWith('/g/') ? location.pathname.slice(3) : '';
+      const fromGame = games[activeIndex] || games.find(game => encodeURIComponent(game.slug || game.id) === fromSlug);
+      backToFeed.href = '#' + encodeURIComponent(fromGame?.id ?? profile.games[0].id);
+      creatorBack.href = backToFeed.href;
       renderProfile(profile);
       unmountGame();
       return;
@@ -1231,7 +1236,7 @@
   gameFromLink();
   document.querySelector('.boot-loading')?.remove();
   window.addEventListener('hashchange', gameFromLink);
-  document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed'))pendingEntrySource='creator_selection';},true);
+  document.addEventListener('click',event=>{if(event.target.closest('.works a,#back-to-feed,#creator-home-controls a'))pendingEntrySource='creator_selection';},true);
   function switchGame(direction) {
     const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     if(position<0||!queue.length)return;
