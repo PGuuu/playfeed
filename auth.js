@@ -1,6 +1,8 @@
 (() => {
   // Phuze's documented custom login flow: /auth/magic-link + /sessions/pickup.
   const tokenKey = 'phuze_session';
+  const shareIntentKey = 'playfeed:share-after-login';
+  let shareIntent = null;
   const pendingKey = 'playfeed:phuze-pending';
   const state = { user: null, token: '', ready: false, pending: null, collection: null, listeners: new Set() };
   let initialized = false, pendingLogin = null, pickupTimer, pickupBusy = false, refreshBusy = null, revision = 0;
@@ -154,15 +156,19 @@
     form.dataset.sending = 'true'; renderButton(); message('正在寄送認證連結…');
     const previous = state.pending;
     const pending = { id: crypto.randomUUID(), created: Date.now() };
+    const email = input.value.trim();
+    const sharing = form.closest('#share-login') !== null;
     try {
       // Keep the previous handoff usable until a new email has actually been accepted.
       await phuze('/auth/magic-link', { method: 'POST', body: JSON.stringify({
-        email: input.value.trim(), pending_id: pending.id,
+        email, pending_id: pending.id,
         redirect_url: location.origin + '/account.html', locale: 'zh-TW'
       }) });
       state.pending = pending;
+      shareIntent = sharing ? { email:email.toLowerCase(), created:pending.created } : null;
+      if (write(shareIntentKey, shareIntent && JSON.stringify(shareIntent))) shareIntent = null;
       const persisted = write(pendingKey, JSON.stringify(pending));
-      message('認證信已送出，請去收信。點完連結後，回到這個分頁即可同步收藏。'
+      message((sharing ? '認證信已送出，完成認證後會自動產生分享連結。' : '認證信已送出，請去收信。點完連結後，回到這個分頁即可同步收藏。')
         + (persisted ? '' : '請保留此分頁，不要重新整理。'));
       cooldown(60);
       pickup();
@@ -200,7 +206,7 @@
     const token = state.token || read(tokenKey);
     if (token) await phuze('/sessions/logout', { method: 'POST', headers: { 'X-Session-Token': token } });
     revision++; state.token = ''; state.user = null; state.collection = null; pendingLogin = null;
-    clearPending(); write(tokenKey, null); message('已登出。'); emit();
+    clearPending(); clearShareIntent(); write(tokenKey, null); message('已登出。'); emit();
   }
   function resume() {
     if (document.visibilityState === 'hidden') return;
@@ -253,7 +259,17 @@
       else refresh();
     });
   }
+  function hasShareIntent() {
+    let intent;
+    try { intent = JSON.parse(read(shareIntentKey) || 'null') || shareIntent; } catch { intent = shareIntent; }
+    return Boolean(intent && Date.now() - intent.created < 600000 && intent.email === state.user?.email?.toLowerCase());
+  }
+  function clearShareIntent() {
+    shareIntent = null;
+    write(shareIntentKey, null);
+  }
   window.PlayFeedAuth = {
+    hasShareIntent, clearShareIntent,
     api, init, openLogin, requireLogin, logout,
     onChange(listener) { state.listeners.add(listener); listener(state.user); return () => state.listeners.delete(listener); },
     takeCollection() { const data = state.collection; state.collection = null; return data; },

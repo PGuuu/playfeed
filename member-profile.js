@@ -26,7 +26,16 @@ function prepareShare() {
   shareDialog.querySelector('#profile-link-field').hidden = !id;
   copyLink.hidden = !id;
   profileLink.value = id ? profileAddress(id).href : '';
-  if (!user) shareLogin.append(emailWidget);
+  document.querySelector('#share-description').hidden = !user;
+  if (!user) {
+    const form = emailWidget.querySelector('form');
+    const input = form?.querySelector('input');
+    if (input) {
+      input.placeholder = '輸入email認證 即可分享遊戲清單~';
+      form.dataset.emailHint = input.placeholder;
+    }
+    shareLogin.append(emailWidget);
+  }
 }
 
 document.querySelector('#share-profile').addEventListener('click', () => {
@@ -36,26 +45,52 @@ document.querySelector('#share-profile').addEventListener('click', () => {
 });
 shareDialog.addEventListener('close', () => {
   if (emailWidget && shareLogin.contains(emailWidget)) {
+    const form = emailWidget.querySelector('form');
+    const input = form?.querySelector('input');
+    if (input) {
+      input.placeholder = '不用記密碼，連結 Email 加入會員';
+      form.dataset.emailHint = input.placeholder;
+    }
     document.querySelector('#backup-note').prepend(emailWidget);
   }
 });
-createLink.addEventListener('click', async () => {
-  const current = collection;
-  if (!current) return;
+let creatingShareFor = '';
+async function createProfileLink() {
+  const userId = PlayFeedAuth.user?.id;
+  if (!userId || !collection || creatingShareFor === userId) return;
+  creatingShareFor = userId;
   createLink.disabled = true;
+  shareStatus.textContent = '正在建立分享連結…';
   try {
     const {id} = await accountAction({action:'share-profile'});
-    if (collection !== current) return;
-    current.profile.public_id = id;
+    if (PlayFeedAuth.user?.id !== userId || !collection) return;
+    collection.profile.public_id = id;
+    PlayFeedAuth.clearShareIntent();
+    shareStatus.textContent = '';
     prepareShare();
-    profileLink.focus();
-    profileLink.select();
+    if (shareDialog.open) {
+      profileLink.focus();
+      profileLink.select();
+    }
   } catch (error) {
-    if (collection === current) shareStatus.textContent = error.message;
+    if (PlayFeedAuth.user?.id === userId) shareStatus.textContent = error.message;
   } finally {
-    if (collection === current) createLink.disabled = false;
+    if (creatingShareFor === userId) {
+      creatingShareFor = '';
+      createLink.disabled = false;
+    }
   }
-});
+}
+function resumeShareAfterLogin() {
+  const autoShare = PlayFeedAuth.hasShareIntent();
+  if (!shareDialog.open && !autoShare) return;
+  prepareShare();
+  if (!autoShare) return;
+  if (!shareDialog.open) shareDialog.showModal();
+  if (collection.profile.public_id) PlayFeedAuth.clearShareIntent();
+  else createProfileLink();
+}
+createLink.addEventListener('click', createProfileLink);
 copyLink.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(profileLink.value);

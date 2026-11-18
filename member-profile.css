@@ -46,8 +46,12 @@ dialog .button { min-height: 44px; margin: 3px 0; background: var(--cream); colo
 .following-profile { display: flex; align-items: center; gap: 12px; padding: 8px; text-decoration: none; text-align: left; overflow-wrap: anywhere; }
 .following-profile:hover { background: #39241c; }
 .following-profile .avatar { width: 42px; height: 42px; font-size: 16px; }
-#share-login .phuze-form { flex-wrap: wrap; justify-content: flex-end; }
-#share-login input.phuze-input { flex-basis: 100% !important; text-align: left; }
+#share-dialog:has(#share-login:not([hidden])) { padding-inline: 12px; }
+#share-login .phuze-form { padding: 3px; border: 1px solid #66513f; border-radius: 12px; }
+#share-login input.phuze-input { text-align: left; }
+@media(max-width:520px) {
+  #share-login #phuze-inline-widget .phuze-form:has(input:placeholder-shown):not(:focus-within)::before { left: 10px; right: 85px; }
+}
 @media(max-width:520px) { .profile { padding: 14px; } }
 .profile-actions:has(#edit-profile[hidden]) { grid-template-columns: 1fr; }
 .session-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
