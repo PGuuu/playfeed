@@ -21,7 +21,11 @@
 </style>
 <link rel="stylesheet" href="/member-profile.css">
 <main class="shell">
-  <header class="top"><a class="brand" href="/">Fan<span>Game</span></a><button id="session-action" class="button" type="button" hidden>Email 認證</button></header>
+  <header class="top"><a class="brand" href="/">Fan<span>Game</span></a><div class="session-tools"><div id="preview-modes" role="group" aria-label="會員頁預覽模式" hidden>
+  <button type="button" data-mode="developer" aria-pressed="true">開發者模式</button>
+  <button type="button" data-mode="member" aria-pressed="false">一般模式</button>
+  <button type="button" data-mode="guest" aria-pressed="false">訪客模式</button>
+  </div><button id="session-action" class="button" type="button" hidden>Email 認證</button></div></header>
   <section class="profile"><div class="avatar">?</div><div class="identity"><h1>我的頁面</h1><p>收藏保存在此瀏覽器</p></div></section>
   <aside class="backup-note" id="backup-note" role="note" aria-label="Email 認證，同步跨瀏覽器收藏"><div id="phuze-inline-widget"></div><p id="backup-copy" hidden></p><button class="button" id="backup-action" type="button" hidden>重試同步</button></aside>
   <aside class="collection-note" id="collection-note" aria-labelledby="collection-note-title">
@@ -83,6 +87,8 @@ if (publicProfileId !== null) {
 <script>
 let tab='saved', collection=null, games=[], loadVersion=0, publicError='';
 const isPublic = publicProfileId !== null;
+let previewMode = 'developer';
+const memberView = () => previewMode !== 'guest' && PlayFeedAuth.user;
 try {
  const cached=JSON.parse(sessionStorage.getItem('playfeed:catalog:v1')||'null');
  if(cached&&Date.now()-cached.time<1800000&&Array.isArray(cached.games))games=cached.games.filter(game=>typeof game.id==='string'&&typeof game.url==='string');
@@ -90,7 +96,7 @@ try {
 const grid=document.querySelector('.grid'), avatar=document.querySelector('.avatar'), title=document.querySelector('.identity h1'), subtitle=document.querySelector('.identity p'), sessionAction=document.querySelector('#session-action');
 function render(){
   grid.replaceChildren();
-  document.querySelector('#recommend-entry').hidden = isPublic || tab !== 'recommended' || !PlayFeedAuth.user;
+  document.querySelector('#recommend-entry').hidden = isPublic || tab !== 'recommended' || !memberView();
   if (isPublic && !collection) {
     const message = document.createElement('p');
     message.className = 'empty';
@@ -99,15 +105,15 @@ function render(){
     return;
   }
   const local=isPublic ? [] : PlayFeedSaves.list();
-  if(!isPublic&&PlayFeedAuth.checking&&!local.length){const p=document.createElement('p');p.className='empty';p.textContent='正在載入我的頁面…';grid.append(p);return;}
-  if(!isPublic&&tab==='recommended'&&!PlayFeedAuth.user){const p=document.createElement('p');p.className='empty';p.textContent='認證 Email 後，就能推薦遊戲、查看推薦進度。';grid.append(p);return;}
+  if(!isPublic&&previewMode!=='guest'&&PlayFeedAuth.checking&&!local.length){const p=document.createElement('p');p.className='empty';p.textContent='正在載入我的頁面…';grid.append(p);return;}
+  if(!isPublic&&tab==='recommended'&&!memberView()){const p=document.createElement('p');p.className='empty';p.textContent='認證 Email 後，就能推薦遊戲、查看推薦進度。';grid.append(p);return;}
   if(tab==='recommended'&&!collection){const p=document.createElement('p');p.className='empty';p.textContent='正在載入…';grid.append(p);return;}
   let entries=[];
   if(tab==='recommended') {
     entries=(collection.requests||[]).map(row=>({title:new URL(row.url).hostname,url:row.url,id:row.published_game_id||row.id,status:row.status}));
     for(const row of collection.recommendations){const entry=entries.find(item=>item.url===row.url);if(entry)Object.assign(entry,{title:row.title,id:row.id,status:'approved'});else entries.push({...row,status:isPublic?'':'approved'});}
   }
-  else {const keys=new Set([...(collection?.actions||[]).filter(row=>row.kind==='save').map(row=>row.game_key),...local.map(game=>game.url)]);entries=(games.length?games:local).filter(game=>keys.has(new URL(game.url,location.origin+'/').href));}
+  else {const keys=new Set([...((previewMode === 'guest' ? null : collection)?.actions||[]).filter(row=>row.kind==='save').map(row=>row.game_key),...local.map(game=>game.url)]);entries=(games.length?games:local).filter(game=>keys.has(new URL(game.url,location.origin+'/').href));}
   for(const game of entries){
     const a=document.createElement('a');a.className='tile';
     const match=games.find(entry=>new URL(entry.url,location.origin).href===new URL(game.url,location.origin).href);
@@ -128,20 +134,20 @@ function render(){
     img.src=sources[0];a.append(img);
     const span=document.createElement('span');span.textContent=game.title+(game.status?' · '+({pending:'待審核',approved:'已上架',rejected:'暫不上架'}[game.status]||''): '');a.append(span);grid.append(a);
   }
-  if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent=isPublic?'這裡還沒有遊戲。':PlayFeedAuth.user&&!collection?'正在載入收藏…':tab==='saved'?'還沒有收藏，回遊戲牆按下儲存，就能在這裡找到。':'這裡還沒有遊戲。';grid.append(p)}
+  if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent=isPublic?'這裡還沒有遊戲。':memberView()&&!collection?'正在載入收藏…':tab==='saved'?'還沒有收藏，回遊戲牆按下儲存，就能在這裡找到。':'這裡還沒有遊戲。';grid.append(p)}
 }
 function updateBackup(){
- const user=PlayFeedAuth.user,note=document.querySelector('#backup-note');
+ const user=memberView(),note=document.querySelector('#backup-note');
  note.hidden=Boolean(user)&&!PlayFeedSaves.error;
  document.querySelector('#phuze-inline-widget').hidden=Boolean(user);
  document.querySelector('#collection-note').hidden=Boolean(user);
- document.querySelector('#backup-copy').textContent=PlayFeedSaves.error||'';
- document.querySelector('#backup-copy').hidden=!PlayFeedSaves.error;
+ document.querySelector('#backup-copy').textContent=previewMode === 'guest' ? '' : PlayFeedSaves.error||'';
+ document.querySelector('#backup-copy').hidden=previewMode === 'guest'||!PlayFeedSaves.error;
  document.querySelector('#backup-action').hidden=!user||!PlayFeedSaves.error;
- if(!user){title.textContent='我的收藏';avatar.textContent='☆';subtitle.textContent='此瀏覽器已儲存 '+PlayFeedSaves.list().length+' 款遊戲'}
+ if(!user){document.querySelector('.profile-site')?.remove();title.textContent='我的收藏';avatar.textContent='☆';subtitle.textContent='此瀏覽器已儲存 '+PlayFeedSaves.list().length+' 款遊戲'}
 }
 window.addEventListener('playfeed:saves-change',event=>{if(isPublic)return;updateBackup();render();if(event.detail.reason==='merged'&&PlayFeedAuth.user&&collection)loadCollection()});
-document.querySelector('#backup-action').addEventListener('click',async()=>{if(PlayFeedAuth.user){await PlayFeedSaves.merge();updateBackup()}else PlayFeedAuth.openLogin()});
+document.querySelector('#backup-action').addEventListener('click',async()=>{if(memberView()){await PlayFeedSaves.merge();updateBackup()}else PlayFeedAuth.openLogin()});
 function showAvatar(target, profile) {
   target.textContent = Array.from(profile.display_name)[0]?.toUpperCase() || '?';
   if (profile.avatar) {
@@ -181,6 +187,84 @@ async function loadPublicCollection() {
   }
   render();
 }
+const dismissedNotices = new Set();
+function renderNotifications() {
+  const notifications = document.querySelector('#notifications');
+  notifications.replaceChildren();
+  if (!memberView() || !collection) return;
+  for (const item of collection.notifications) {
+    if (dismissedNotices.has(item.id)) continue;
+    const notice = document.createElement('div');
+    notice.className = 'publication-notice';
+    const link = document.createElement('a');
+    const recommendation = collection.recommendations.find(row => row.id === item.game_id);
+    const listed = recommendation && games.find(game => new URL(game.url, location.origin).href === recommendation.url);
+    link.href = '/g/' + encodeURIComponent(listed?.slug || listed?.id || item.game_id);
+    link.textContent = '你的推薦「' + item.title + '」已上架！';
+    if (!item.read_at) link.className = 'unread';
+    link.addEventListener('click', () => accountAction({action:'read-notifications'}).catch(() => {}));
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'notice-close';
+    close.textContent = '×';
+    close.setAttribute('aria-label', '關閉「' + item.title + '」上架通知');
+    close.addEventListener('click', async () => {
+      close.disabled = true;
+      try {
+        await accountAction({action:'dismiss-notification', id:item.id});
+        dismissedNotices.add(item.id);
+        const next = notice.nextElementSibling?.querySelector('button') ||
+          notice.previousElementSibling?.querySelector('button') || document.querySelector('#share-profile');
+        if (notice.isConnected && document.activeElement === close) next.focus();
+        notice.remove();
+      } catch (error) {
+        close.disabled = false;
+        status.textContent = error.message;
+      }
+    });
+    const status = document.createElement('p');
+    status.className = 'notice-status';
+    status.setAttribute('role', 'status');
+    notice.append(link, close, status);
+    notifications.append(notice);
+  }
+  const pending = collection.requests.filter(row => row.status === 'pending').length;
+  if (pending) {
+    const message = document.createElement('p');
+    message.textContent = pending + ' 款推薦等待管理者審核。';
+    notifications.append(message);
+  }
+}
+
+function applyPreview() {
+  document.body.dataset.memberPreview = previewMode;
+  document.querySelector('#preview-modes').hidden = !collection?.isAdmin;
+  for (const button of document.querySelectorAll('[data-mode]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.mode === previewMode));
+  }
+  const showMember = Boolean(memberView() && collection);
+  document.querySelector('#edit-profile').hidden = !showMember;
+  document.querySelector('#open-following').hidden = !showMember;
+  if (showMember) showIdentity(collection.profile);
+  updateBackup();
+  renderNotifications();
+  render();
+}
+
+for (const button of document.querySelectorAll('[data-mode]')) {
+  button.addEventListener('click', () => {
+    if (!collection?.isAdmin) return;
+    previewMode = button.dataset.mode;
+    applyPreview();
+  });
+}
+// Keep the real session intact while previewing the guest Email form.
+document.addEventListener('submit', event => {
+  if (previewMode !== 'guest' || !event.target.closest('#phuze-inline-widget')) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
+
 async function loadCollection(){
  const version=++loadVersion;
  try{
@@ -188,14 +272,8 @@ async function loadCollection(){
   const result=PlayFeedAuth.takeCollection?.()||await PlayFeedAuth.api('/api/account?action=collection');
   if(version!==loadVersion||!PlayFeedAuth.user)return;
   collection=result;
-  showIdentity(result.profile);
-  document.querySelector('#edit-profile').hidden = false;
-  document.querySelector('#open-following').hidden = false;
+  applyPreview();
   if (document.querySelector('#share-dialog').open) prepareShare();
-  const notifications=document.querySelector('#notifications');notifications.replaceChildren();
-  for(const item of result.notifications){const a=document.createElement('a');const recommended=result.recommendations.find(r=>r.id===item.game_id);const listed=recommended&&games.find(g=>new URL(g.url,location.origin).href===recommended.url);a.href='/g/'+encodeURIComponent(listed?.slug||listed?.id||item.game_id);a.textContent='你的推薦「'+item.title+'」已上架！';if(!item.read_at)a.className='unread';a.addEventListener('click',()=>PlayFeedAuth.api('/api/account',{method:'POST',body:JSON.stringify({action:'read-notifications'})}).catch(()=>{}));notifications.append(a)}
-  const pending=result.requests.filter(row=>row.status==='pending').length;
-  if(pending){const p=document.createElement('p');p.textContent=pending+' 款推薦等待管理者審核。';notifications.append(p)}
   document.querySelector('#reports-entry').hidden=!result.isAdmin;
   document.querySelector('#waiting-entry').hidden=result.user?.id!=='d28b1149fa6dc857b3086bf77acf5073'||String(result.user?.email||'').toLowerCase()!=='paulvongulla@gmail.com';
   document.querySelector('#open-review').hidden=!result.isAdmin;
@@ -207,9 +285,9 @@ async function loadCollection(){
 }
 for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelector('.tabs .active').classList.remove('active');button.classList.add('active');render()});
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
-PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user||isPublic;if(isPublic){loadPublicCollection();return}avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;if(!user)document.querySelector('#share-dialog').close();document.querySelector('#following-dialog').close();document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=true;document.querySelector('#open-following').hidden=true;updateBackup();render();if(user)loadCollection()});
+PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user||isPublic;if(isPublic){loadPublicCollection();return}avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;previewMode='developer';document.body.dataset.memberPreview=previewMode;document.querySelector('#preview-modes').hidden=true;dismissedNotices.clear();if(!user)document.querySelector('#share-dialog').close();document.querySelector('#following-dialog').close();document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=true;document.querySelector('#open-following').hidden=true;updateBackup();render();if(user)loadCollection()});
 PlayFeedAuth.onChange(()=>{document.querySelector('#waiting-entry').hidden=true;});
-loadPlayfeedGames().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render()});
+loadPlayfeedGames().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render();if(!isPublic)renderNotifications()});
 
 const profileDialog=document.querySelector('#profile-dialog'),profileForm=document.querySelector('#profile-form');
 const avatarEditor = createAvatarEditor();

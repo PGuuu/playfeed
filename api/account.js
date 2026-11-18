@@ -74,7 +74,7 @@ module.exports = async function handler(request, response) {
     if(action==='waiting-review')return sendJson(response,200,await require('./_waiting').post(user,body));
     if(action==='merge-saves')return sendJson(response,200,await require('./_guest-saves').mergeGuest(request,response,user,body));
 
-    if (['profile', 'share-profile', 'follow', 'read-notifications', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game', 'edit-game', 'game-screenshot'].includes(action)) return sendJson(response, 200, await community.post(user, body));
+    if (['profile', 'share-profile', 'follow', 'read-notifications', 'dismiss-notification', 'recommend', 'publish', 'review', 'delete-game', 'remove-reported-game', 'edit-game', 'game-screenshot'].includes(action)) return sendJson(response, 200, await community.post(user, body));
 
     if (action === 'like' || action === 'save') {
       const game = gameKey(body.gameKey);

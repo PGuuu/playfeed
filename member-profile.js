@@ -18,7 +18,7 @@ function profileAddress(id) {
 }
 
 function prepareShare() {
-  const user = PlayFeedAuth.user;
+  const user = memberView();
   const id = user && collection?.profile.public_id;
   shareLogin.hidden = Boolean(user);
   createLink.hidden = !user || Boolean(id);

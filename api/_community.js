@@ -78,7 +78,7 @@ async function get(user, action) {
    profileFor(user), isAdmin(user),
    db('playfeed_user_actions', { query: 'select=game_key,kind,created_at&user_id=eq.' + eq(user.id) + '&order=created_at.desc' }),
    db('playfeed_requests', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc' }),
-   db('playfeed_notifications', { query: 'select=*&user_id=eq.' + eq(user.id) + '&order=created_at.desc&limit=100' }),
+   db('playfeed_notifications', { query: 'select=*&user_id=eq.' + eq(user.id) + '&dismissed_at=is.null&order=created_at.desc&limit=100' }),
    db('playfeed_recommendations', { query: 'select=id,title,url,author,creator_url,created_at&submitted_by=eq.' + eq(user.id) + '&order=created_at.desc' })
   ]);
   await addLinkedRecommendations(requests, recommendations);
@@ -186,6 +186,11 @@ async function post(user, body) {
   }
   await db('playfeed_profiles', { method: 'POST', query: 'on_conflict=user_id', body: profile, prefer: 'resolution=merge-duplicates,return=minimal' });
   return { profile };
+ }
+ if (body.action === 'dismiss-notification') {
+  const id = publicId(body.id);
+  await db('playfeed_notifications', {method:'PATCH', query:'id=eq.' + id + '&user_id=eq.' + eq(user.id) + '&dismissed_at=is.null', body:{dismissed_at:new Date().toISOString()}});
+  return {ok:true};
  }
  if (body.action === 'read-notifications') {
   await db('playfeed_notifications', { method: 'PATCH', query: 'user_id=eq.' + eq(user.id) + '&read_at=is.null', body: { read_at: new Date().toISOString() } });

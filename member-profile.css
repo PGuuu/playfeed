@@ -50,3 +50,14 @@ dialog .button { min-height: 44px; margin: 3px 0; background: var(--cream); colo
 #share-login input.phuze-input { flex-basis: 100% !important; text-align: left; }
 @media(max-width:520px) { .profile { padding: 14px; } }
 .profile-actions:has(#edit-profile[hidden]) { grid-template-columns: 1fr; }
+.session-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+#preview-modes { display: flex; gap: 2px; padding: 3px; background: #39241c; border-radius: 12px; }
+#preview-modes button { border: 0; border-radius: 9px; padding: 7px 5px; background: transparent; color: #efd3bc; font: 650 12px system-ui,sans-serif; cursor: pointer; white-space: nowrap; }
+#preview-modes button[aria-pressed="true"] { background: var(--cream); color: var(--ink); }
+body:is([data-member-preview="member"],[data-member-preview="guest"]) :is(#waiting-entry,#reports-entry,#open-review,#review,#owner-analytics-link) { display: none !important; }
+.publication-notice { position: relative; }
+#notifications .publication-notice a { padding-right: 54px; min-height: 46px; }
+.notice-close { position: absolute; inset: 0 0 auto auto; width: 44px; height: 44px; color: var(--cream); background: transparent; border: 0; font-size: 22px; cursor: pointer; }
+.notice-close:hover { color: var(--orange); }
+.notice-status:empty { display: none; }
+@media(max-width:480px) { .top:has(#preview-modes:not([hidden])) { flex-wrap: wrap; row-gap: 8px; } }
