@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#e6e3da">
 <title>幫我關燈 · PlayFeed</title>
+<link rel="preload" as="image" href="./wall-shadow-v2.webp" fetchpriority="high">
 <style>
 *{box-sizing:border-box}
 :root{font-family:Arial,"Noto Sans TC",sans-serif;color-scheme:light;--wall:#e6e3da;--ink:#686b5e;--plate-light:#faf9ef;--plate-mid:#e5e5d9;--plate-dark:#b8bead;--key-light:#fbfbef;--key-dark:#dce0d0;--edge:#a2ac92;--angle:-22deg}
@@ -36,10 +37,18 @@ body.dark{color-scheme:dark;--wall:#20251f;--ink:#a6b299;--plate-light:#646e5b;-
 .rocker.press-left{transform:translateZ(7px) rotateY(-28deg)}.rocker.press-right{transform:translateZ(7px) rotateY(28deg)}
 @media(max-width:560px){main{padding:28px 12px}.assembly{width:clamp(150px,54vw,224px);height:auto;aspect-ratio:236/316;transform:translateX(-54px)}.hint{top:43%;left:calc(100% + 19px);width:98px;font-size:17px;transform:rotate(-5deg)}.hint::before{width:25px;left:-31px;top:-9px}.hint::after{left:-31px;top:-8px}}
 @media(max-height:440px){.assembly{transform:translateX(-48px) scale(.78)}}
+
+/* A faceless wall silhouette appears only after the lights go out. */
+.wall-shadow{position:fixed;z-index:0;left:calc(50% - 190px);top:50%;height:clamp(600px,88svh,1100px);width:auto;aspect-ratio:3/4;transform:translateY(-56%) rotate(-3deg);opacity:0;filter:brightness(0) blur(2.5px);pointer-events:none;user-select:none;transition:none;mask-image:linear-gradient(to bottom,transparent 0%,#000 16%,#000 72%,transparent 98%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 16%,#000 72%,transparent 98%)}
+.wall-shadow img{display:block;width:100%;height:100%;object-fit:contain}
+.dark .wall-shadow{opacity:.26}
+@media(max-height:440px){.wall-shadow{height:150svh;min-height:560px;transform:translateY(-55%) rotate(-3deg)}}
+
 @media(prefers-reduced-motion:reduce){*,*::after,*::before{transition:none!important}}
 </style>
 </head>
 <body>
+<div class="wall-shadow" aria-hidden="true"><img src="./wall-shadow-v2.webp" alt="" decoding="sync" loading="eager" fetchpriority="high" draggable="false"></div>
 <main aria-label="電燈開關小遊戲">
 <div class="assembly"><div class="plate"><span class="engraved">SWITCH</span><div class="well"><div class="rocker"><span class="face"></span><button class="press left" aria-label="按左側，開燈" aria-pressed="true"><span class="dimple"></span></button><button class="press right" aria-label="按右側，關燈" aria-pressed="false"><span class="dimple"></span></button></div></div><span class="indicator"></span></div><span class="hint" aria-hidden="true">按這邊<br>關燈</span></div>
 </main>
@@ -110,5 +119,7 @@ body.dark{color-scheme:dark;--wall:#20251f;--ink:#a6b299;--plate-light:#646e5b;-
 </script>
 </body>
 </html>
+
+
 
 
