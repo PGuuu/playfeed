@@ -268,14 +268,15 @@
 <script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
-  const popularIdsPromise=Promise.resolve([]);
+  const discoveryPromise=savedMode?Promise.resolve(null):loadPlayfeedDiscoveryPriorities();
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let entryGameId='';
   try{entryGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}
   entryGameId = catalog.find(game => game.id === entryGameId || game.slug === entryGameId)?.id || entryGameId;
   const requestedGameId=reload?'':entryGameId;
-  const games=savedMode?catalog:orderPlayfeedGames(catalog,{popularIds:await popularIdsPromise,requestedId:requestedGameId});
+  const feedPlayerId=PlayFeedAuth.user?.id||'';
+  const games=savedMode?catalog:orderPlayfeedGames(catalog,{discovery:await discoveryPromise,requestedId:requestedGameId,playerId:feedPlayerId});
   const featuredVisit=createPlayfeedFeaturedVisit(games,{entryId:entryGameId,savedMode});
   let memberSavedKeys=new Set(),savedListError=false,savedMembershipVersion=0;
   async function readMemberSavedKeys(){
@@ -1120,6 +1121,7 @@
     featuredVisit.shown(games[index].id,entrySource);
     unmountGame(gameExpanded);
     activeIndex = index;
+    recordPlayfeedGameExposure(games[index].id,{playerId:feedPlayerId});
 
     cards[index].hidden = false;
     cards[index].querySelector('.game-expand').setAttribute('aria-expanded', String(gameExpanded));

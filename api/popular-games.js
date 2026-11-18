@@ -1,5 +1,5 @@
 const { supabaseRest } = require('./_lib');
-const { rankPopularGames } = require('./_popular-games');
+const { rankPopularGames, discoveryPriorities } = require('./_popular-games');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     // Publish only ranking IDs. Never expose visitor, source, device or owner reports.
     const ids = rankPopularGames(result.data.games).map(game => game.id);
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-    return res.status(200).send(req.method === 'HEAD' ? '' : JSON.stringify({ ids }));
+    return res.status(200).send(req.method === 'HEAD' ? '' : JSON.stringify({ ids, ...discoveryPriorities(result.data.games) }));
   } catch (error) {
     console.warn('Popularity ranking unavailable:', error.message);
     res.setHeader('Cache-Control', 'no-store');

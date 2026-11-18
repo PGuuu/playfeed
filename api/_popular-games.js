@@ -14,4 +14,14 @@ function rankPopularGames(games = []) {
     return { id: g.game_id, score };
   }).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
 }
-module.exports = { rankPopularGames };
+
+function discoveryPriorities(games = []) {
+  const valid=games.filter(game=>typeof game.game_id==='string'&&/^[a-zA-Z0-9_-]{1,200}$/.test(game.game_id));
+  const ranked=valid.map(game=>({id:game.game_id,views:Math.max(0,Number(game.views)||0)})).sort((a,b)=>a.views-b.views||a.id.localeCompare(b.id));
+  const observedIds=[...new Set(ranked.map(game=>game.id))];
+  // The least-exposed third of observed games; games absent from the report have zero recent views.
+  const threshold=ranked.length?ranked[Math.max(0,Math.ceil(ranked.length/3)-1)].views:0;
+  const lowExposureIds=[...new Set(ranked.filter(game=>game.views<=threshold).map(game=>game.id))];
+  return {observedIds,lowExposureIds};
+}
+module.exports = { rankPopularGames, discoveryPriorities };
