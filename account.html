@@ -66,7 +66,7 @@
 </dialog>
 <template id="visitor-login"><dialog id="login-dialog"><h2>Email 認證後追蹤</h2><div id="phuze-widget"></div><button class="button" type="button" data-close-login>取消</button></dialog></template>
 <script>
-const publicProfileId = new URLSearchParams(location.search).get('profile');
+const publicProfileId = location.pathname.match(/^\/u\/([^/]+)\/?$/)?.[1] ?? new URLSearchParams(location.search).get('profile');
 if (publicProfileId !== null) {
   document.querySelector('meta[name="playfeed-auth-bootstrap"]').remove();
   document.querySelector('#profile-actions').hidden = true;
@@ -322,7 +322,7 @@ async function loadReview(){
  }catch(error){document.querySelector('#review-list').textContent=error.message}
 }
 </script>
-<script src="/member-profile.js?v=20261118-share-email"></script>
+<script src="/member-profile.js?v=20261118-profile-url"></script>
 </html>
 
 

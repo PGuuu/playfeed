@@ -1,5 +1,7 @@
 const { publicName, safeText, supabaseRest } = require('./_lib');
-const { randomUUID } = require('node:crypto');
+const { randomInt, randomUUID } = require('node:crypto');
+const adjectives = ('amber aqua autumn azure bold bright brisk bronze calm candy cedar cherry clear clever coral cozy crisp dawn dewy dapper dusky eager early electric emerald fair fancy fern fine fresh frost gentle ginger golden happy hazel honey icy indigo ivory jade jazzy jolly lemon lilac little lively lucky lunar mellow merry mint misty neon nimble ocean olive opal peach pearl pink playful plum polar poppy quiet rapid rosy royal ruby sandy satin silver silky sky sleek snowy soft solar spring starry still sunny swift teal tiny vivid warm wild windy wise witty').split(' ');
+const nouns = ('acorn apple apricot atlas badge bamboo beach bean bear bee berry birch bloom boat bubble bunny cactus canyon cap cat cloud comet cookie copper cove crane creek daisy delta dice dove drift echo elm ember falcon fig finch fish flame flower foam forest fox frog galaxy garden gecko gem glow grape grove gull harbor hare hat hawk hill iris island kite lake lark leaf lotus lynx mango maple marble meadow melon moon moss moth mouse nest oak orchid otter owl palm panda paper path pebble petal pine pixel planet pond prawn prism puff quartz rain raven reef river robin rock rose sail seal seed shell shore slate smile snail snow spark spring star stone storm swan tide tiger toast trail tulip twig vale violet wave willow wing wren').split(' ');
 const eq = value => encodeURIComponent(String(value));
 async function db(table, options) {
  const result = await supabaseRest(table, options);
@@ -11,7 +13,7 @@ async function isAdmin(user) {
  return rows.length > 0;
 }
 async function profileFor(user) {
- const rows = await db('playfeed_profiles', { query: 'select=display_name,bio,website,avatar,public_id&user_id=eq.' + eq(user.id) });
+ const rows = await db('playfeed_profiles', { query: 'select=display_name,bio,website,avatar,public_id,public_slug&user_id=eq.' + eq(user.id) });
  return rows[0] || { display_name: publicName(user), bio: '', website: '' };
 }
 function validUrl(value) {
@@ -33,11 +35,16 @@ function publicId(value) {
  return safeText(value, {name:'profile', max:36, pattern:/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i});
 }
 
+function profileFilter(value) {
+ const slug = String(value ?? '');
+ if (/^[a-z]{2,12}-[a-z]{2,12}$/.test(slug)) return 'public_slug=eq.' + slug;
+ return 'public_id=eq.' + publicId(value);
+}
+
 async function publicCollection(viewer, value) {
- const id = publicId(value);
- const [row] = await db('playfeed_profiles', {query:'select=user_id,display_name,bio,website,avatar&public_id=eq.' + id});
+ const [row] = await db('playfeed_profiles', {query:'select=user_id,public_id,display_name,bio,website,avatar&' + profileFilter(value)});
  if (!row) throw Object.assign(new Error('找不到這個遊戲清單。'), {status:404});
- const {user_id, ...profile} = row;
+ const {user_id, public_id:id, ...profile} = row;
  const owner = 'user_id=eq.' + eq(user_id);
  const isOwn = viewer?.id === user_id;
  const [actions, recommendations, requests, follows] = await Promise.all([
@@ -52,7 +59,7 @@ async function publicCollection(viewer, value) {
 
 async function get(user, action) {
  if (action === 'following') {
-  const rows = await db('playfeed_follows', {query:'select=profile:playfeed_profiles!inner(public_id,display_name,avatar)&follower_id=eq.' + eq(user.id) + '&order=created_at.desc'});
+  const rows = await db('playfeed_follows', {query:'select=profile:playfeed_profiles!inner(public_id,public_slug,display_name,avatar)&follower_id=eq.' + eq(user.id) + '&order=created_at.desc'});
   return {profiles:rows.map(row=>row.profile)};
  }
  if (action === 'me') return { user: { email: user.email, name: publicName(user) }, profile: await profileFor(user), isAdmin: await isAdmin(user) };
@@ -150,14 +157,27 @@ async function post(user, body) {
   const owner = 'user_id=eq.' + eq(user.id);
   await db('playfeed_profiles', {method:'POST',query:'on_conflict=user_id',body:{user_id:user.id,display_name:'玩家'},prefer:'resolution=ignore-duplicates,return=minimal'});
   await db('playfeed_profiles', {method:'PATCH',query:owner + '&public_id=is.null',body:{public_id:randomUUID()},prefer:'return=minimal'});
-  const [row] = await db('playfeed_profiles', {query:'select=public_id&' + owner});
-  return {id:row.public_id};
+  for (let attempt = 0; attempt < 20; attempt++) {
+   const [row] = await db('playfeed_profiles', {query:'select=public_id,public_slug&' + owner});
+   if (row.public_slug) return {id:row.public_id, slug:row.public_slug};
+   const slug = adjectives[randomInt(adjectives.length)] + '-' + nouns[randomInt(nouns.length)];
+   try {
+    const [saved] = await db('playfeed_profiles', {
+     method:'PATCH', query:owner + '&public_slug=is.null&select=public_id,public_slug',
+     body:{public_slug:slug}, prefer:'return=representation'
+    });
+    if (saved) return {id:saved.public_id, slug:saved.public_slug};
+   } catch (error) {
+    if (error.status !== 409) throw error;
+   }
+  }
+  throw Object.assign(new Error('目前無法建立分享網址，請再試一次。'), {status:503});
  }
  if (body.action === 'follow') {
-  const id = publicId(body.profile);
   if (typeof body.active !== 'boolean') throw Object.assign(new Error('無效的追蹤操作。'), {status:400});
-  const [target] = await db('playfeed_profiles', {query:'select=user_id&public_id=eq.' + id});
+  const [target] = await db('playfeed_profiles', {query:'select=user_id,public_id&' + profileFilter(body.profile)});
   if (!target) throw Object.assign(new Error('找不到這個遊戲清單。'), {status:404});
+  const id = target.public_id;
   if (target.user_id === user.id) throw Object.assign(new Error('無法追蹤自己。'), {status:400});
   if (body.active) {
    await db('playfeed_follows', {method:'POST',query:'on_conflict=follower_id,target_id',body:{follower_id:user.id,target_id:id},prefer:'resolution=ignore-duplicates,return=minimal'});

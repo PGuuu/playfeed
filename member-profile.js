@@ -11,21 +11,23 @@ function accountAction(body) {
   return PlayFeedAuth.api('/api/account', {method:'POST',body:JSON.stringify(body)});
 }
 
-function profileAddress(id) {
+function profileAddress(profile) {
+  if (profile.public_slug) return new URL('/u/' + encodeURIComponent(profile.public_slug), location.origin);
   const address = new URL('/account.html', location.origin);
-  address.searchParams.set('profile', id);
+  address.searchParams.set('profile', profile.public_id);
   return address;
 }
 
 function prepareShare() {
   const user = memberView();
-  const id = user && collection?.profile.public_id;
+  const profile = user && collection?.profile;
+  const id = profile?.public_id;
   shareLogin.hidden = Boolean(user);
-  createLink.hidden = !user || Boolean(id);
+  createLink.hidden = !user || Boolean(profile?.public_slug);
   createLink.disabled = !collection;
   shareDialog.querySelector('#profile-link-field').hidden = !id;
   copyLink.hidden = !id;
-  profileLink.value = id ? profileAddress(id).href : '';
+  profileLink.value = id ? profileAddress(profile).href : '';
   document.querySelector('#share-description').hidden = !user;
   if (!user) {
     const form = emailWidget.querySelector('form');
@@ -42,6 +44,7 @@ document.querySelector('#share-profile').addEventListener('click', () => {
   shareStatus.textContent = '';
   prepareShare();
   shareDialog.showModal();
+  if (memberView() && collection?.profile.public_id && !collection.profile.public_slug) createProfileLink();
 });
 shareDialog.addEventListener('close', () => {
   if (emailWidget && shareLogin.contains(emailWidget)) {
@@ -62,9 +65,10 @@ async function createProfileLink() {
   createLink.disabled = true;
   shareStatus.textContent = '正在建立分享連結…';
   try {
-    const {id} = await accountAction({action:'share-profile'});
+    const {id, slug} = await accountAction({action:'share-profile'});
     if (PlayFeedAuth.user?.id !== userId || !collection) return;
     collection.profile.public_id = id;
+    collection.profile.public_slug = slug;
     PlayFeedAuth.clearShareIntent();
     shareStatus.textContent = '';
     prepareShare();
@@ -87,7 +91,7 @@ function resumeShareAfterLogin() {
   prepareShare();
   if (!autoShare) return;
   if (!shareDialog.open) shareDialog.showModal();
-  if (collection.profile.public_id) PlayFeedAuth.clearShareIntent();
+  if (collection.profile.public_slug) PlayFeedAuth.clearShareIntent();
   else createProfileLink();
 }
 createLink.addEventListener('click', createProfileLink);
@@ -116,7 +120,7 @@ document.querySelector('#open-following').addEventListener('click', async () => 
     for (const profile of profiles) {
       const link = document.createElement('a');
       link.className = 'following-profile';
-      link.href = profileAddress(profile.public_id).href;
+      link.href = profileAddress(profile).href;
       const picture = document.createElement('span');
       picture.className = 'avatar';
       showAvatar(picture, profile);

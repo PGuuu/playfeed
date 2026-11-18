@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/u/:slug",
+      "destination": "/account.html"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/api/seo?format=xml"
     },
