@@ -13,7 +13,7 @@
 /* Keep a single home action in the same bottom control area on member pages. */
 .shell{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
 .member-controls{position:fixed;z-index:8;left:50%;bottom:0;transform:translateX(-50%);width:min(462px,100%);display:flex;padding:6px max(6px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));border-top:1px solid #dcc6ae;background:#fff7eb;box-shadow:0 -3px 16px #0002}
-.member-home{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:0;min-height:48px;border:0;border-radius:13px;background:#d63f20;color:#fff;font:750 15px system-ui,sans-serif;text-decoration:none;touch-action:manipulation}
+.member-home{margin-inline:auto;width:clamp(96px, 33vw, 144px);display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;border:0;border-radius:13px;background:#d63f20;color:#fff;font:750 15px system-ui,sans-serif;text-decoration:none;touch-action:manipulation}
 .member-home svg{width:19px;height:19px;flex:none}
 .member-home:hover{background:#c53518}
 .member-home:active{background:#b92d13}
@@ -42,7 +42,7 @@
   <p id="recommend-entry" hidden><a class="recommend-button" href="/submit.html">＋ 推薦新遊戲</a></p>
   <section class="grid" aria-live="polite"><p class="empty">正在載入…</p></section>
 </main>
-<nav class="member-controls" aria-label="會員頁底部控制板"><a class="member-home" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>上一頁</span></a></nav>
+<nav class="member-controls" aria-label="會員頁底部控制板"><a class="member-home" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>回上一頁</span></a></nav>
 <dialog id="profile-dialog"><form id="profile-form"><h2>編輯我的自介</h2>
 <div class="avatar-editor">
   <label>上傳頭貼<input type="file" id="avatar-file" accept="image/*"></label>
@@ -85,7 +85,7 @@ if (publicProfileId !== null) {
 </script>
 <script src="/auth.js?v=20261118-member-profile"></script><script src="/saves.js"></script><script src="/analytics.js"></script><script src="/analytics-owner-link.js" defer></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/avatar-editor.js"></script>
 <script>
-let tab='saved', collection=null, games=[], loadVersion=0, publicError='';
+let tab=history.state?.collectionTab==='recommended'?'recommended':'saved', collection=null, games=[], loadVersion=0, publicError='';
 const isPublic = publicProfileId !== null;
 let previewMode = 'developer';
 const memberView = () => previewMode !== 'guest' && PlayFeedAuth.user;
@@ -96,6 +96,7 @@ try {
 const grid=document.querySelector('.grid'), avatar=document.querySelector('.avatar'), title=document.querySelector('.identity h1'), subtitle=document.querySelector('.identity p'), sessionAction=document.querySelector('#session-action');
 function render(){
   grid.replaceChildren();
+  for (const button of document.querySelectorAll('[data-tab]')) button.classList.toggle('active', button.dataset.tab === tab);
   document.querySelector('#recommend-entry').hidden = isPublic || tab !== 'recommended' || !memberView();
   if (isPublic && !collection) {
     const message = document.createElement('p');
@@ -283,7 +284,7 @@ async function loadCollection(){
   render();
  }catch(error){if(version!==loadVersion)return;const p=document.createElement('p');p.className='empty';p.textContent=error.message;grid.replaceChildren(p)}
 }
-for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelector('.tabs .active').classList.remove('active');button.classList.add('active');render()});
+for(const button of document.querySelectorAll('[data-tab]'))button.addEventListener('click',()=>{tab=button.dataset.tab;history.replaceState({...history.state,collectionTab:tab},'');render()});
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
 PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user||isPublic;if(isPublic){loadPublicCollection();return}avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;previewMode='developer';document.body.dataset.memberPreview=previewMode;document.querySelector('#preview-modes').hidden=true;dismissedNotices.clear();if(!user)document.querySelector('#share-dialog').close();document.querySelector('#following-dialog').close();document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=true;document.querySelector('#open-following').hidden=true;updateBackup();render();if(user)loadCollection()});
 PlayFeedAuth.onChange(()=>{document.querySelector('#waiting-entry').hidden=true;});

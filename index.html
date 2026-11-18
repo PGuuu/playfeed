@@ -240,7 +240,7 @@
       <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
       <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
     </div>
-    <nav class="expanded-controls" aria-label="放大模式控制"><button class="expanded-exit" type="button">退出遊戲</button></nav>
+    <nav class="expanded-controls" aria-label="放大模式控制"><button class="expanded-exit" type="button">回上一頁</button></nav>
     <footer>
       <div class="source-dock">
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
@@ -1077,7 +1077,6 @@
     const queue=navigationQueue(),position=queue.indexOf(activeIndex);
     lastNavigationQueue=queue;
     previousButton.disabled=position<0||!queue.length;nextButton.disabled=position<0||!queue.length;
-    if (activeIndex >= 0) for (const button of cards[activeIndex].querySelectorAll('.expanded-controls button')) button.disabled=position<0||!queue.length;
     const label=document.querySelector('.saved-list-label');label.hidden=!savedMode;
     if(savedMode)label.textContent='儲存清單（'+(position>=0?position+1:0)+'/'+queue.length+'）';
   }
