@@ -4,8 +4,34 @@ const { loadPlayfeedGames } = require('../catalog.js');
 const origin = 'https://fangame.app';
 const escape = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
+async function memberPage(profile, response) {
+  response.setHeader('Cache-Control', 'no-store');
+  try {
+    const nickname = await require('./_community').publicProfileName(profile);
+    if (!nickname) return response.status(404).send('找不到這個遊戲清單。');
+    const title = escape(nickname + '的FanGame');
+    const description = '看看這位玩家收藏與推薦的遊戲。';
+    const url = /^[a-z]+-[a-z]+$/.test(profile) ? origin + '/u/' + profile : origin + '/account.html?profile=' + encodeURIComponent(profile);
+    const image = origin + '/share-cards/fangame-platform.png';
+    const metadata = [
+      ['og:type', 'website'], ['og:site_name', 'FanGame'], ['og:locale', 'zh_TW'],
+      ['og:title', title], ['og:description', description], ['og:url', escape(url)],
+      ['og:image', image], ['og:image:width', '1200'], ['og:image:height', '630']
+    ].map(([property, content]) => `<meta property="${property}" content="${content}">`).join('');
+    const page = fs.readFileSync(path.join(process.cwd(), 'account.html'), 'utf8')
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${title}</title>${metadata}<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">`);
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    return response.send(page);
+  } catch (error) {
+    if (error.status === 400) return response.status(404).send('找不到這個遊戲清單。');
+    return response.status(503).send('暫時無法載入遊戲清單。');
+  }
+}
+
 module.exports = async function handler(request, response) {
   if (!['GET', 'HEAD'].includes(request.method)) return response.status(405).end();
+  if (request.query?.profile !== undefined) return memberPage(request.query.profile, response);
   const id = request.query?.id;
   if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,200}$/.test(id)) return response.status(404).send('Game not found');
   try {

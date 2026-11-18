@@ -219,7 +219,7 @@
   <span class="label">作品收錄</span>
   <h1 id="creator-name"></h1>
   <p class="note">FanGame 整理的作品集。<a href="/games.html">瀏覽全部遊戲</a></p>
-  <a class="source" id="creator-site" target="_blank" rel="noopener noreferrer">原站 ↗</a>
+  <a class="source" id="creator-site" data-external-game target="_blank" rel="noopener noreferrer">原站 ↗</a>
   <ul class="works"></ul>
 </main>
 <nav id="creator-home-controls" class="creator-home-controls" aria-label="作品集底部控制板" hidden><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg><span>回首頁</span></a></nav>
@@ -244,7 +244,7 @@
     <footer>
       <div class="source-dock">
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
-        <div class="game-info" aria-hidden="true" inert><div class="source-stats" aria-label="遊戲統計"><span class="exposure-stat">曝光 — 次</span><span class="play-stat" title="單次停留超過 10 秒計為一次遊玩">遊玩 — 次</span></div><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
+        <div class="game-info" aria-hidden="true" inert><div class="source-stats" aria-label="遊戲統計"><span class="exposure-stat">曝光 — 次</span><span class="play-stat" title="單次停留超過 10 秒計為一次遊玩">遊玩 — 次</span></div><div class="game-info-heading"><a class="creator-card"><span class="creator-card-details"><span class="game-title"></span><span class="byline"></span></span><span class="creator-card-action">作品收錄 <span aria-hidden="true">›</span></span></a><button type="button" class="game-edit" aria-label="修改遊戲名稱與創作者" title="修改遊戲資料" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 2h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-2Z"/><circle cx="11.5" cy="11" r="3"/></svg></button></div><a class="game-source" data-external-game target="_blank" rel="noopener noreferrer">遊戲原站 ↗</a></div>
       </div>
       <div class="actions">
         <button class="comments-button" type="button" aria-label="來源" aria-expanded="false" aria-controls="comments-sheet"><span class="action-label">來源</span></button>
@@ -255,7 +255,7 @@
   </article>
 </template>
 
-<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261117-qualified-plays"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261117-qualified-plays"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const popularIdsPromise=Promise.resolve([]);

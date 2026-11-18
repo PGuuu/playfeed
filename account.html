@@ -115,7 +115,7 @@ function render(){
     const preview=match||game;
     a.href=tab==='recommended'?game.url:'/g/'+encodeURIComponent(preview.slug || preview.id)+(isPublic?'':'?list=saved');
     if(tab==='saved'&&!isPublic)a.addEventListener('click',()=>{try{sessionStorage.setItem('playfeed:saved-order:v1',JSON.stringify(entries.map(entry=>new URL(entry.url,location.origin+'/').href)))}catch{}});
-    if(tab==='recommended'){a.target='_blank';a.rel='noopener noreferrer';}
+    if(tab==='recommended'){a.dataset.externalGame='';a.target='_blank';a.rel='noopener noreferrer';}
     a.setAttribute('aria-label',game.title);
     const img=document.createElement('img');
     img.alt='';img.loading='lazy';img.decoding='async';img.width=390;img.height=700;
@@ -171,7 +171,7 @@ async function loadPublicCollection() {
     if (version !== loadVersion) return;
     collection = result;
     showIdentity(result.profile);
-    document.title = result.profile.display_name + '的遊戲清單 | FanGame';
+    document.title = result.profile.display_name + '的FanGame';
     document.querySelector('#visitor-actions').hidden = result.isOwn;
     updateFollowButton();
   } catch (error) {
@@ -323,6 +323,7 @@ async function loadReview(){
 }
 </script>
 <script src="/member-profile.js?v=20261118-profile-url"></script>
+<script src="/external-game-link.js"></script>
 </html>
 
 

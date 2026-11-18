@@ -41,6 +41,11 @@ function profileFilter(value) {
  return 'public_id=eq.' + publicId(value);
 }
 
+async function publicProfileName(value) {
+ const [row] = await db('playfeed_profiles', {query:'select=display_name&' + profileFilter(value)});
+ return row?.display_name;
+}
+
 async function publicCollection(viewer, value) {
  const [row] = await db('playfeed_profiles', {query:'select=user_id,public_id,display_name,bio,website,avatar&' + profileFilter(value)});
  if (!row) throw Object.assign(new Error('找不到這個遊戲清單。'), {status:404});
@@ -266,6 +271,6 @@ async function post(user, body) {
   return { ok: true };
  }
 }
-module.exports = { get, post, profileFor, publicCollection, isAdmin };
+module.exports = { get, post, profileFor, publicCollection, publicProfileName, isAdmin };
 
 

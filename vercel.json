@@ -2,7 +2,12 @@
   "rewrites": [
     {
       "source": "/u/:slug",
-      "destination": "/account.html"
+      "destination": "/api/share?profile=:slug"
+    },
+    {
+      "source": "/account.html",
+      "has": [{"type": "query", "key": "profile", "value": "(?<profileId>[0-9a-fA-F-]{36})"}],
+      "destination": "/api/share?profile=:profileId"
     },
     {
       "source": "/sitemap.xml",
@@ -19,7 +24,7 @@
   ],
   "functions": {
     "api/share.js": {
-      "includeFiles": "{catalog.js,share-assets.json,index.html}",
+      "includeFiles": "{catalog.js,share-assets.json,index.html,account.html}",
       "maxDuration": 15
     },
     "api/og.js": {
