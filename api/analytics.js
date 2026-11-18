@@ -6,7 +6,7 @@ const ENTRIES=new Set(['next','previous','search_selection','saved_selection','c
 const ACTIONS=new Set(['page_view','game_view','game_time','game_play','source_open','save_click','save_success','guest_save_success','save_sync_success','unsave_success','guest_unsave_success','comments_open','comment_success','rating_open','rating_success','share_click','share_success','report_open','report_success','creator_open','account_open','search_open','search_select','previous_game','next_game','menu_open','recommend_open','recommend_success','login_open','external_open','settings_open','game_expand','expanded_previous_game','expanded_next_game']);
 const { saveCountSummary } = require('./_save-counts');
 const rates=new Map();
-const {deviceId,deviceInfo}=require('./_device');
+const {analyticsDevice,analyticsToken,deviceInfo}=require('./_device');
 async function db(table,options){const r=await supabaseRest(table,options);if(!r.ok)throw Error('Analytics database unavailable');return r.data;}
 async function ensureDevice(id,info){
  await db('playfeed_analytics_devices',{method:'POST',query:'on_conflict=id',body:{id,family:info.family,browser:info.browser},prefer:'resolution=ignore-duplicates,return=minimal'});
@@ -29,13 +29,13 @@ module.exports=async(req,res)=>{
   }
   if(req.method!=='POST')return sendJson(res,405,{error:'Method not allowed'});
   const body=await readJson(req,40000),action=body.action;
-  const id=deviceId(req,res),info=deviceInfo(req);
+  const id=analyticsDevice(req,res,body.deviceToken,action==='events'&&Array.isArray(body.events)?body.events[0]?.session:undefined),info=deviceInfo(req);
   const minute=Math.floor(Date.now()/60000),rate=rates.get(id);
   const count=rate?.minute===minute?rate.count+1:1;
   rates.set(id,{minute,count});if(rates.size>5000)for(const [key,value]of rates)if(value.minute<minute)rates.delete(key);
   if(count>120)return sendJson(res,429,{error:'Too many analytics requests'});
   await ensureDevice(id,info);
-  if(action==='init')return sendJson(res,200,{ok:true});
+  if(action==='init')return sendJson(res,200,{ok:true,deviceToken:analyticsToken(id)});
   if(action==='identify'){
    const verified=await verifyPhuzeSession(req);
    if(verified.user&&OWNERS.has(verified.user.email.toLowerCase())){await markOwner(id,'我的 '+info.family+' · '+info.browser,false);return sendJson(res,200,{isOwner:true});}

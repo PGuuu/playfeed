@@ -8,8 +8,25 @@ function deviceId(req,res,create=true){
  if(!create)return null;
  const id=crypto.randomUUID();res.setHeader('Set-Cookie',`pf_device=${id}.${signature(id)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`);return id;
 }
+function analyticsToken(id){
+ return id+'.'+crypto.createHmac('sha256',secret()).update('playfeed-analytics-continuity:'+id).digest('hex');
+}
+function analyticsDevice(req,res,token,session){
+ if(typeof token==='string'){
+  const [id,sig,...extra]=token.split('.');
+  if(!extra.length&&UUID.test(id)&&/^[a-f0-9]{64}$/.test(sig||'')&&
+    crypto.timingSafeEqual(Buffer.from(token),Buffer.from(analyticsToken(id))))return id;
+ }
+ const cookie = deviceId(req,res,false);
+ if(cookie)return cookie;
+ if(typeof session==='string'&&UUID.test(session)){
+  const hex=crypto.createHmac('sha256',secret()).update('playfeed-analytics-session:'+session).digest('hex');
+  return hex.slice(0,8)+'-'+hex.slice(8,12)+'-8'+hex.slice(13,16)+'-8'+hex.slice(17,20)+'-'+hex.slice(20,32);
+ }
+ return deviceId(req,res);
+}
 function deviceInfo(req){
  const ua=String(req.headers['user-agent']||'');
  return {family:/iPhone/i.test(ua)?'iPhone':/iPad/i.test(ua)?'iPad':/Android/i.test(ua)?'Android':/Macintosh/i.test(ua)?'Mac':'Windows / Desktop',browser:/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'Other',is_bot:/bot|crawler|spider|headless|facebookexternalhit|preview|slurp/i.test(ua)};
 }
-module.exports={deviceId,deviceInfo};
+module.exports={deviceId,deviceInfo,analyticsDevice,analyticsToken};
