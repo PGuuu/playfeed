@@ -7,11 +7,7 @@
   // A remote game keeps its own origin for modules and storage. Same-origin
   // platform pages stay isolated so embedded scripts cannot access the parent.
   const remote = url.origin !== new URL(base).origin;
-  // End screens may open shops in a tab or navigate the top page on a click.
-  // New tabs must not inherit game restrictions (shop login/forms need them).
-  // Top-page redirects still require an explicit user gesture.
-  const outbound = 'allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
-  frame.setAttribute('sandbox', (remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : 'allow-scripts') + ' ' + outbound);
+  frame.setAttribute('sandbox', remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : 'allow-scripts');
   frame.setAttribute('allow', 'fullscreen');
   frame.style.backgroundColor = '#000';
   frame.referrerPolicy = 'no-referrer';
