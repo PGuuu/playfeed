@@ -6,6 +6,7 @@
   const effects = dialog.querySelector('.update-notice-effects');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let drift;
+  let nudge;
   let shooting = false;
 
   try {
@@ -43,6 +44,7 @@
   async function shoot() {
     if (shooting) return;
     shooting = true;
+    nudge?.cancel();
     button.disabled = true;
     drift?.pause();
     try {
@@ -77,6 +79,15 @@
   }
 
   button.addEventListener('click', shoot);
+  dialog.addEventListener('click', event => {
+    if (shooting || button.contains(event.target)) return;
+    nudge?.cancel();
+    const resting = {transform:'translateY(0)'};
+    const lifted = {transform:'translateY(-8px)'};
+    nudge = reducedMotion.matches
+      ? button.animate([{outline:'3px solid #fff3df'}, {outline:'3px solid #fff3df'}], {duration:550})
+      : button.animate([resting, lifted, resting, lifted, resting], {duration:520, easing:'ease-in-out'});
+  });
   dialog.addEventListener('cancel', event => { event.preventDefault(); shoot(); });
   dialog.addEventListener('close', () => {
     drift?.cancel();
