@@ -9,6 +9,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
   const creator = { name: '阿李阿斗 @ali_aaa_do', url: 'https://aicooksyourbrain.com/', hash: '#creator-ali-aaa-do' };
   const playfeed = { name: 'FanGame', url: 'https://fangame.app/', hash: '#creator-playfeed' };
   const games = [
+    { id: 'hammer-face', title: '敲一下！', creator: playfeed, author: 'FanGame', url: './games/hammer-face/index.html', published_at: '2026-11-18T06:00:00.000Z', viewport: { width: 390, height: 740 } },
     { id: 'light-switch', title: '幫我關燈', creator: playfeed, author: 'FanGame', url: './games/light-switch/index.html', cover: '/share-cards/v4/light-switch.png', published_at: '2026-11-15T07:55:06.000Z' },
     { id: 'sticker-chat', title: '寶貝，這張你有嗎？', author: 'FanGame', creator: playfeed, url: './games/sticker-chat/index.html', cover: '/share-cards/v4/sticker-chat.png', published_at: '2026-11-14T07:58:33.000Z', viewport: { width: 390, height: 740 } },
     { id: 'vanilla-cloud', title: '香草雲朵 Vanilla Cloud', author: 'FanGame', creator: playfeed, url: './vanilla.html', cover: '/share-cards/vanilla-cloud.png', published_at: '2026-11-13T04:16:00.000Z', viewport: { width: 390, height: 740 } },
@@ -130,6 +131,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
 
 // Public URL names are pinned so title/source edits never break shared links.
 const GAME_PUBLIC_SLUGS = {
+  "hammer-face": "hammer-face",
   "60f6b2bb-9eed-4343-8044-0890c8a9663e": "slowpoke",
   "b7b7412f-5817-4cd6-8d52-0b4b965c4b0e": "hamelin",
   "fbe586c6-91f2-43ef-95c7-eac861d44335": "carpet",
