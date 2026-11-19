@@ -1,5 +1,5 @@
 (() => {
-  const key = 'fangame:update-notice:collections-20261118';
+  const key = 'fangame:update-notice:rankings-20261119';
   const dialog = document.querySelector('#update-notice');
   const card = dialog.querySelector('.update-notice-card');
   const button = dialog.querySelector('button');
