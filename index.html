@@ -176,7 +176,8 @@
 </dialog>
 <dialog id="ranking-dialog" class="ranking-dialog" aria-labelledby="ranking-heading">
   <header class="ranking-header"><div><h2 id="ranking-heading">遊戲排行榜</h2><p>依近 7 天的實際遊玩與互動綜合排序</p></div><form method="dialog"><button type="submit" aria-label="關閉遊戲排行榜">關閉</button></form></header>
-  <p class="ranking-status" role="status"></p><button class="ranking-retry" type="button" hidden>重新載入</button><ol class="ranking-list"></ol>
+  <p class="ranking-status" role="status"></p><button class="ranking-retry" type="button" hidden>重新載入</button><ol class="ranking-list" aria-label="前十名"></ol>
+  <section class="ranking-bottom" hidden aria-labelledby="ranking-bottom-heading"><h3 id="ranking-bottom-heading">更多遊戲需要被看見</h3><ol class="ranking-list ranking-bottom-list" aria-label="最後十名"></ol></section>
 </dialog>
 <dialog id="report-menu" class="report-dialog" aria-label="遊戲選項">
   <button type="button" id="delete-game" hidden>刪除遊戲</button>
