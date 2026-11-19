@@ -174,6 +174,10 @@
   <p id="search-status" role="status"></p>
   <ul class="search-results"></ul>
 </dialog>
+<dialog id="ranking-dialog" class="ranking-dialog" aria-labelledby="ranking-heading">
+  <header class="ranking-header"><div><h2 id="ranking-heading">遊戲排行榜</h2><p>依近 7 天的實際遊玩與互動綜合排序</p></div><form method="dialog"><button type="submit" aria-label="關閉遊戲排行榜">關閉</button></form></header>
+  <p class="ranking-status" role="status"></p><button class="ranking-retry" type="button" hidden>重新載入</button><ol class="ranking-list"></ol>
+</dialog>
 <dialog id="report-menu" class="report-dialog" aria-label="遊戲選項">
   <button type="button" id="delete-game" hidden>刪除遊戲</button>
   <button type="button" id="open-report">檢舉遊戲</button>
@@ -205,7 +209,7 @@
 </section>
 <div class="feed-shell"><main id="feed" aria-label="FanGame 遊戲牆"><div class="boot-loading loading-screen" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><strong>Loading…</strong><span>請稍後</span></div></main>
 <aside class="feed-rail" aria-label="我的收藏、搜尋與遊戲切換">
- <nav class="rail-tools" aria-label="帳號與搜尋"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button></nav>
+ <nav class="rail-tools" aria-label="搜尋與遊戲排行榜"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><button class="ranking-button" type="button" aria-label="遊戲排行榜" aria-haspopup="dialog" aria-controls="ranking-dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v6m-4 3h8m-6-3h4"/></svg><span>遊戲排行榜</span></button></nav>
  <nav class="game-switcher" aria-label="切換遊戲">
   <button id="previous-game" type="button" aria-label="上一款"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span class="switch-label">上一款</span></button>
   <button id="next-game" type="button" aria-label="下一款"><span class="switch-label">下一款</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
@@ -265,11 +269,12 @@
   <div class="update-notice-controls"><button type="button" autofocus>關掉通知</button></div>
 </dialog>
 <script src="/update-notice.js?v=2" defer></script>
-<script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const discoveryPromise=savedMode?Promise.resolve(null):loadPlayfeedDiscoveryPriorities();
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
+  document.querySelector('.ranking-button').addEventListener('click',()=>PlayFeedRanking.open(catalog));
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let entryGameId='';
   try{entryGameId=location.hash.slice(1)||(location.pathname.startsWith('/g/')?decodeURIComponent(location.pathname.slice(3)):new URLSearchParams(location.search).get('id'))||''}catch{}

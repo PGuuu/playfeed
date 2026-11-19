@@ -343,3 +343,19 @@ body.game-expanded #feed .expanded-controls .expanded-exit:active,
 /* Keep iframe gutters and loading surfaces consistently black. */
 .game-viewport,.game-viewport>.stage,.switch-dark .game-viewport>.stage,.switch-dark .game-viewport>.stage::before{background:#000}
 .game-loading,.switch-dark .game-loading{background:#000;color:#fff7eb}
+
+/* Public game ranking, alongside search in the top controls. */
+.feed-rail .ranking-button{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:auto;min-width:44px;height:36px;min-height:36px;padding:0 10px;border:0;border-radius:12px;background:#edc29c;color:var(--feed-ink);font:650 12px system-ui;touch-action:manipulation}
+.ranking-button svg{width:17px;height:17px;flex:none}.ranking-button:hover{background:#e5b387}
+.ranking-dialog{width:min(450px,calc(100vw - 24px));max-height:85dvh;overflow:auto;padding:18px;border:1px solid #d8b995;border-radius:20px;background:#fff7eb;color:#443323;color-scheme:light;overscroll-behavior:contain;touch-action:pan-y}
+.ranking-dialog::backdrop{background:#15191080;backdrop-filter:blur(3px)}
+.ranking-header{position:static;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0;padding:0;border:0;background:none;color:inherit}
+.ranking-header h2{font-size:19px;line-height:1.4;margin:0 0 5px}.ranking-header p{font-size:12px;line-height:1.6;margin:0;color:#82664b}
+.ranking-header form{margin:0;flex:none}.ranking-header button,.ranking-retry{min-height:40px;padding:8px 12px;border:0;border-radius:10px;background:#edc29c;color:#593d2a;font:650 12px system-ui;cursor:pointer;touch-action:manipulation}
+.ranking-status{font-size:12px;color:#82664b;line-height:1.5;margin:16px 0 10px}
+.ranking-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.ranking-list a{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px;border-radius:12px;background:#f4e6d5;color:inherit;text-decoration:none;touch-action:manipulation}.ranking-list a:hover{background:#edc29c}
+.ranking-number{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:10px;font-size:17px;font-weight:800;color:#79502f;background:#e5d1b9;font-variant-numeric:tabular-nums}.ranking-list li:nth-child(-n+3) .ranking-number{background:#e6ae70;color:#593418}
+.ranking-details{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}.ranking-details strong{font-size:14px;line-height:1.4;overflow-wrap:anywhere}.ranking-details small{font-size:11px;line-height:1.4;color:#82664b;overflow-wrap:anywhere}.ranking-arrow{font-size:24px;color:#9b7958;flex:none}
+.ranking-list a:focus-visible,.ranking-dialog button:focus-visible{outline:2px solid #8b542b;outline-offset:2px}
+.switch-dark .feed-rail .ranking-button,.switch-dark .ranking-dialog{background:#293323;color:#d3ddc8;border-color:#4b5841}.switch-dark .ranking-header p,.switch-dark .ranking-status,.switch-dark .ranking-details small{color:#aebba1}.switch-dark .ranking-list a,.switch-dark .ranking-header button,.switch-dark .ranking-retry{background:#35402e;color:#d3ddc8}.switch-dark .ranking-number,.switch-dark .ranking-list li:nth-child(-n+3) .ranking-number{background:#566c42;color:#e6f2d9}
+@media(orientation:landscape) and (max-height:600px){.feed-rail .ranking-button{width:36px;height:36px;padding:0}.ranking-button span{display:none}.ranking-dialog{max-height:92dvh}}
