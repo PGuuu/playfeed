@@ -10,6 +10,7 @@
  let photo=null,editor=null,gesture=null,pressUntil=0,deformationKey='';const pointers=new Map();
  let demoActive=true,demoStart=null,demoBeat=-1;
  const controls=$('.controls'),editorControls=$('#editor-controls'),crosshair=$('#crosshair'),zoom=$('#zoom');
+ const panel=$('.game-panel'),wrist=$('#wrist-button'),breath=$('#breath'),breathLabel=$('#breath-label'),breathCount=$('#breath-count'),breathTrack=$('#breath-track'),breathing=BrowBreathing.create();
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function ellipse(cx,cy,rx,ry,color){b.fillStyle=color;b.beginPath();b.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);b.fill()}
  function defaultPortrait(){
@@ -28,11 +29,11 @@
   b.strokeStyle='#a7725d';b.lineWidth=6;b.beginPath();b.moveTo(328,567);b.quadraticCurveTo(364,580,399,566);b.stroke();
   ellipse(255,490,41,19,'#dfa88b44');ellipse(464,490,41,19,'#dfa88b44');
  }
- function position(){surface.style.setProperty('--x',(anchor.x*100)+'%');surface.style.setProperty('--y',(anchor.y*100)+'%')}
+ function position(){for(const node of [surface,panel]){node.style.setProperty('--x',(anchor.x*100)+'%');node.style.setProperty('--y',(anchor.y*100)+'%')}}
  function drawPhoto(target,value){
   target.clearRect(0,0,W,H);target.fillStyle='#e7dbcb';target.fillRect(0,0,W,H);
   const fit=fitPhoto(value.source.width,value.source.height,W,H,value.zoom);
-  target.drawImage(value.source,value.x-fit.width/2,value.y-fit.height/2,fit.width,fit.height);
+  target.save();target.translate(value.x,value.y);target.scale(value.flip?-1:1,1);target.drawImage(value.source,-fit.width/2,-fit.height/2,fit.width,fit.height);target.restore();
   deformationKey='';
  }
  function triangle(origin,across,down,sx,sy,dx,dy,x,y){
@@ -63,32 +64,42 @@
   if(!reduced){const cycle=((time-started)%1400)/1400;ctx.strokeStyle='rgba(255,244,218,'+(1-cycle)*.26*pressure+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,38+cycle*100,0,Math.PI*2);ctx.stroke()}
  }
  function animate(time){
-  raf=0;updateDemo(time);const target=held||time<pressUntil?1:0;pressure+=(target-pressure)*(reduced ? .7 : target ? .3 : .16);
-  if(Math.abs(target-pressure)<.001)pressure=target;draw(time);if(!editor&&(demoActive||held||pressure>0))raf=requestAnimationFrame(animate);
+  raf=0;updateDemo(time);renderBreathing(time);const target=held||time<pressUntil?1:0;pressure+=(target-pressure)*(reduced ? .7 : target ? .3 : .16);
+  if(Math.abs(target-pressure)<.001)pressure=target;draw(time);if(!editor&&(demoActive||held||pressure>0||breathing.active))raf=requestAnimationFrame(animate);
  }
+ function setHand(down){surface.classList.toggle('pressing',down);surface.setAttribute('aria-pressed',String(down));wrist.classList.toggle('pressing',down);wrist.setAttribute('aria-pressed',String(down))}
+ function renderBreathing(time=performance.now()){
+  const state=breathing.sample(time),active=state.phase!=='idle';
+  breath.classList.toggle('active',active);breath.classList.toggle('exhale',state.phase==='exhale');breath.classList.toggle('release-cue',state.label==='放開');breath.setAttribute('aria-hidden',String(!active));
+  if(breathLabel.textContent!==state.label)breathLabel.textContent=state.label;
+  const count=state.remaining?state.remaining+' 秒':'';if(breathCount.textContent!==count)breathCount.textContent=count;
+  breath.style.setProperty('--fill',state.fill);breathTrack.setAttribute('aria-valuenow',String(Math.round(state.fill*50)/10));breathTrack.setAttribute('aria-valuetext',state.label+(count?' '+count:''));
+ }
+ function resetBreathing(){breathing.reset();renderBreathing()}
  function updateDemo(time){
   if(!demoActive)return;demoStart??=time;
   const elapsed=time-demoStart-450;if(elapsed<0)return;
   const beat=Math.floor(elapsed/1200),down=beat<3&&elapsed%1200<500;
   if(beat>=3)demoActive=false;
   if(down&&demoBeat!==beat){demoBeat=beat;started=time;pressure=Math.max(.2,pressure)}
-  held=down;surface.classList.toggle('pressing',down);surface.setAttribute('aria-pressed',String(down));
+  held=down;setHand(down);
  }
  function cancelDemo(){if(!demoActive)return;demoActive=false;pressUntil=0;release()}
  document.addEventListener('pointerdown',cancelDemo,{capture:true,passive:true});
  document.addEventListener('keydown',cancelDemo,{capture:true});
  function schedule(){if(!raf)raf=requestAnimationFrame(animate)}
- function press(){held=true;started=performance.now();pressUntil=started+140;pressure=Math.max(.2,pressure);surface.classList.add('pressing');surface.setAttribute('aria-pressed','true');draw();schedule()}
- function release(){held=false;pointerId=null;surface.classList.remove('pressing');surface.setAttribute('aria-pressed','false');schedule()}
+ function press(){held=true;started=performance.now();pressUntil=started+140;pressure=Math.max(.2,pressure);breathing.start(started);renderBreathing(started);setHand(true);draw();schedule()}
+ function release(){held=false;pointerId=null;breathing.release(performance.now());renderBreathing();setHand(false);schedule()}
  function finishPointers(){for(const id of pointers.keys())if(surface.hasPointerCapture(id))surface.releasePointerCapture(id);pointers.clear();gesture=null}
  function editorView(){
-  const editing=!!editor;surface.classList.toggle('editing',editing);crosshair.toggleAttribute('hidden',!editing);controls.hidden=editing;editorControls.hidden=!editing;
+  const editing=!!editor;surface.classList.toggle('editing',editing);panel.classList.toggle('editing',editing);crosshair.toggleAttribute('hidden',!editing);controls.hidden=editing;editorControls.hidden=!editing;
+  $('#flip').setAttribute('aria-pressed',String(!!editor?.flip));
   surface.setAttribute('role',editing?'img':'button');if(editing)surface.removeAttribute('aria-pressed');else surface.setAttribute('aria-pressed','false');
   surface.setAttribute('aria-label',editing?'拖曳、縮放照片，將眉心對準中央十字':'按住眉心，放開回彈');
   upload.classList.toggle('compact',!!photo);upload.setAttribute('aria-label',photo?'更換照片':'上傳照片');reposition.hidden=!photo;
  }
  function beginEdit(value){
-  release();finishPointers();pressure=0;editor={...value};zoom.min=String(Math.min(W/value.source.width,H/value.source.height)/Math.max(W/value.source.width,H/value.source.height));
+  resetBreathing();release();finishPointers();pressure=0;editor={...value};zoom.min=String(Math.min(W/value.source.width,H/value.source.height)/Math.max(W/value.source.width,H/value.source.height));
   zoom.value=String(editor.zoom);editorView();draw();
  }
  function updateZoom(value,pivot={x:W/2,y:H/2}){if(!editor)return;editor=zoomPhoto(editor,clamp(value,Number(zoom.min),4),pivot,W,H);zoom.value=String(editor.zoom);draw()}
@@ -132,13 +143,22 @@
  });
  surface.addEventListener('keyup',event=>{if(!editor&&[' ','Enter'].includes(event.key)){event.preventDefault();release()}});
  surface.addEventListener('blur',()=>{if(held)release()});
+ wrist.addEventListener('pointerdown',event=>{
+  if(editor||event.button!==0||!event.isPrimary||pointerId!==null)return;
+  event.preventDefault();wrist.classList.add('pointer-focus');wrist.focus({preventScroll:true});pointerId=event.pointerId;wrist.setPointerCapture(pointerId);press();
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])wrist.addEventListener(type,endPointer);
+ wrist.addEventListener('keydown',event=>{wrist.classList.remove('pointer-focus');if(editor||event.repeat||pointerId!==null||![' ','Enter'].includes(event.key))return;event.preventDefault();press()});
+ wrist.addEventListener('keyup',event=>{if([' ','Enter'].includes(event.key)){event.preventDefault();release()}});
+ wrist.addEventListener('blur',()=>{if(held)release()});
  window.addEventListener('pointerup',event=>{if(event.pointerId===pointerId)release()});
- window.addEventListener('blur',()=>{cancelDemo();finishPointers();release()});
- document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelDemo();finishPointers();held=false;pressure=0;cancelAnimationFrame(raf);raf=0;pointerId=null;surface.classList.remove('pressing');if(!editor)surface.setAttribute('aria-pressed','false');draw()}});
+ window.addEventListener('blur',()=>{cancelDemo();resetBreathing();finishPointers();release()});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelDemo();resetBreathing();finishPointers();held=false;pressure=0;cancelAnimationFrame(raf);raf=0;pointerId=null;setHand(false);if(editor)surface.removeAttribute('aria-pressed');draw()}});
  reposition.addEventListener('click',()=>{if(photo)beginEdit(photo)});
  zoom.addEventListener('input',()=>updateZoom(Number(zoom.value)));
  $('#zoom-in').addEventListener('click',()=>{if(editor)updateZoom(editor.zoom*1.15)});
  $('#zoom-out').addEventListener('click',()=>{if(editor)updateZoom(editor.zoom/1.15)});
+ $('#flip').addEventListener('click',()=>{if(!editor)return;editor.flip=!editor.flip;$('#flip').setAttribute('aria-pressed',String(editor.flip));draw()});
  $('#confirm').addEventListener('click',()=>{
   if(!editor)return;finishPointers();photo={...editor};drawPhoto(b,photo);editor=null;pressure=0;anchor={x:.5,y:.5};position();editorView();draw();
  });
@@ -159,4 +179,5 @@
  });
  defaultPortrait();position();draw();schedule();
 })();
+
 
