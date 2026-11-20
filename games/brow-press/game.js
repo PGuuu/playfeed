@@ -177,7 +177,64 @@
   }catch{if(ticket===version)status.textContent='無法讀取照片'}
   finally{URL.revokeObjectURL(url);fileInput.value=''}
  });
+ const recordButton=$('#record'),recordLabel=$('#record-label'),viewRecording=$('#view-recording'),result=$('#recording-result'),video=$('#recorded-video'),saveRecording=$('#save-recording');
+ const recordingCanvas=document.createElement('canvas');recordingCanvas.width=720;recordingCanvas.height=1280;const recordingContext=recordingCanvas.getContext('2d');
+ let handImage=null,handPromise=null,recordingUrl=null,preparingRecording=false;
+ function prepareHand(){
+  if(handImage)return Promise.resolve();if(handPromise)return handPromise;
+  handPromise=(async()=>{
+   const svg=$('#finger').cloneNode(true);svg.setAttribute('xmlns','http://www.w3.org/2000/svg');svg.setAttribute('width','320');svg.setAttribute('height','780');svg.removeAttribute('id');
+   const image=new Image();image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));await image.decode();handImage=image;
+  })().catch(error=>{handPromise=null;throw error});return handPromise;
+ }
+ function renderRecording(time){
+  const c=recordingContext,x=36,y=150,w=648,h=w*H/W,unit=w/(surface.getBoundingClientRect().width||343),amount=clamp(pressure,0,1);
+  c.clearRect(0,0,720,1280);const background=c.createRadialGradient(80,100,10,360,600,1000);background.addColorStop(0,'#fcf8f1');background.addColorStop(1,'#eee7de');c.fillStyle=background;c.fillRect(0,0,720,1280);
+  c.fillStyle='#6d594b';c.font='600 38px system-ui, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('按按眉心 股市放心',360,86);
+  c.save();c.shadowColor='#71594330';c.shadowBlur=38;c.shadowOffsetY=16;c.fillStyle='#e8dccc';c.beginPath();c.roundRect(x,y,w,h,52);c.fill();c.restore();
+  c.save();c.beginPath();c.roundRect(x,y,w,h,52);c.clip();c.drawImage(canvas,x,y,w,h);
+  const cx=x+anchor.x*w,cy=y+anchor.y*h;
+  if(amount<1){c.strokeStyle='rgba(255,255,255,'+(.35*(1-amount))+')';c.lineWidth=unit;c.beginPath();c.arc(cx,cy,14*unit,0,Math.PI*2);c.stroke()}
+  if(handImage){
+   const fw=w*.29,fh=fw*390/160;c.save();c.translate(cx,cy);c.rotate((-17+6*amount)*Math.PI/180);c.translate(0,(8+10*amount)*unit);c.scale(1+.16*amount,1-.13*amount);c.globalAlpha=.9+.1*amount;c.shadowColor='#50362235';c.shadowBlur=(5-3*amount)*unit;c.shadowOffsetX=(4-3*amount)*unit;c.shadowOffsetY=(8-6*amount)*unit;c.drawImage(handImage,-fw*.319,-fh*.11,fw,fh);c.restore();
+  }
+  c.restore();
+  const wx=x+clamp(anchor.x*w+w*.24,34*unit,w-34*unit),wy=y+clamp(anchor.y*h+h*.39,34*unit,h-34*unit),radius=28*unit;
+  if(!reduced)for(const offset of [0,.5]){const phase=held ? .25 : (time/2200+offset)%1;c.strokeStyle='rgba(255,255,255,'+((1-phase)*.65)+')';c.lineWidth=1.5*unit;c.beginPath();c.arc(wx,wy,(radius+7*unit)*(.9+.65*phase),0,Math.PI*2);c.stroke()}
+  c.save();c.shadowColor='#ffffffaa';c.shadowBlur=24*unit;c.fillStyle=held?'#e6c19d':'#fff6e8e6';c.strokeStyle='#fffc';c.lineWidth=1.5*unit;c.beginPath();c.arc(wx,wy,radius*(held ? .91 : 1),0,Math.PI*2);c.fill();c.stroke();c.restore();
+  c.strokeStyle=held?'#76503c':'#9c7355';c.lineWidth=1.4*unit;c.beginPath();c.arc(wx,wy,9.4*unit,0,Math.PI*2);c.stroke();c.fillStyle=c.strokeStyle;c.beginPath();c.arc(wx,wy,2.8*unit,0,Math.PI*2);c.fill();
+  const state=breathing.sample(time);
+  if(state.phase!=='idle'){
+   c.fillStyle=state.label==='放開'?'#a46840':'#80634d';c.font='600 29px system-ui, sans-serif';c.fillText(state.label+(state.remaining?' '+state.remaining+' 秒':''),360,y+h+52);
+   c.fillStyle='#d8c9b775';c.beginPath();c.roundRect(x,y+h+88,w,13,7);c.fill();
+   if(state.fill>0){c.fillStyle=state.phase==='exhale'?'#a4ae9b':'#ac8c69';c.beginPath();c.roundRect(x,y+h+88,w*state.fill,13,Math.min(7,w*state.fill/2));c.fill()}
+  }
+ }
+ const recorder=BrowRecording.create({
+  canvas:recordingCanvas,renderFrame:renderRecording,
+  onState:({state,seconds})=>{
+   const active=state==='recording',busy=active||state==='stopping',time=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+   upload.classList.toggle('disabled',busy);upload.setAttribute('aria-disabled',String(busy));upload.tabIndex=busy?-1:0;fileInput.disabled=busy;reposition.disabled=busy;
+   recordButton.classList.toggle('recording',active);recordButton.setAttribute('aria-pressed',String(active));recordButton.setAttribute('aria-label',active?'停止錄影':'開始錄影');recordButton.disabled=state==='stopping';recordLabel.textContent=active?'停止 '+time:'錄影';
+  },
+  onReady:({blob,filename})=>{
+   video.pause();video.removeAttribute('src');video.load();if(recordingUrl)URL.revokeObjectURL(recordingUrl);
+   recordingUrl=URL.createObjectURL(blob);video.src=recordingUrl;saveRecording.href=recordingUrl;saveRecording.download=filename;viewRecording.hidden=false;result.showModal();
+  },
+  onError:error=>{status.textContent=error.message==='unsupported'?'此瀏覽器不支援錄影':'錄影失敗，請再試一次'}
+ });
+ recordButton.addEventListener('click',async()=>{
+  if(recorder.active){recorder.stop();return}if(preparingRecording)return;
+  status.textContent='';preparingRecording=true;recordButton.disabled=true;
+  try{await prepareHand();recorder.start()}catch{status.textContent='錄影失敗，請再試一次'}finally{preparingRecording=false;recordButton.disabled=false}
+ });
+ viewRecording.addEventListener('click',()=>result.showModal());
+ $('#close-recording').addEventListener('click',()=>{video.pause();result.close()});
+ result.addEventListener('close',()=>video.pause());
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)recorder.stop()});
+ window.addEventListener('pagehide',()=>{recorder.dispose();if(recordingUrl)URL.revokeObjectURL(recordingUrl)});
  defaultPortrait();position();draw();schedule();
 })();
+
 
 

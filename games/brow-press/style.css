@@ -62,5 +62,24 @@ h1{margin:0;font:600 clamp(20px,5vw,25px)/1.4 system-ui;letter-spacing:.06em;tex
 @keyframes wrist-glow{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.55);opacity:0}}
 @media(max-height:450px) and (min-width:560px){.game-panel{width:calc((100svh - 138px) * .78947);max-width:65vw}#surface{width:100%;height:auto}#wrist-button{width:48px;height:48px}.breath-copy{font-size:14px}}
 @media(prefers-reduced-motion:reduce){#wrist-button::before,#wrist-button::after{animation:none}}
+#record,#view-recording{display:flex;align-items:center;justify-content:center;gap:9px;height:46px;padding:0 18px;border:1px solid #d2c2b0;border-radius:99px;background:#fffaf2;color:#6d594b;font:600 14px system-ui;cursor:pointer;touch-action:manipulation;white-space:nowrap}
+#record-label{font-variant-numeric:tabular-nums}
+.record-dot{display:block;flex:none;width:10px;height:10px;border-radius:50%;background:#bd5c44}
+#record.recording{background:#bd5c44;border-color:#bd5c44;color:#fffaf2}
+#record.recording .record-dot{border-radius:2px;background:#fffaf2}
+#record:disabled{opacity:.6;cursor:wait}
+#upload.disabled,#reposition:disabled{opacity:.4;pointer-events:none}
+#view-recording{width:46px;padding:0}
+#view-recording svg{width:21px;height:21px}
+#record:focus-visible,#view-recording:focus-visible{outline:2px solid #a78d6f;outline-offset:4px}
+#recording-result{width:min(90vw,390px);max-height:92svh;padding:14px;border:1px solid #d2c2b0;border-radius:22px;background:#f9f2e8;color:#6d594b;overflow:auto}
+#recording-result::backdrop{background:#30231888}
+#recorded-video{display:block;width:100%;height:min(65svh,600px);object-fit:contain;background:#eee7de;border-radius:12px}
+.recording-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px}
+#close-recording,#save-recording{display:grid;place-items:center;height:44px;padding:0 18px;border:1px solid #d2c2b0;border-radius:99px;background:#fffaf2;color:inherit;font:600 14px system-ui;text-decoration:none;cursor:pointer}
+#close-recording{padding:0;width:44px;font-size:24px;font-weight:400}
+#save-recording{background:#725844;border-color:#725844;color:#fffaf2}
+@media(max-height:450px) and (min-width:560px){#record{width:46px;padding:0}#record-label{display:none}#recording-result{width:min(90vw,520px)}#recorded-video{height:65svh}}
+
 
 

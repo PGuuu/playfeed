@@ -7,7 +7,8 @@
   // A remote game keeps its own origin for modules and storage. Same-origin
   // platform pages stay isolated so embedded scripts cannot access the parent.
   const remote = url.origin !== new URL(base).origin;
-  frame.setAttribute('sandbox', remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : 'allow-scripts');
+  const downloadable = !remote && url.pathname === '/games/brow-press/index.html';
+  frame.setAttribute('sandbox', remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : downloadable ? 'allow-scripts allow-downloads' : 'allow-scripts');
   frame.setAttribute('allow', 'fullscreen');
   frame.style.backgroundColor = '#000';
   frame.referrerPolicy = 'no-referrer';
@@ -15,3 +16,4 @@
  }
  window.PlayFeedFrame = { configure };
 })();
+
