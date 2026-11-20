@@ -8,6 +8,7 @@
  patch.width=440;patch.height=440;const p=patch.getContext('2d');
  let anchor={x:.5,y:.35},held=false,pointerId=null,pressure=0,raf=0,version=0,started=0;
  let photo=null,editor=null,gesture=null,pressUntil=0,deformationKey='';const pointers=new Map();
+ let demoActive=true,demoStart=null,demoBeat=-1;
  const controls=$('.controls'),editorControls=$('#editor-controls'),crosshair=$('#crosshair'),zoom=$('#zoom');
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function ellipse(cx,cy,rx,ry,color){b.fillStyle=color;b.beginPath();b.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);b.fill()}
@@ -62,9 +63,20 @@
   if(!reduced){const cycle=((time-started)%1400)/1400;ctx.strokeStyle='rgba(255,244,218,'+(1-cycle)*.26*pressure+')';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,38+cycle*100,0,Math.PI*2);ctx.stroke()}
  }
  function animate(time){
-  raf=0;const target=held||time<pressUntil?1:0;pressure+=(target-pressure)*(reduced ? .7 : target ? .3 : .16);
-  if(Math.abs(target-pressure)<.001)pressure=target;draw(time);if(!editor&&(held||pressure>0))raf=requestAnimationFrame(animate);
+  raf=0;updateDemo(time);const target=held||time<pressUntil?1:0;pressure+=(target-pressure)*(reduced ? .7 : target ? .3 : .16);
+  if(Math.abs(target-pressure)<.001)pressure=target;draw(time);if(!editor&&(demoActive||held||pressure>0))raf=requestAnimationFrame(animate);
  }
+ function updateDemo(time){
+  if(!demoActive)return;demoStart??=time;
+  const elapsed=time-demoStart-450;if(elapsed<0)return;
+  const beat=Math.floor(elapsed/1200),down=beat<3&&elapsed%1200<500;
+  if(beat>=3)demoActive=false;
+  if(down&&demoBeat!==beat){demoBeat=beat;started=time;pressure=Math.max(.2,pressure)}
+  held=down;surface.classList.toggle('pressing',down);surface.setAttribute('aria-pressed',String(down));
+ }
+ function cancelDemo(){if(!demoActive)return;demoActive=false;pressUntil=0;release()}
+ document.addEventListener('pointerdown',cancelDemo,{capture:true,passive:true});
+ document.addEventListener('keydown',cancelDemo,{capture:true});
  function schedule(){if(!raf)raf=requestAnimationFrame(animate)}
  function press(){held=true;started=performance.now();pressUntil=started+140;pressure=Math.max(.2,pressure);surface.classList.add('pressing');surface.setAttribute('aria-pressed','true');draw();schedule()}
  function release(){held=false;pointerId=null;surface.classList.remove('pressing');surface.setAttribute('aria-pressed','false');schedule()}
@@ -121,8 +133,8 @@
  surface.addEventListener('keyup',event=>{if(!editor&&[' ','Enter'].includes(event.key)){event.preventDefault();release()}});
  surface.addEventListener('blur',()=>{if(held)release()});
  window.addEventListener('pointerup',event=>{if(event.pointerId===pointerId)release()});
- window.addEventListener('blur',()=>{finishPointers();release()});
- document.addEventListener('visibilitychange',()=>{if(document.hidden){finishPointers();held=false;pressure=0;cancelAnimationFrame(raf);raf=0;pointerId=null;surface.classList.remove('pressing');if(!editor)surface.setAttribute('aria-pressed','false');draw()}});
+ window.addEventListener('blur',()=>{cancelDemo();finishPointers();release()});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelDemo();finishPointers();held=false;pressure=0;cancelAnimationFrame(raf);raf=0;pointerId=null;surface.classList.remove('pressing');if(!editor)surface.setAttribute('aria-pressed','false');draw()}});
  reposition.addEventListener('click',()=>{if(photo)beginEdit(photo)});
  zoom.addEventListener('input',()=>updateZoom(Number(zoom.value)));
  $('#zoom-in').addEventListener('click',()=>{if(editor)updateZoom(editor.zoom*1.15)});

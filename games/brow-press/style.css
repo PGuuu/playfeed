@@ -4,7 +4,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:no
 body{background:radial-gradient(ellipse at 24% 12%,#fcf8f1,#eee7de 72%);-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 [hidden]{display:none!important}
 main{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:22px 16px max(22px,env(safe-area-inset-bottom));position:relative}
-#surface{--x:50%;--y:35%;position:relative;width:min(88vw,410px,calc(74svh * .78947));aspect-ratio:720/912;border-radius:30px;overflow:hidden;background:#e8dccc;isolation:isolate;touch-action:none;cursor:pointer;outline:none;box-shadow:0 22px 55px -28px #71594365,0 2px 6px #6e58421c,inset 0 0 0 1px #fff7;transform:translateZ(0)}
+h1{margin:0;font:600 clamp(20px,5vw,25px)/1.4 system-ui;letter-spacing:.06em;text-align:center}
+#surface{--x:50%;--y:35%;position:relative;width:min(88vw,410px,calc(74svh * .78947),calc((100svh - 180px) * .78947));aspect-ratio:720/912;border-radius:30px;overflow:hidden;background:#e8dccc;isolation:isolate;touch-action:none;cursor:pointer;outline:none;box-shadow:0 22px 55px -28px #71594365,0 2px 6px #6e58421c,inset 0 0 0 1px #fff7;transform:translateZ(0)}
 #surface:focus-visible:not(.pointer-focus){outline:2px solid #a78d6f;outline-offset:6px}
 #portrait{display:block;width:100%;height:100%;pointer-events:none}
 #finger{position:absolute;z-index:2;left:var(--x);top:var(--y);width:29%;height:auto;transform-origin:31.9% 11%;transform:translate(-31.9%,-11%) rotate(-17deg) translateY(8px);opacity:.9;filter:drop-shadow(4px 8px 5px #50362226);pointer-events:none;transition:transform .16s ease-out,filter .16s ease-out,opacity .16s}
@@ -35,4 +36,5 @@ main{min-height:100svh;display:flex;flex-direction:column;align-items:center;jus
 #status:empty{display:none}
 @media(max-height:450px) and (min-width:560px){main{flex-direction:row;gap:28px;padding:18px}#surface{width:auto;height:calc(100svh - 36px);max-width:65vw}.controls{flex-direction:column;width:46px;height:auto}#upload{padding:0;width:46px}#upload span{display:none}#status{left:auto;width:130px;right:8px;bottom:10px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+@media(max-height:450px) and (min-width:560px){main{padding-top:50px}h1{position:absolute;top:10px;left:0;right:0;font-size:20px}#surface{height:calc(100svh - 76px)}}
 
