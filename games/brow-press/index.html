@@ -8,12 +8,13 @@
 <link rel="stylesheet" href="./style.css">
 <script src="./geometry.js" defer></script>
 <script src="./game.js" defer></script>
-</head>
+<script src="/game-interaction.js?v=20261120" defer></script></head>
 <body>
 <main>
   <div id="surface" role="button" tabindex="0" aria-label="按住眉心，放開回彈" aria-pressed="false">
     <canvas id="portrait" width="720" height="912" aria-label="照片按壓畫面"></canvas>
     <span id="point" aria-hidden="true"></span>
+    <svg id="crosshair" viewBox="0 0 80 80" aria-hidden="true" hidden><circle cx="40" cy="40" r="23"/><path d="M40 4v24m0 24v24M4 40h24m24 0h24"/><circle cx="40" cy="40" r="2"/></svg>
     <svg id="finger" viewBox="0 0 160 390" aria-hidden="true">
       <defs>
         <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#bd917d"/><stop offset=".18" stop-color="#e0b7a0"/><stop offset=".48" stop-color="#f4d6bf"/><stop offset=".77" stop-color="#e7bfa7"/><stop offset="1" stop-color="#c99b83"/></linearGradient>
@@ -24,7 +25,13 @@
       <path d="m34 111 34-2m-31 13 30-1m30 62 9 31m23-24 7 28m15-12 5 26" fill="none" stroke="#aa7c6240" stroke-width="2" stroke-linecap="round"/>
       <path d="M40 39c0-8 3-12 7-15" fill="none" stroke="#fff4e870" stroke-width="3" stroke-linecap="round"/>
     </svg>
-    <p id="hint" hidden>點一下眉心</p>
+  </div>
+  <div id="editor-controls" hidden>
+    <button id="cancel" type="button" aria-label="取消調整"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    <button id="zoom-out" type="button" aria-label="縮小"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+    <input id="zoom" type="range" min=".3" max="4" step=".01" value="1" aria-label="照片縮放">
+    <button id="zoom-in" type="button" aria-label="放大"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+    <button id="confirm" type="button">確認</button>
   </div>
   <div class="controls">
     <label id="upload" for="file" tabindex="0" role="button" aria-label="上傳照片">
@@ -37,3 +44,4 @@
 </main>
 </body>
 </html>
+
