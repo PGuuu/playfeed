@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>紙上 · 針筆畫室</title><meta name="description" content="一張有紋理的暖白紙，一支細黑針筆。用手指慢慢畫，留下自己的小小作品。">
+<link rel="stylesheet" href="style.css"><script src="draw.js" defer></script>
+</head>
+<body>
+<main class="studio">
+ <header><div class="identity"><span class="edition">A LITTLE INK, A LITTLE QUIET.</span><h1>紙上<span>針筆畫室</span></h1></div><span class="signature">FanGame<br>drawing no. 01</span></header>
+ <section class="desk" aria-label="畫紙區域"><div class="sheet"><canvas width="900" height="1200" aria-label="用手指、觸控筆或滑鼠在紙上畫圖"></canvas><div class="hint">不用畫得很好。<br><span>手指碰到紙，就開始了。</span></div></div></section>
+ <footer>
+  <div class="tools"><div class="pens" role="group" aria-label="針筆粗細"><button type="button" data-size="2" aria-pressed="false"><i class="fine"></i><span>細</span></button><button type="button" data-size="3.5" aria-pressed="true"><i class="normal"></i><span>中</span></button><button type="button" data-size="5.5" aria-pressed="false"><i class="bold"></i><span>粗</span></button></div><span class="tool-note">BLACK INK / 黑墨</span></div>
+  <div class="actions"><button type="button" id="undo" disabled aria-label="復原上一筆">↶ <span>復原</span></button><button type="button" id="redo" disabled aria-label="重做上一筆">↷ <span>重做</span></button><button type="button" id="clear" disabled>換張紙</button><button type="button" id="save">存下這張 <span aria-hidden="true">↗</span></button></div>
+  <p class="status" role="status">慢慢畫，線條也會跟著你的速度呼吸。</p>
+ </footer>
+</main>
+</body></html>

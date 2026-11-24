@@ -7,7 +7,7 @@
   // A remote game keeps its own origin for modules and storage. Same-origin
   // platform pages stay isolated so embedded scripts cannot access the parent.
   const remote = url.origin !== new URL(base).origin;
-  const downloadable = !remote && url.pathname === '/games/brow-press/index.html';
+  const downloadable = !remote && ['/games/brow-press/index.html','/games/paper-ink/index.html'].includes(url.pathname);
   frame.setAttribute('sandbox', remote ? 'allow-scripts allow-same-origin allow-forms allow-pointer-lock' : downloadable ? 'allow-scripts allow-downloads' : 'allow-scripts');
   frame.setAttribute('allow', 'fullscreen');
   frame.style.backgroundColor = '#000';
