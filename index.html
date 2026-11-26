@@ -175,7 +175,9 @@
   <ul class="search-results"></ul>
 </dialog>
 <dialog id="ranking-dialog" class="ranking-dialog" aria-labelledby="ranking-heading">
-  <header class="ranking-header"><div><h2 id="ranking-heading">遊戲列表</h2><p>依近 7 天的實際遊玩與互動綜合排序</p></div><form method="dialog"><button type="submit" aria-label="關閉遊戲列表">關閉</button></form></header>
+  <header class="ranking-header"><div><h2 id="ranking-heading">遊戲列表</h2><p class="ranking-catalog-total">正在讀取上架總數…</p></div><form method="dialog"><button type="submit" aria-label="關閉遊戲列表">關閉</button></form></header>
+  <div class="ranking-filters" role="group" aria-label="篩選遊戲"></div>
+  <div class="ranking-options"><label>排序 <select class="ranking-sort"><option value="popular">近 7 天人氣排名</option><option value="newest">最新上架優先</option></select></label><small class="ranking-updated" role="status"></small></div>
   <p class="ranking-status" role="status"></p><button class="ranking-retry" type="button" hidden>重新載入</button><ol class="ranking-list" aria-label="依排名排列的遊戲"></ol>
   <section class="ranking-bottom" hidden aria-labelledby="ranking-bottom-heading"><h3 id="ranking-bottom-heading">尚未排名 · 更多遊戲需要被看見</h3><ol class="ranking-list ranking-bottom-list" aria-label="尚未排名的遊戲"></ol></section>
 </dialog>
@@ -275,6 +277,7 @@
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const discoveryPromise=savedMode?Promise.resolve(null):loadPlayfeedDiscoveryPriorities();
   const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
+  PlayFeedRanking.setCatalog(catalog);
   document.querySelector('.ranking-button').addEventListener('click',()=>PlayFeedRanking.open(catalog));
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
   let entryGameId='';
