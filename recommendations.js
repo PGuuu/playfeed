@@ -28,7 +28,7 @@ async function recommendationRequest(path, options = {}) {
 async function loadPlayfeedCatalog(){
   try{return await loadPlayfeedGames();}
   catch(directError){
-    const response=await fetch('/api/catalog',{cache:'no-store',signal:AbortSignal.timeout(12000)});
+    const response=await fetch('/api/seo?format=json',{cache:'no-store',signal:AbortSignal.timeout(12000)});
     if(!response.ok)throw directError;
     const data=await response.json();
     if(!Array.isArray(data.games)||!data.games.every(game=>typeof game.id==='string'&&typeof game.url==='string'&&typeof game.title==='string'))throw directError;

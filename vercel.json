@@ -23,10 +23,6 @@
     }
   ],
   "functions": {
-    "api/catalog.js": {
-      "includeFiles": "catalog.js",
-      "maxDuration": 15
-    },
     "api/share.js": {
       "includeFiles": "{catalog.js,share-assets.json,index.html,account.html}",
       "maxDuration": 15
