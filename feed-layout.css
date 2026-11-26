@@ -345,6 +345,7 @@ body.game-expanded #feed .expanded-controls .expanded-exit:active,
 .game-loading,.switch-dark .game-loading{background:#000;color:#fff7eb}
 
 /* Public game ranking, alongside search in the top controls. */
+.catalog-retry{min-height:44px;margin-top:16px;padding:10px 18px;border:0;border-radius:12px;background:#edc29c;color:#593d2a;font:650 14px system-ui;cursor:pointer;touch-action:manipulation}.catalog-retry:focus-visible{outline:2px solid #8b542b;outline-offset:3px}.switch-dark .catalog-retry{background:#566c42;color:#e6f2d9}
 .feed-rail .ranking-button{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:auto;min-width:44px;height:36px;min-height:36px;padding:0 10px;border:0;border-radius:12px;background:#edc29c;color:var(--feed-ink);font:650 12px system-ui;touch-action:manipulation}
 .ranking-button svg{width:17px;height:17px;flex:none}.ranking-button:hover{background:#e5b387}
 .ranking-dialog{width:min(450px,calc(100vw - 24px));max-height:85dvh;overflow:auto;padding:18px;border:1px solid #d8b995;border-radius:20px;background:#fff7eb;color:#443323;color-scheme:light;overscroll-behavior:contain;touch-action:pan-y}

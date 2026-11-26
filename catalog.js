@@ -97,6 +97,7 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
     }
   } catch (error) {
     console.warn('推薦清單暫時無法載入', error);
+    throw error;
   }
   // One authoritative display record for static games and recommendations alike.
   const metadata=await metadataResult;

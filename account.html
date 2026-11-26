@@ -77,7 +77,7 @@ if (publicProfileId !== null) {
   document.body.append(document.querySelector('#visitor-login').content.cloneNode(true));
 }
 </script>
-<script src="/auth.js?v=20261118-share-email"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/analytics-owner-link.js" defer></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/avatar-editor.js"></script>
+<script src="/auth.js?v=20261118-share-email"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/analytics-owner-link.js" defer></script><script src="/recommendations.js?v=20261126-catalog-recovery"></script><script src="/catalog.js?v=20261126-catalog-recovery"></script><script src="/avatar-editor.js"></script>
 <script>
 let tab=history.state?.collectionTab==='recommended'?'recommended':'saved', collection=null, games=[], loadVersion=0, publicError='';
 const isPublic = publicProfileId !== null;
@@ -281,7 +281,7 @@ for(const button of document.querySelectorAll('[data-tab]'))button.addEventListe
 sessionAction.addEventListener('click',async()=>{if(PlayFeedAuth.user)await PlayFeedAuth.logout();else PlayFeedAuth.openLogin()});
 PlayFeedAuth.onChange(async user=>{sessionAction.textContent=user?'登出':'Email 認證';sessionAction.hidden=!user||isPublic;if(isPublic){loadPublicCollection();return}avatar.textContent=user?.email?.[0]?.toUpperCase()||'?';title.textContent=user?.email?.split('@')[0]||'我的頁面';subtitle.textContent=user?.email||'認證 Email，同步收藏與推薦';loadVersion++;collection=null;previewMode='developer';document.body.dataset.memberPreview=previewMode;document.querySelector('#preview-modes').hidden=true;dismissedNotices.clear();if(!user)document.querySelector('#share-dialog').close();document.querySelector('#following-dialog').close();document.querySelector('#reports-entry').hidden=true;document.querySelector('.profile-site')?.remove();document.querySelector('#notifications').replaceChildren();document.querySelector('#review').hidden=true;document.querySelector('#open-review').hidden=true;document.querySelector('#open-review').setAttribute('aria-expanded','false');document.querySelector('#review-list').replaceChildren();document.querySelector('#profile-dialog').close();document.querySelector('#edit-profile').hidden=true;document.querySelector('#open-following').hidden=true;updateBackup();render();if(user)loadCollection()});
 PlayFeedAuth.onChange(()=>{document.querySelector('#waiting-entry').hidden=true;});
-loadPlayfeedGames().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render();if(!isPublic)renderNotifications()});
+loadPlayfeedCatalog().then(value=>{games=value;PlayFeedSaves.refreshMetadata?.(games);try{sessionStorage.setItem('playfeed:catalog:v1',JSON.stringify({time:Date.now(),games}))}catch{}render();if(!isPublic)renderNotifications()});
 
 const profileDialog=document.querySelector('#profile-dialog'),profileForm=document.querySelector('#profile-form');
 const avatarEditor = createAvatarEditor();

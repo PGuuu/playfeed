@@ -272,11 +272,11 @@
   <div class="update-notice-controls"><button type="button" autofocus>關掉通知</button></div>
 </dialog>
 <script src="/update-notice.js?v=20261119-rankings" defer></script>
-<script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js"></script><script src="/catalog.js"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js?v=20261126-catalog-recovery"></script><script src="/catalog.js?v=20261126-catalog-recovery"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const discoveryPromise=savedMode?Promise.resolve(null):loadPlayfeedDiscoveryPriorities();
-  const catalog=await loadPlayfeedGames().catch(()=>{catalogError=true;return[]});
+  const catalog=await loadPlayfeedCatalog().catch(()=>{catalogError=true;return[]});
   PlayFeedRanking.setCatalog(catalog);
   document.querySelector('.ranking-button').addEventListener('click',()=>PlayFeedRanking.open(catalog));
   const reload=performance.getEntriesByType('navigation')[0]?.type==='reload';
@@ -1242,7 +1242,7 @@
       unmountGame();
       return;
     }
-    if(!games.length){feed.replaceChildren();const empty=document.createElement('p');empty.className='empty';empty.textContent=catalogError?'遊戲清單暫時無法載入，請重新整理。':'目前沒有可遊玩的遊戲';feed.append(empty);return;}
+    if(!games.length){feed.replaceChildren();const empty=document.createElement('p');empty.className='empty';empty.textContent=catalogError?'遊戲清單暫時無法載入，請稍後重試。':'目前沒有可遊玩的遊戲';if(catalogError){const retry=document.createElement('button');retry.type='button';retry.className='catalog-retry';retry.textContent='重新載入首頁';retry.addEventListener('click',()=>location.assign('/'));empty.append(document.createElement('br'),retry);}feed.append(empty);return;}
     const queue=navigationQueue();
     if(savedMode&&!queue.length){refreshSavedMode();return;}
     const requestedId = ignoreGameLinkOnReload ? '' : (location.hash.slice(1) || (location.pathname.startsWith('/g/') ? decodeURIComponent(location.pathname.slice(3)) : new URLSearchParams(location.search).get('id')));
