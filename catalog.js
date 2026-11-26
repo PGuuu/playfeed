@@ -55,6 +55,56 @@ async function loadPlayfeedGames(request = recommendationRequest, baseUrl = loca
     { id: 'memory-grid', title: '記憶方格', author: 'FanGame 測試遊戲', url: './arcade.html#memory' },
 
   ];
+  const leluneBackyard = [
+    { id: "lelune-mohuang-herb-shop", title: "莫慌本草堂", url: "https://mohuang-herb-shop.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/mohuang-herb-shop.webp" },
+    { id: "lelune-ama-hungry", title: "阿嬤覺得你會餓", url: "https://ama-hungry.culaliya-877.workers.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/ama-hungry.webp" },
+    { id: "lelune-full-sugar-lab", title: "全糖實驗室", url: "https://full-sugar-lab.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/full-sugar-lab.webp" },
+    { id: "lelune-molten-gold-bench", title: "熔金：夜班金工台", url: "https://molten-gold-bench.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/molten-gold-bench.webp" },
+    { id: "lelune-tangerine-bowl", title: "橘子自帶碗", url: "https://tangerine-bowl.culaliya-877.workers.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/tangerine-bowl.webp" },
+    { id: "lelune-craft-bistro-burger", title: "匠心鐵板漢堡屋", url: "https://craft-bistro-burger.culaliya-877.workers.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/craft-bistro-burger.webp" },
+    { id: "lelune-bread-person-factory", title: "小麵包人繁殖工廠", url: "https://bread-person-factory.culaliya-877.workers.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/bread-person-factory.webp" },
+    { id: "lelune-knit-for-you", title: "織給你", url: "https://knit-for-you.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/knit-for-you.webp" },
+    { id: "lelune-aye-moon-kiln", title: "穿越了，只好煉丹", url: "https://world.lelunevale.com/tiny-worlds/aye-moon-kiln/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/aye-moon-kiln.webp" },
+    { id: "lelune-aye-cretaceous-mudwatch", title: "白堊紀・泥灘守夜", url: "https://world.lelunevale.com/tiny-worlds/aye-cretaceous-mudwatch/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/aye-cretaceous-mudwatch.webp" },
+    { id: "lelune-aye-cretaceous-rivercall", title: "白堊紀・河霧裡的長鳴", url: "https://world.lelunevale.com/tiny-worlds/aye-cretaceous-rivercall/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/aye-cretaceous-rivercall.webp" },
+    { id: "lelune-aye-pluto-ice-traverse", title: "冥王星・冰谷回聲", url: "https://world.lelunevale.com/tiny-worlds/aye-pluto-ice-traverse/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/aye-pluto-ice-traverse.webp" },
+    { id: "lelune-douhua-stall", title: "老樣子豆花攤", url: "https://world.lelunevale.com/tiny-worlds/douhua-stall/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/douhua-stall.webp" },
+    { id: "lelune-crustacean-harbor", title: "甲殼海鮮攤", url: "https://crustacean-harbor.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/crustacean-harbor.webp" },
+    { id: "lelune-scone-shop-chaos", title: "司康出爐了沒？", url: "https://scone-shop-chaos.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/scone-shop-chaos.webp" },
+    { id: "lelune-jintian-kaidian", title: "今天我們開店", url: "https://jintian-kaidian.vercel.app/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/jintian-kaidian.webp" },
+    { id: "lelune-wintercrown-atelier", title: "冬冠織坊", url: "https://wintercrown-atelier.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/wintercrown-atelier.webp" },
+    { id: "lelune-meow-this-is-mine", title: "喵的，這塊我的！", url: "https://world.lelunevale.com/backyard/games/meow-this-is-mine/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/meow-this-is-mine.webp", outboundOnly: "download" },
+    { id: "lelune-dream-box-the-tenth-door", title: "Dream Box: The Tenth Door", url: "https://html-classic.itch.zone/html/20229308/index.html?v=1793622724", cover: "https://world.lelunevale.com/assets/backyard/gameplay/dream-box-the-tenth-door.webp" },
+    { id: "lelune-mao-jieguo", title: "貓，借過一下", url: "https://mao-jieguo.vercel.app/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/mao-jieguo.webp" },
+    { id: "lelune-temple-keeper-no-overtime", title: "Temple Keeper: No Overtime Today", url: "https://temple-keeper-no-overtime.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/temple-keeper-no-overtime.webp" },
+    { id: "lelune-toga-rex-toilet-oracle", title: "托加暴龍與馬桶神諭", url: "https://toga-rex-toilet-oracle.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/toga-rex-toilet-oracle.webp" },
+    { id: "lelune-seven-realms-chess", title: "七境棋旅", url: "https://seven-realms-chess.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/seven-realms-chess.webp" },
+    { id: "lelune-shanhai-sanctuary", title: "山海經動物園 · 青丘水院", url: "https://shanhai-sanctuary.pages.dev/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/shanhai-sanctuary.webp" },
+    { id: "lelune-witchs-halloween-shop", title: "女巫的萬聖夜雜貨店", url: "https://world.lelunevale.com/little-worlds/witch-shop/", cover: "https://world.lelunevale.com/assets/backyard/gameplay/witchs-halloween-shop.webp" },
+    { id: "lelune-nolight-night-orderly", title: "忌向：無光之域", url: "https://horror.lelunevale.com/play/nolight-night-orderly/#player", cover: "https://horror.lelunevale.com/media/nolight-night-orderly.webp", outboundOnly: "play" },
+    { id: "lelune-seven-chimes", title: "第七聲，開飯", url: "https://horror.lelunevale.com/play/seven-chimes/", cover: "https://horror.lelunevale.com/media/seven-chimes.webp", outboundOnly: "play" },
+    { id: "lelune-wuzuo", title: "無座", url: "https://horror.lelunevale.com/play/wuzuo/", cover: "https://horror.lelunevale.com/media/wuzuo.webp", outboundOnly: "play" },
+    { id: "lelune-last-exit", title: "末班出口", url: "https://horror.lelunevale.com/play/last-exit/", cover: "https://horror.lelunevale.com/media/last-exit.webp", outboundOnly: "play" },
+    { id: "lelune-luna-park", title: "廢棄深夜遊樂園", url: "https://horror.lelunevale.com/play/luna-park/", cover: "https://horror.lelunevale.com/media/luna-park.webp", outboundOnly: "play" },
+    { id: "lelune-blackthorn", title: "真的是鬼屋", url: "https://horror.lelunevale.com/play/blackthorn/", cover: "https://horror.lelunevale.com/media/blackthorn.webp", outboundOnly: "play" },
+    { id: "lelune-gravekeeper", title: "認真的守墓鵝", url: "https://horror.lelunevale.com/play/gravekeeper/", cover: "https://horror.lelunevale.com/media/gravekeeper.webp", outboundOnly: "play" },
+    { id: "lelune-code-philosophy", title: "程式碼哲學空間", url: "https://horror.lelunevale.com/play/code-philosophy/", cover: "https://horror.lelunevale.com/media/code-philosophy.webp", outboundOnly: "play" },
+    { id: "lelune-next-stop", title: "永遠的下一站", url: "https://horror.lelunevale.com/play/next-stop/", cover: "https://horror.lelunevale.com/media/next-stop.webp", outboundOnly: "play" },
+    { id: "lelune-dont-greet", title: "不要和不存在的人打招呼", url: "https://horror.lelunevale.com/play/dont-greet/", cover: "https://horror.lelunevale.com/media/dont-greet.webp", outboundOnly: "play" },
+    { id: "lelune-after-school", title: "放學後17:47：最後一個醒來的人", url: "https://horror.lelunevale.com/play/after-school/", cover: "https://horror.lelunevale.com/media/after-school.webp", outboundOnly: "play" },
+    { id: "lelune-mini-cabinet", title: "迷你鬼屋標本箱", url: "https://horror.lelunevale.com/play/mini-cabinet/", cover: "https://horror.lelunevale.com/media/mini-cabinet.webp", outboundOnly: "play" },
+    { id: "lelune-spiral", title: "無盡的樓梯", url: "https://horror.lelunevale.com/play/spiral/", cover: "https://horror.lelunevale.com/media/spiral.webp", outboundOnly: "play" },
+    { id: "lelune-sundown", title: "SUNDOWN ROAD", url: "https://horror.lelunevale.com/play/sundown/", cover: "https://horror.lelunevale.com/media/sundown.webp", outboundOnly: "play" },
+    { id: "lelune-castle", title: "城堡：房間會記得", url: "https://horror.lelunevale.com/case/castle/", cover: "https://horror.lelunevale.com/media/castle.webp", outboundOnly: "download" },
+    { id: "lelune-flight-zero", title: "第零航班：餐飲服務已結束", url: "https://horror.lelunevale.com/play/flight-zero/", cover: "https://horror.lelunevale.com/media/flight-zero.webp", outboundOnly: "play" },
+    { id: "lelune-brass-leviathan", title: "黃銅蒸汽輪船密室", url: "https://horror.lelunevale.com/play/brass-leviathan/", cover: "https://horror.lelunevale.com/media/brass-leviathan.webp", outboundOnly: "play" },
+    { id: "lelune-after-hours-stacks", title: "閉館請走防火梯", url: "https://horror.lelunevale.com/play/after-hours-stacks/", cover: "https://horror.lelunevale.com/media/after-hours-stacks.webp", outboundOnly: "play" },
+  ];
+  const lelune = { name: 'AYE & LELUNE', url: 'https://world.lelunevale.com/backyard.html', hash: '#creator-lelune-backyard' };
+  for (const game of leluneBackyard) {
+    games.push({ ...game, creator: lelune, author: lelune.name, external: true, published_at: '2026-11-26T12:57:00.000Z' });
+  }
+
   // Recovered from publication records; code updates never bump a game.
   const originalPublicationTimes = {
     'yakyolife': '2026-11-10T20:52:17.000Z',

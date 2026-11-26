@@ -145,7 +145,7 @@
   .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
-<link rel="stylesheet" href="/feed-layout.css?v=20261126-centered-return">
+<link rel="stylesheet" href="/feed-layout.css?v=20261126-lelune-backyard">
 <link rel="stylesheet" href="/update-notice.css?v=20261126-centered-return">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
@@ -274,7 +274,7 @@
   <div class="update-notice-controls"><button type="button" autofocus>關掉通知</button></div>
 </dialog>
 <script src="/update-notice.js?v=20261119-rankings" defer></script>
-<script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js?v=20261126-catalog-recovery"></script><script src="/catalog.js?v=20261126-catalog-recovery"></script><script src="/feed-order.js"></script><script type="module">
+<script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261126-lelune-backyard"></script><script src="/recommendations.js?v=20261126-catalog-recovery"></script><script src="/catalog.js?v=20261126-lelune-backyard"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
   const discoveryPromise=savedMode?Promise.resolve(null):loadPlayfeedDiscoveryPriorities();
@@ -723,6 +723,7 @@
     const card = template.content.firstElementChild.cloneNode(true);
     card.hidden = true;
     card.setAttribute('aria-label', game.title);
+    card.classList.toggle('outbound-game', Boolean(game.outboundOnly));
     card.dataset.gameKey=new URL(game.url,location.origin+'/').href;
     card.querySelector('.game-expand').addEventListener('click', () => {
       if (!gameExpanded) window.PlayFeedAnalytics?.event('game_expand');
@@ -1027,7 +1028,7 @@
   }
   window.addEventListener('resize', clearExpandHint);
   function setGameExpanded(expanded, restoreFocus = true) {
-    if (expanded && activeIndex < 0) return;
+    if (expanded && (activeIndex < 0 || games[activeIndex].outboundOnly)) return;
     clearExpandHint();
     const start = expanded ? cards[activeIndex].querySelector('.game-expand').getBoundingClientRect() : null;
     gameExpanded = expanded;
@@ -1129,6 +1130,8 @@
 
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
+    const game = games[index];
+    if (game.outboundOnly && gameExpanded) setGameExpanded(false, false);
     featuredVisit.shown(games[index].id,entrySource);
     unmountGame(gameExpanded);
     activeIndex = index;
@@ -1146,14 +1149,40 @@
     layoutFeed();
     updateNavigation();
     notifyAction('');
-    const game = games[index];
     window.PlayFeedAnalytics?.setGame(game,entrySource);
     loadEngagement(game, cards[index]);
     loadPlayCount(game, cards[index]);
+    const url = new URL(location.href);
+    url.pathname = "/g/" + encodeURIComponent(game.slug || game.id);
+    url.search = savedMode?'?list=saved':'';
+    url.hash = "";
+    if (location.href !== url.href) history.replaceState(null, '', url);
+    const stage = cards[index].querySelector('.stage');
+    if (game.outboundOnly) {
+      const panel = document.createElement('div');
+      panel.className = 'outbound-game-panel';
+      if (game.cover) {
+        const cover = document.createElement('img');
+        cover.src = game.cover;
+        cover.alt = '';
+        cover.addEventListener('error', () => cover.remove(), {once:true});
+        panel.append(cover);
+      }
+      const title = document.createElement('h2');
+      title.textContent = game.title;
+      const link = document.createElement('a');
+      link.href = game.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.dataset.externalGame = '';
+      link.textContent = game.outboundOnly === 'download' ? '前往原站查看 Mac 下載 ↗' : '到原站遊玩 ↗';
+      panel.append(title, link);
+      stage.replaceChildren(panel);
+      return;
+    }
     const frame = document.createElement('iframe');
     frame.title = game.title;
     const gameUrl = PlayFeedFrame.configure(frame, game.url);
-    const stage = cards[index].querySelector('.stage');
     const viewport = cards[index].querySelector('.game-viewport');
     const surfaceColor = '#000';
     viewport.style.setProperty('--surface-color', surfaceColor);
@@ -1221,11 +1250,6 @@
         }, 0);
       });
     });
-    const url = new URL(location.href);
-    url.pathname = "/g/" + encodeURIComponent(game.slug || game.id);
-    url.search = savedMode?'?list=saved':'';
-    url.hash = "";
-    if (location.href !== url.href) history.replaceState(null, '', url);
   }
 
   function gameFromLink(entrySource) {

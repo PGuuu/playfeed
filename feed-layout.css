@@ -182,6 +182,11 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 #feed .game-expand{position:absolute;right:8px;bottom:8px;z-index:3;display:grid;place-items:center;width:34px;height:34px;min-width:34px;padding:6px;border:1px solid #72583f25;border-radius:9px;background:#fff7ebdf;color:#72583f;box-shadow:0 1px 6px #44332318;touch-action:manipulation}
 #feed .game-expand svg,#feed .expanded-controls svg{width:20px;height:20px;pointer-events:none}
 #feed .game-expand:hover{background:#f4dfc9}
+#feed .outbound-game .game-expand{display:none}
+.outbound-game-panel{display:grid;align-content:center;justify-items:center;gap:12px;height:100%;padding:16px;overflow:auto;text-align:center;color:#fff7eb}
+.outbound-game-panel img{width:min(100%,380px);max-height:min(36dvh,280px);object-fit:contain;border-radius:10px}
+.outbound-game-panel h2{margin:0;font:700 clamp(16px,3vw,24px)/1.25 system-ui}
+.outbound-game-panel a{color:#443323;background:#fff7eb;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700}
 #feed .game-expand:focus-visible,#feed .expanded-controls button:focus-visible{outline:2px solid #e8a37e;outline-offset:-3px}
 #feed .expanded-controls{display:none}
 body.game-expanded .feed-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);z-index:10;background:var(--feed-cream)}

@@ -20,13 +20,13 @@
   if(['guest_save_success','guest_unsave_success','save_sync_success','rating_success','game_expand','expanded_previous_game','expanded_next_game'].includes(action))Promise.resolve().then(flush);
  }
  function accountVisible(ms){
-  if(!current||ms<=0)return;
+  if(!current||current.outboundOnly||ms<=0)return;
   current.visibleMs+=ms;
   if(!current.played&&current.visibleMs>10000){current.played=true;event('game_play');Promise.resolve().then(flush);}
  }
  function schedulePlay(){
   clearTimeout(playTimer);playTimer=null;
-  if(!current||current.played||document.visibilityState!=='visible')return;
+  if(!current||current.outboundOnly||current.played||document.visibilityState!=='visible')return;
   playTimer=setTimeout(()=>{elapsed();schedulePlay()},Math.max(1,10001-current.visibleMs));
  }
  function elapsed(){const now=performance.now(),ms=Math.min(60000,Math.max(0,Math.round(now-last)));last=now;if(current&&document.visibilityState==='visible'&&ms){accountVisible(ms);event('game_time',{ms});}}
@@ -55,7 +55,7 @@
   elapsed();clearTimeout(playTimer);
   if(!game){current=null;last=performance.now();return;}
   const source=entry||(!seenGame?initialEntry():'internal_selection');
-  current={id:String(game.id),title:String(game.title),entry:source,previous:seenGame?lastViewed:'',visibleMs:0,played:false};
+  current={id:String(game.id),title:String(game.title),entry:source,previous:seenGame?lastViewed:'',visibleMs:0,played:false,outboundOnly:Boolean(game.outboundOnly)};
   seenGame=true;lastViewed=current.id;last=performance.now();event('game_view');flush();schedulePlay();
  },async flush(){
    // Wait for initialization and an existing batch before sending newly queued events.
