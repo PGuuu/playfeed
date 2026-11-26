@@ -145,7 +145,7 @@
   .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
-<link rel="stylesheet" href="/feed-layout.css">
+<link rel="stylesheet" href="/feed-layout.css?v=20261126-game-recording">
 <link rel="stylesheet" href="/update-notice.css">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
@@ -246,9 +246,16 @@
     <div class="game-viewport">
       <div class="stage"><div class="empty">準備遊戲中</div></div>
       <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
-      <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+      <div class="game-view-controls">
+        <button class="game-record" type="button" aria-label="全螢幕錄影" title="全螢幕錄影"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+      </div>
+      <div class="record-countdown" role="status" aria-live="polite"></div>
     </div>
-    <nav class="expanded-controls" aria-label="放大模式控制"><button class="expanded-exit" type="button">回上一頁</button></nav>
+    <nav class="expanded-controls" aria-label="放大模式控制">
+      <button class="expanded-exit" type="button" aria-label="回上一頁" title="回上一頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 5-7 7 7 7M4 12h16"/></svg></button>
+      <button class="expanded-record" type="button" aria-label="錄影" title="錄影"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg><span class="record-pending" aria-hidden="true">×</span><span class="record-active" aria-hidden="true">● REC</span></button>
+    </nav>
     <footer>
       <div class="source-dock">
         <button class="game-more" type="button" aria-label="更多遊戲選項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
@@ -272,6 +279,7 @@
   <div class="update-notice-controls"><button type="button" autofocus>關掉通知</button></div>
 </dialog>
 <script src="/update-notice.js?v=20261119-rankings" defer></script>
+<script src="/game-recording.js"></script>
 <script src="/ranking.js"></script><script src="/game-preview-crop.js"></script><script src="/game-screenshot.js"></script><script src="/game-surfaces.js"></script><script src="/game-loading.js"></script><script src="/game-frame.js?v=20261118-sandbox"></script><script src="/external-game-link.js" defer></script><script src="/auth.js?v=20261114-collection-note"></script><script src="/saves.js"></script><script src="/analytics.js?v=20261118-device-continuity"></script><script src="/recommendations.js?v=20261126-catalog-recovery"></script><script src="/catalog.js?v=20261126-catalog-recovery"></script><script src="/feed-order.js"></script><script type="module">
   let catalogError=false;
   const savedMode=new URLSearchParams(location.search).get('list')==='saved';
@@ -726,6 +734,12 @@
       if (!gameExpanded) window.PlayFeedAnalytics?.event('game_expand');
       setGameExpanded(true);
     });
+    card.querySelector('.game-record').addEventListener('click', () => {
+      PlayFeedRecording.toggle(card, {title: game.title, notify: notifyAction, expand: () => card.querySelector('.game-expand').click()});
+    });
+    card.querySelector('.expanded-record').addEventListener('click', () => {
+      PlayFeedRecording.toggle(card, {title: game.title, notify: notifyAction});
+    });
     card.querySelector('.expanded-exit').addEventListener('click', () => setGameExpanded(false));
     const sourcePanel = card.querySelector('.game-info');
     sourcePanel.id = 'game-source-' + index;
@@ -1026,6 +1040,7 @@
   window.addEventListener('resize', clearExpandHint);
   function setGameExpanded(expanded, restoreFocus = true) {
     if (expanded && activeIndex < 0) return;
+    if (!expanded) PlayFeedRecording.stop();
     clearExpandHint();
     const start = expanded ? cards[activeIndex].querySelector('.game-expand').getBoundingClientRect() : null;
     gameExpanded = expanded;
@@ -1072,6 +1087,7 @@
     }
   });
   function unmountGame(preserveExpanded = false) {
+    PlayFeedRecording.stop();
     clearExpandHint();
     if (gameExpanded && !preserveExpanded) setGameExpanded(false, false);
     window.PlayFeedAnalytics?.setGame(null);
@@ -1182,9 +1198,9 @@
         viewport.style.setProperty('--surface-width', (nativeSize ? Math.floor(frameWidth * scale) : frameWidth * scale) + 'px');
         viewport.style.setProperty('--surface-height', (nativeSize ? Math.floor(frameHeight * scale) : frameHeight * scale) + 'px');
         const gutter = Math.max(0, (stage.clientWidth - frameWidth * scale) / 2);
-        const expand = cards[index].querySelector('.game-expand');
-        expand.style.right = (gutter + 8) + 'px';
-        expand.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 8) + 'px';
+        const controls = cards[index].querySelector('.game-view-controls');
+        controls.style.right = (gutter + 8) + 'px';
+        controls.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 8) + 'px';
         if (nativeSize) {
           frame.style.width = Math.floor(frameWidth * scale) + 'px';
           frame.style.height = Math.floor(frameHeight * scale) + 'px';

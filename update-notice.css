@@ -1,4 +1,4 @@
-body.update-notice-open :is(.feed-rail, #feed .actions, #feed .game-expand, #creator-home-controls) {
+body.update-notice-open :is(.feed-rail, #feed .actions, #feed .game-view-controls, #creator-home-controls) {
   visibility: hidden;
 }
 #update-notice {
