@@ -179,9 +179,12 @@ iframe.fitted{transform:scale(var(--game-scale,0));transform-origin:center cente
 .comments-list .own-review{background:#f7e8d6;border-radius:12px;padding:12px 8px;margin:8px -8px}
 
 /* Expand the existing frame in place so the current game keeps running. */
-#feed .game-view-controls{position:absolute;right:8px;bottom:8px;z-index:3;display:grid;gap:6px}
-#feed .game-view-controls button{display:grid;place-items:center;width:34px;height:34px;min-width:34px;padding:6px;border:1px solid #72583f25;border-radius:9px;background:#fff7ebdf;color:#72583f;box-shadow:0 1px 6px #44332318;touch-action:manipulation}
+#feed .game-view-controls{position:absolute;right:4px;bottom:4px;z-index:3;display:flex;gap:4px}
+#feed .stack-view-controls .game-view-controls{flex-direction:column}
+#feed .reserve-view-controls>.stage{height:calc(100% - 42px)}
+#feed .game-view-controls button{display:grid;place-items:center;width:36px;height:36px;min-width:36px;padding:4px;border:1px solid #72583f25;border-radius:9px;background:#fff7ebdf;color:#72583f;box-shadow:0 1px 6px #44332318;touch-action:manipulation}
 #feed .game-view-controls svg,#feed .expanded-controls svg{width:20px;height:20px;pointer-events:none}
+#feed .game-view-controls .record-camera,#feed .expanded-controls .record-camera{width:28px}
 #feed .game-view-controls button:hover{background:#f4dfc9}
 #feed .game-view-controls button:focus-visible,#feed .expanded-controls button:focus-visible{outline:2px solid #e8a37e;outline-offset:-3px}
 #feed .record-countdown{position:absolute;inset:0;z-index:5;display:grid;place-items:center;color:#fff7eb;font:800 clamp(56px,16vmin,120px)/1 system-ui;text-shadow:0 2px 12px #000,0 0 32px #000;pointer-events:none}
@@ -194,13 +197,18 @@ body.game-expanded #feed article{grid-template-columns:minmax(0,1fr);grid-templa
 body.game-expanded #feed article>.game-viewport{grid-row:1;grid-column:1;border-radius:0}
 body.game-expanded .game-viewport>.stage{border-radius:0}
 body.game-expanded #feed article>footer,body.game-expanded #feed .source-dock,body.game-expanded #feed .game-view-controls{display:none}
-body.game-expanded #feed .expanded-controls{grid-row:2;grid-column:1;display:flex;justify-content:center;align-items:center;gap:8px;width:100%;height:calc(50px + env(safe-area-inset-bottom));padding:4px 8px calc(4px + env(safe-area-inset-bottom));background:#000;touch-action:manipulation}
+body.game-expanded #feed .expanded-controls{grid-row:2;grid-column:1;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%;height:calc(50px + env(safe-area-inset-bottom));padding:4px 4px calc(4px + env(safe-area-inset-bottom));background:#000;touch-action:manipulation}
 body.game-expanded #feed .expanded-controls button{width:52px;height:42px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:transparent;color:#fff7eb;touch-action:manipulation}
 body.game-expanded #feed .expanded-controls button:hover{background:#2c201b}
-body.game-expanded #feed .expanded-record{color:#ff896d}
+body.game-expanded #feed .expanded-record{grid-column:2}
+body.game-expanded #feed .expanded-exit{grid-column:3;justify-self:end}
 #feed .record-active,#feed .record-pending,#feed .expanded-record[data-state=pending] svg,#feed .expanded-record[data-state=recording] svg{display:none}
 #feed .expanded-record[data-state=pending] .record-pending{display:block;font:600 24px/1 system-ui}
-#feed .expanded-record[data-state=recording] .record-active{display:block;font:750 11px/1 system-ui;white-space:nowrap}
+#feed .expanded-record[data-state=recording] .record-active{display:block;color:#ff5252;font:800 13px/1 system-ui;white-space:nowrap}
+@media(prefers-reduced-motion:no-preference){
+ #feed .expanded-record[data-state=recording] .record-active{animation:record-pulse 1.6s ease-in-out infinite alternate}
+}
+@keyframes record-pulse{from{opacity:1}to{opacity:.4}}
 body.game-expanded .action-status{z-index:11;bottom:calc(58px + env(safe-area-inset-bottom))}
 #feed .source-dock .creator-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;padding:10px 12px;border:1px solid #c9a884;border-radius:10px;background:#f4dfc9;color:#593d2a;text-decoration:none;white-space:normal;box-sizing:border-box;touch-action:manipulation}
 #feed .source-dock .creator-card:hover{background:#edd0af;border-color:#a77b52}

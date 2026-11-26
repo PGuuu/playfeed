@@ -145,7 +145,7 @@
   .save-hint .hint-close{position:absolute;right:10px;top:8px;background:none;font-size:22px;padding:4px 8px}.save-highlight{outline:3px solid var(--cream);outline-offset:5px;box-shadow:0 0 0 10px #ff8b3d80}
   @media(max-width:420px){article>footer{left:10px;right:10px;padding:12px 10px;gap:8px}.actions{gap:8px}.actions button{padding:12px 8px;font-size:15px;min-width:58px}.feed-brand{left:10px;right:10px}.byline{font-size:13px}}
 </style>
-<link rel="stylesheet" href="/feed-layout.css?v=20261126-game-recording">
+<link rel="stylesheet" href="/feed-layout.css?v=20261126-recording-controls">
 <link rel="stylesheet" href="/update-notice.css">
 <link rel="prefetch" href="/account.html" as="document">
 <meta property="og:type" content="website">
@@ -247,14 +247,14 @@
       <div class="stage"><div class="empty">準備遊戲中</div></div>
       <div class="game-loading loading-screen" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span><strong class="loading-title">Loading…</strong><span class="loading-note">請稍後</span><small class="loading-help" hidden>也可以先切換其他遊戲</small></div>
       <div class="game-view-controls">
-        <button class="game-record" type="button" aria-label="全螢幕錄影" title="全螢幕錄影"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg></button>
+        <button class="game-record" type="button" aria-label="全螢幕錄影" title="全螢幕錄影"><svg class="record-camera" viewBox="0 0 36 24" fill="none" aria-hidden="true"><rect x="1.5" y="4" width="27" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="m28.5 8 5.5-2v12l-5.5-2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7" cy="12" r="2.1" fill="#e93737"/><text x="11" y="15" fill="currentColor" font-family="system-ui" font-size="8.5" font-weight="850">REC</text></svg></button>
         <button class="game-expand" type="button" aria-label="放大遊戲" aria-expanded="false" title="放大遊戲"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
       </div>
       <div class="record-countdown" role="status" aria-live="polite"></div>
     </div>
     <nav class="expanded-controls" aria-label="放大模式控制">
+      <button class="expanded-record" type="button" aria-label="錄影" title="錄影"><svg class="record-camera" viewBox="0 0 36 24" fill="none" aria-hidden="true"><rect x="1.5" y="4" width="27" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="m28.5 8 5.5-2v12l-5.5-2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7" cy="12" r="2.1" fill="#e93737"/><text x="11" y="15" fill="currentColor" font-family="system-ui" font-size="8.5" font-weight="850">REC</text></svg><span class="record-pending" aria-hidden="true">×</span><span class="record-active" aria-hidden="true">● REC</span></button>
       <button class="expanded-exit" type="button" aria-label="回上一頁" title="回上一頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 5-7 7 7 7M4 12h16"/></svg></button>
-      <button class="expanded-record" type="button" aria-label="錄影" title="錄影"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg><span class="record-pending" aria-hidden="true">×</span><span class="record-active" aria-hidden="true">● REC</span></button>
     </nav>
     <footer>
       <div class="source-dock">
@@ -1183,6 +1183,7 @@
       }
       const fit = () => {
         if (gameExpanded) {
+          viewport.classList.remove('reserve-view-controls');
           viewport.style.setProperty('--surface-width', stage.clientWidth + 'px');
           viewport.style.setProperty('--surface-height', stage.clientHeight + 'px');
           frame.style.width = stage.clientWidth + 'px';
@@ -1194,13 +1195,18 @@
         const frameWidth = landscape ? Math.max(width,height) : width;
         const frameHeight = landscape ? Math.min(width,height) : height;
         // Fitted games can grow with the stage; native games retain their viewport size.
-        const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, nativeSize ? 1 : Infinity);
+        const fullWidth = viewport.clientWidth;
+        const fullHeight = viewport.clientHeight;
+        const maxScale = nativeSize ? 1 : Infinity;
+        const availableScale = Math.min(fullWidth / frameWidth, fullHeight / frameHeight, maxScale);
+        const sideGutter = (fullWidth - frameWidth * availableScale) / 2;
+        const bottomGutter = (fullHeight - frameHeight * availableScale) / 2;
+        const stackControls = sideGutter >= 42 || bottomGutter >= 82;
+        viewport.classList.toggle('stack-view-controls', stackControls);
+        viewport.classList.toggle('reserve-view-controls', !stackControls && bottomGutter < 42);
+        const scale = Math.min(stage.clientWidth / frameWidth, stage.clientHeight / frameHeight, maxScale);
         viewport.style.setProperty('--surface-width', (nativeSize ? Math.floor(frameWidth * scale) : frameWidth * scale) + 'px');
         viewport.style.setProperty('--surface-height', (nativeSize ? Math.floor(frameHeight * scale) : frameHeight * scale) + 'px');
-        const gutter = Math.max(0, (stage.clientWidth - frameWidth * scale) / 2);
-        const controls = cards[index].querySelector('.game-view-controls');
-        controls.style.right = (gutter + 8) + 'px';
-        controls.style.bottom = (Math.max(0, (stage.clientHeight - frameHeight * scale) / 2) + 8) + 'px';
         if (nativeSize) {
           frame.style.width = Math.floor(frameWidth * scale) + 'px';
           frame.style.height = Math.floor(frameHeight * scale) + 'px';
@@ -1212,7 +1218,7 @@
       };
       fit();
       gameResizeObserver = new ResizeObserver(fit);
-      gameResizeObserver.observe(stage);
+      gameResizeObserver.observe(viewport);
     }
     const version = gameLoadVersion;
     gameLoadingCleanup=PlayFeedLoading.start({indicator:viewport.querySelector('.game-loading'),stage,frame,image:games[index].preload_image});
