@@ -752,8 +752,9 @@
     card.setAttribute('aria-label', game.title);
     card.dataset.gameKey=new URL(game.url,location.origin+'/').href;
     card.querySelector('.game-expand').addEventListener('click', () => {
-      if (!gameExpanded) window.PlayFeedAnalytics?.event('game_expand');
+      if (gameExpanded) return;
       setGameExpanded(true);
+      window.PlayFeedAnalytics?.event('game_expand');
     });
     card.querySelector('.expanded-exit').addEventListener('click', () => setGameExpanded(false));
     const sourcePanel = card.querySelector('.game-info');
@@ -1156,8 +1157,8 @@
 
   function showGame(index, entrySource) {
     if (activeIndex === index) return;
-    featuredVisit.shown(games[index].id,entrySource);
     unmountGame(gameExpanded);
+    featuredVisit.shown(games[index].id,entrySource);
     activeIndex = index;
     recordPlayfeedGameExposure(games[index].id,{playerId:feedPlayerId});
 
@@ -1282,6 +1283,33 @@
     showGame(target,source);
   }
 
+  // Opt-in recording for remote inspection on devices where the feed stalls.
+  if (new URLSearchParams(location.search).has('debugInput')) {
+    const controls = 'button, a, .game-switcher';
+    for (const type of ['pointerdown', 'pointerup', 'click']) {
+      document.addEventListener(type, event => {
+        const control = event.target.closest(controls);
+        if (!control) return;
+        const receivedAt = performance.now();
+        const game = games[activeIndex]?.id;
+        const label = control.getAttribute('aria-label') || control.id || control.textContent.trim();
+        if (event.timeStamp > 0 && event.timeStamp <= receivedAt) {
+          performance.measure('FanGame input: ' + type, {
+            start: event.timeStamp,
+            end: receivedAt,
+            detail: { game, control: label }
+          });
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          performance.measure('FanGame next frame: ' + type, {
+            start: receivedAt,
+            end: performance.now(),
+            detail: { game, control: label, activeGame: games[activeIndex]?.id, expanded: gameExpanded }
+          });
+        }));
+      }, { capture: true, passive: true });
+    }
+  }
   gameFromLink();
   document.querySelector('.boot-loading')?.remove();
   window.addEventListener('hashchange', gameFromLink);
@@ -1292,7 +1320,6 @@
     const featuredId=featuredVisit.take(games[activeIndex].id,queue.map(index=>games[index].id));
     const target=featuredId?games.findIndex(game=>game.id===featuredId):queue[(position+direction+queue.length)%queue.length];
     const source=direction<0?previousButton:nextButton;
-    showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
     const wasExpanded = gameExpanded;
     if (wasExpanded) {
       window.PlayFeedAnalytics?.event(direction<0?'expanded_previous_game':'expanded_next_game');
@@ -1300,6 +1327,7 @@
     }
     window.PlayFeedAnalytics?.event(direction<0?'previous_game':'next_game');
     showGame(target,direction<0?'previous':'next');
+    showSwitchBomb(source,cards[activeIndex].querySelector('.stage'));
     if(wasExpanded)(direction<0?previousButton:nextButton).focus({preventScroll:true});
 
   }
