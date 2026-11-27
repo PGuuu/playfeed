@@ -166,8 +166,35 @@
 <link rel="canonical" href="https://fangame.app/">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"FanGame","alternateName":["糞Game","fangame.app"],"url":"https://fangame.app/","description":"收錄獨立創作者的免費網頁小遊戲，滑一下就玩。","inLanguage":"zh-Hant"}</script>
 <style> .source-stats{display:flex;gap:16px;margin:0 0 10px;font:12px/1.5 system-ui,sans-serif;color:inherit;opacity:.75;font-variant-numeric:tabular-nums}#comments-sheet .reviews-heading,#comments-sheet .rating-summary,#comments-sheet .comments-message,#comments-sheet #ratings-reload,#comments-sheet .comments-list,#comments-sheet .comments-form{display:none!important}</style>
+<link rel="stylesheet" href="/wish-board.css">
+<script src="/wish-board.js" defer></script>
 <script src="/game-interaction.js?v=20261120" defer></script></head>
 <body>
+<dialog id="wish-dialog" aria-labelledby="wish-heading">
+  <header>
+    <h2 id="wish-heading">許願板</h2>
+    <form method="dialog"><button type="submit" autofocus>關閉</button></form>
+  </header>
+  <p>希望 FanGame 新增什麼功能，或有哪些地方可以改善？</p>
+  <form id="wish-form">
+    <label for="wish-body">你的建議</label>
+    <textarea id="wish-body" name="body" rows="3" maxlength="1000" required></textarea>
+    <div class="wish-form-actions">
+      <label id="wish-guest">暱稱（選填） <input name="nickname" maxlength="24" autocomplete="off"></label>
+      <label id="wish-member" hidden>留言身分
+        <select name="author"><option value="anonymous">匿名留言</option><option value="member">顯示會員名稱</option></select>
+      </label>
+      <button type="submit">送出留言</button>
+    </div>
+    <p id="wish-feedback" role="status"></p>
+  </form>
+  <section aria-labelledby="wish-list-heading">
+    <h3 id="wish-list-heading">大家的願望</h3>
+    <p id="wish-list-status" role="status"></p>
+    <ul id="wish-list"></ul>
+    <button id="wish-more" type="button" hidden>載入更多</button>
+  </section>
+</dialog>
 <dialog id="login-dialog" aria-labelledby="login-heading"><div class="login-box"><h2 id="login-heading">Email 認證</h2><p>輸入 Email，點信中的認證連結，就能跨瀏覽器同步收藏與評分。</p><div id="phuze-widget"></div><button class="login-cancel" type="button" data-close-login>先逛逛</button></div></dialog>
 <dialog class="search-dialog" aria-label="搜尋遊戲">
   <form method="dialog"><input type="search" id="game-search" aria-label="遊戲關鍵字" placeholder="搜尋遊戲、作者" autocomplete="off"><button aria-label="關閉搜尋">關閉</button></form>
@@ -212,7 +239,7 @@
 </section>
 <div class="feed-shell"><main id="feed" aria-label="FanGame 遊戲牆"><div class="boot-loading loading-screen" role="status" aria-live="polite"><span class="loading-spinner" aria-hidden="true"></span><strong>Loading…</strong><span>請稍後</span></div></main>
 <aside class="feed-rail" aria-label="我的收藏、搜尋與遊戲切換">
- <nav class="rail-tools" aria-label="搜尋與遊戲列表"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><button class="ranking-button" type="button" aria-label="遊戲列表" aria-haspopup="dialog" aria-controls="ranking-dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v6m-4 3h8m-6-3h4"/></svg><span>遊戲列表</span></button></nav>
+ <nav class="rail-tools" aria-label="首頁工具"><a class="account-link" href="/account.html" aria-label="我的頁面"></a><button class="search-button" aria-label="搜尋遊戲" type="button"><span class="magnifier" aria-hidden="true"></span></button><button class="ranking-button" type="button" aria-label="遊戲列表" aria-haspopup="dialog" aria-controls="ranking-dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v6m-4 3h8m-6-3h4"/></svg><span>遊戲列表</span></button><button class="wish-button" type="button" aria-haspopup="dialog" aria-controls="wish-dialog">許願</button></nav>
  <nav class="game-switcher" aria-label="切換遊戲">
   <button id="previous-game" type="button" aria-label="上一款"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span class="switch-label">上一款</span></button>
   <button id="next-game" type="button" aria-label="下一款"><span class="switch-label">下一款</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
